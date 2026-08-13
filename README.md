@@ -8,7 +8,6 @@ Jessie Campbell
 Justin Welsh  
 Daniel Martin  
 
-### Test Commit
 
 ### Team Charter Link: <TODO>  
 
