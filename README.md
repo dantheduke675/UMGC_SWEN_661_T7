@@ -8,7 +8,6 @@ Jessie Campbell
 Justin Welsh  
 Daniel Martin  
 
-
 ### Team Charter Link: <TODO>  
 
 ### Setup Instructions:  
