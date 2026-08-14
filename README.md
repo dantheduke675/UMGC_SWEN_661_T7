@@ -8,7 +8,7 @@ Jessie Campbell
 Justin Welsh  
 Daniel Martin  
 
-### Team Charter Link: <TODO>  
+### Team Charter Link: [HERE](https://umuc365-my.sharepoint.com/:w:/g/personal/dguerreromartin_student_umgc_edu/IQBJi-GDoxg2TopXWVh7sYRzATRPniwq0isIp623mE6ZLn8?e=m2bmOs)  
 
 ### Setup Instructions:  
 <TODO>
