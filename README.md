@@ -29,3 +29,5 @@ From there navigate to the respective front end directory and run the correspond
 
 ### React:
 <TODO>
+
+### AI Disclosure: The code in this project was written with the help of Figma Make and Claude Opus 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
