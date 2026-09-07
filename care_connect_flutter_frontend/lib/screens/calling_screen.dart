@@ -1,11 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import '../data.dart';
-import '../theme.dart';
-// ignore: unused_import
-import '../widgets.dart';
 
 class CallingScreen extends StatefulWidget {
   final int contactId;
@@ -82,10 +78,8 @@ class _CallingScreenState extends State<CallingScreen>
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unused_local_variable
-    final scheme = context.watch<ThemeNotifier>().scheme;
     final contactColor = Color(_contact.color);
-    final screenH = MediaQuery.of(context).size.height;
+    final screenH     = MediaQuery.of(context).size.height;
 
     return Container(
       width: double.infinity,

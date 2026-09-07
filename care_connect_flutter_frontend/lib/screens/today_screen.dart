@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data.dart';
 import '../theme.dart';
-import '../widgets.dart';
 
 class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
