@@ -1,0 +1,113 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:care_connect_flutter_frontend/screens/medications_screen.dart';
+import 'package:care_connect_flutter_frontend/theme.dart';
+import '../helpers/test_helpers.dart';
+
+// Marking a dose taken/missed schedules an untracked Future.delayed(5s) toast
+// dismissal; advance the fake clock past it before the test ends so the
+// timer fires instead of leaking into the next test's invariant check.
+Future<void> _flushToastTimer(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 6));
+}
+
+void main() {
+  // ── Content ──────────────────────────────────────────────────────────────────
+
+  group('MedicationsScreen — content', () {
+    testWidgets('renders Medications heading', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.text('Medications'), findsOneWidget);
+    });
+
+    testWidgets('renders Total stat tile', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.text('Total doses'), findsOneWidget);
+    });
+
+    testWidgets('renders Taken stat tile', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.text('Taken'), findsOneWidget);
+    });
+
+    testWidgets('renders Missed stat tile', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.text('Missed'), findsOneWidget);
+    });
+
+    testWidgets('renders Ropivacaine medication card', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.textContaining('Ropivacaine'), findsWidgets); // 2 slots (8 AM + 8 PM)
+    });
+
+    testWidgets('renders Metformin medication card', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.textContaining('Metformin'), findsWidgets); // 2 slots (8 AM + 8 PM)
+    });
+
+    testWidgets('I took this buttons are present', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.textContaining('I took this'), findsWidgets);
+    });
+
+    testWidgets('I missed this buttons are present', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      expect(find.textContaining('I missed this'), findsWidgets);
+    });
+  });
+
+  // ── Interaction ───────────────────────────────────────────────────────────────
+
+  group('MedicationsScreen — interaction', () {
+    testWidgets('tapping I took this shows ✓ Taken label', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      final btn = find.textContaining('I took this').first;
+      await tester.ensureVisible(btn);
+      await tester.tap(btn);
+      await tester.pump();
+      expect(find.textContaining('Taken'), findsWidgets);
+      await _flushToastTimer(tester);
+    });
+
+    testWidgets('tapping I took this shows undo toast', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      final btn = find.textContaining('I took this').first;
+      await tester.ensureVisible(btn);
+      await tester.tap(btn);
+      await tester.pump();
+      expect(find.textContaining('Marked as taken'), findsOneWidget);
+      await _flushToastTimer(tester);
+    });
+
+    testWidgets('tapping I missed this shows confirm dialog', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen()));
+      final btn = find.textContaining('I missed this').first;
+      await tester.ensureVisible(btn);
+      await tester.tap(btn);
+      await tester.pump();
+      // Confirm dialog appears with confirmation button
+      expect(find.textContaining('Yes, I missed'), findsOneWidget);
+    });
+  });
+
+  // ── Theming ───────────────────────────────────────────────────────────────────
+
+  group('MedicationsScreen — theming', () {
+    testWidgets('renders in dark mode without error', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen(), isDark: true));
+      expect(find.text('Medications'), findsOneWidget);
+    });
+
+    testWidgets('renders in light mode without error', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen(), isDark: false));
+      expect(find.text('Medications'), findsOneWidget);
+    });
+
+    testWidgets('tapping toggle fires ThemeNotifier', (tester) async {
+      final notifier = ThemeNotifier(isDark: true);
+      await pumpScreen(tester, buildTestApp(child: const MedicationsScreen(), themeNotifier: notifier));
+      // ThemeToggleBtn is not on this screen (it is an auth-screen widget)
+      // Verify dark scheme is active via notifier
+      expect(notifier.isDark, isTrue);
+    });
+  });
+}

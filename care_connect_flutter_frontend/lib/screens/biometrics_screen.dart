@@ -57,9 +57,10 @@ class BiometricsScreen extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.fromLTRB(px, pt, px, pb),
               child: isTablet
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [content, actions],
+                  ? SingleChildScrollView(
+                      child: Column(
+                        children: [content, const SizedBox(height: 24), actions],
+                      ),
                     )
                   : SingleChildScrollView(
                       child: Column(
