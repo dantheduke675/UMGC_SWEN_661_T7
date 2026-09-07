@@ -52,6 +52,7 @@ class LandingScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Actions
                   Column(
                     children: [
                       AuthBtn(

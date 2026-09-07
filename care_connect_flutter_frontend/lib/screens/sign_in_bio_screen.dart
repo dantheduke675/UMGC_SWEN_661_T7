@@ -51,17 +51,19 @@ class SignInBioScreen extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.fromLTRB(px, pt, px, pb),
               child: isTablet
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        content,
-                        AuthBtn(
-                          label: 'Use my password instead',
-                          variant: 'secondary',
-                          lg: isTablet,
-                          onPressed: () => context.go('/sign-in-pass'),
-                        ),
-                      ],
+                  ? SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          content,
+                          const SizedBox(height: 24),
+                          AuthBtn(
+                            label: 'Use my password instead',
+                            variant: 'secondary',
+                            lg: isTablet,
+                            onPressed: () => context.go('/sign-in-pass'),
+                          ),
+                        ],
+                      ),
                     )
                   : SingleChildScrollView(
                       child: Column(

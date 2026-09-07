@@ -47,7 +47,7 @@ class SignInPassScreen extends StatelessWidget {
       children: [
         AuthBtn(label: 'Sign in', lg: isTablet, onPressed: () => context.go('/today')),
         const SizedBox(height: 16),
-        AuthBtn(label: 'Use Face ID instead', variant: 'text', lg: isTablet, onPressed: null), // we will have to assing the onpressed to an actual go route navigation once we work on those screens
+        AuthBtn(label: 'Use Face ID instead', variant: 'text', lg: isTablet, onPressed: () => context.go('/sign-in-bio')),
       ],
     );
 

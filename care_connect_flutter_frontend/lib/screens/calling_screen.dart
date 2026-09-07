@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../data.dart';
 import '../theme.dart';
+// ignore: unused_import
 import '../widgets.dart';
 
 class CallingScreen extends StatefulWidget {
@@ -81,9 +82,10 @@ class _CallingScreenState extends State<CallingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final scheme      = context.watch<ThemeNotifier>().scheme;
+    // ignore: unused_local_variable
+    final scheme = context.watch<ThemeNotifier>().scheme;
     final contactColor = Color(_contact.color);
-    final screenH     = MediaQuery.of(context).size.height;
+    final screenH = MediaQuery.of(context).size.height;
 
     return Container(
       width: double.infinity,
@@ -142,7 +144,7 @@ class _CallingScreenState extends State<CallingScreen>
                   // Outer pulse ring
                   AnimatedBuilder(
                     animation: _pulseCtrl,
-                    builder: (_, __) => Transform.scale(
+                    builder: (_, _) => Transform.scale(
                       scale: _pulseScale.value,
                       child: Container(
                         width: 150, height: 150,
@@ -159,7 +161,7 @@ class _CallingScreenState extends State<CallingScreen>
                   // Inner ring (offset phase)
                   AnimatedBuilder(
                     animation: _pulseCtrl,
-                    builder: (_, __) {
+                    builder: (_, _) {
                       final t = (_pulseCtrl.value + 0.4) % 1.0;
                       final scale = 1.0 + t * 0.55;
                       final opacity = 0.5 * (1.0 - t);

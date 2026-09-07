@@ -209,12 +209,15 @@ class _LogCard extends StatelessWidget {
               children: [
                 Text('Mild', style: TextStyle(fontSize: 12, color: scheme.muted)),
                 Expanded(
-                  child: Slider(
-                    value: severity.toDouble(),
-                    min: 1, max: 5, divisions: 4,
-                    activeColor: scheme.primary,
-                    inactiveColor: scheme.surface2,
-                    onChanged: (v) => onSeverityChange(v.round()),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Slider(
+                      value: severity.toDouble(),
+                      min: 1, max: 5, divisions: 4,
+                      activeColor: scheme.primary,
+                      inactiveColor: scheme.surface2,
+                      onChanged: (v) => onSeverityChange(v.round()),
+                    ),
                   ),
                 ),
                 Text('Severe', style: TextStyle(fontSize: 12, color: scheme.muted)),
