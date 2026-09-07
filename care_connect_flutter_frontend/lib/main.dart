@@ -8,7 +8,14 @@ import 'screens/create_account_screen.dart';
 import 'screens/biometrics_screen.dart';
 import 'screens/sign_in_bio_screen.dart';
 import 'screens/sign_in_pass_screen.dart';
-
+import 'screens/today_screen.dart';
+import 'screens/medications_screen.dart';
+import 'screens/schedule_screen.dart';
+import 'screens/symptoms_screen.dart';
+import 'screens/messages_screen.dart';
+import 'screens/msg_thread_screen.dart';
+import 'screens/account_screen.dart';
+import 'screens/calling_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,11 +35,30 @@ void main() {
 final _router = GoRouter(
   initialLocation: '/landing',
   routes: [
-    GoRoute(path: '/landing',         builder: (_, __) => const LandingScreen()),
-    GoRoute(path: '/create-account',  builder: (_, __) => const CreateAccountScreen()),
-    GoRoute(path: '/biometrics',      builder: (_, __) => const BiometricsScreen()),
-    GoRoute(path: '/sign-in-bio',     builder: (_, __) => const SignInBioScreen()),
-    GoRoute(path: '/sign-in-pass',    builder: (_, __) => const SignInPassScreen()),
+    GoRoute(path: '/landing',         builder: (_, _) => const LandingScreen()),
+    GoRoute(path: '/create-account',  builder: (_, _) => const CreateAccountScreen()),
+    GoRoute(path: '/biometrics',      builder: (_, _) => const BiometricsScreen()),
+    GoRoute(path: '/sign-in-bio',     builder: (_, _) => const SignInBioScreen()),
+    GoRoute(path: '/sign-in-pass',    builder: (_, _) => const SignInPassScreen()),
+    ShellRoute(
+      builder: (context, state, child) => AppShell(child: child),
+      routes: [
+        GoRoute(path: '/today',       builder: (_, _) => const TodayScreen()),
+        GoRoute(path: '/medications', builder: (_, _) => const MedicationsScreen()),
+        GoRoute(path: '/schedule',    builder: (_, _) => const ScheduleScreen()),
+        GoRoute(path: '/symptoms',    builder: (_, _) => const SymptomsScreen()),
+        GoRoute(path: '/messages',    builder: (_, _) => const MessagesScreen()),
+        GoRoute(
+          path: '/messages/:threadId',
+          builder: (_, state) => MsgThreadScreen(threadId: int.parse(state.pathParameters['threadId']!)),
+        ),
+        GoRoute(path: '/account',     builder: (_, _) => const AccountScreen()),
+        GoRoute(
+          path: '/calling/:contactId',
+          builder: (_, state) => CallingScreen(contactId: int.parse(state.pathParameters['contactId']!)),
+        ),
+      ],
+    ),
   ],
 );
 
@@ -53,6 +79,8 @@ class CareConnectApp extends StatelessWidget {
   }
 }
 
+// ── Shared nav items ────────────────────────────────────────────────────────────
+
 const _navItems = [
   (path: '/today',       label: 'Today',       icon: '🏠'),
   (path: '/medications', label: 'Medications',  icon: '💊'),
@@ -61,6 +89,8 @@ const _navItems = [
   (path: '/symptoms',    label: 'Symptoms',     icon: '📊'),
   (path: '/account',     label: 'Account',      icon: '👤'),
 ];
+
+// ── App shell with adaptive bottom nav ─────────────────────────────────────────
 
 class AppShell extends StatelessWidget {
   final Widget child;
@@ -81,7 +111,9 @@ class AppShell extends StatelessWidget {
       bottomNavigationBar: isFullScreen ? null : Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Accessibility bar
           _AccessBar(scheme: scheme),
+          // Bottom nav
           _BottomNav(
             scheme: scheme,
             currentIdx: currentIdx < 0 ? 0 : currentIdx,
@@ -167,7 +199,7 @@ class _AccessBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          _accessBtn(context, '↑', 'Scroll up', scheme, onTap: () {}),
+          _accessBtn(context, '↑', 'Scroll up', scheme, onTap: () => _scroll(context, -220)),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () {},
@@ -187,10 +219,21 @@ class _AccessBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _accessBtn(context, '↓', 'Scroll down', scheme, onTap: () {}),
+          _accessBtn(context, '↓', 'Scroll down', scheme, onTap: () => _scroll(context, 220)),
         ],
       ),
     );
+  }
+
+  void _scroll(BuildContext context, double delta) {
+    final ctrl = PrimaryScrollController.maybeOf(context);
+    if (ctrl == null || !ctrl.hasClients) return;
+    final target = (ctrl.offset + delta).clamp(
+      ctrl.position.minScrollExtent,
+      ctrl.position.maxScrollExtent,
+    );
+    ctrl.animateTo(target,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
   Widget _accessBtn(BuildContext context, String icon, String label, CScheme scheme, {required VoidCallback onTap}) {
@@ -204,12 +247,16 @@ class _AccessBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: scheme.border, width: 2),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(icon, style: TextStyle(fontSize: 20, color: scheme.sub)),
-              Text(label, style: TextStyle(fontSize: 11, color: scheme.sub, fontWeight: FontWeight.w700)),
-            ],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(icon, style: TextStyle(fontSize: 20, color: scheme.sub)),
+                Text(label, style: TextStyle(fontSize: 11, color: scheme.sub, fontWeight: FontWeight.w700)),
+              ],
+            ),
           ),
         ),
       ),

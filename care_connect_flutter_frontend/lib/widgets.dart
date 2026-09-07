@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme.dart';
 
+// ── Auth shared widgets ─────────────────────────────────────────────────────────
+
 class AuthLogo extends StatelessWidget {
   final bool lg;
   const AuthLogo({super.key, this.lg = false});
@@ -36,7 +38,7 @@ class AuthLogoSmall extends StatelessWidget {
 class AuthBtn extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
-  final String variant; 
+  final String variant; // 'primary' | 'secondary' | 'text'
   final bool lg;
 
   const AuthBtn({
@@ -218,7 +220,7 @@ class _AuthSpinnerState extends State<AuthSpinner> with SingleTickerProviderStat
 }
 
 class AuthRoleTile extends StatelessWidget {
-  final String role; 
+  final String role; // 'recipient' | 'caregiver'
   final VoidCallback? onPressed;
   final bool lg;
 
@@ -246,6 +248,8 @@ class AuthRoleTile extends StatelessWidget {
     );
   }
 }
+
+// ── App shared widgets ──────────────────────────────────────────────────────────
 
 class CAvatarBadge extends StatelessWidget {
   final String initials;
@@ -279,7 +283,7 @@ class CChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.13),
+        color: color.withValues(alpha: 0.13),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
@@ -301,7 +305,7 @@ class CSeverityBar extends StatelessWidget {
         child: Container(
           height: 12, margin: const EdgeInsets.only(right: 6),
           decoration: BoxDecoration(
-            color: i < level ? _color : scheme.muted.withOpacity(0.2),
+            color: i < level ? _color : scheme.muted.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(6),
           ),
         ),
@@ -313,7 +317,7 @@ class CSeverityBar extends StatelessWidget {
 class CBtn extends StatelessWidget {
   final Widget child;
   final VoidCallback? onPressed;
-  final String variant; 
+  final String variant; // 'primary' | 'secondary' | 'ghost' | 'danger'
   final bool sm;
   final bool fullWidth;
 
@@ -364,6 +368,8 @@ class CBtn extends StatelessWidget {
   }
 }
 
+// ── Floating theme toggle used on auth screens ──────────────────────────────────
+
 class ThemeToggleBtn extends StatelessWidget {
   const ThemeToggleBtn({super.key});
 
@@ -377,7 +383,7 @@ class ThemeToggleBtn extends StatelessWidget {
         child: Container(
           width: 44, height: 44,
           decoration: BoxDecoration(
-            color: notifier.isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.07),
+            color: notifier.isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.07),
             shape: BoxShape.circle,
           ),
           child: Center(child: Text(notifier.isDark ? '☀️' : '🌙', style: const TextStyle(fontSize: 18))),
