@@ -22,10 +22,21 @@ git clone git@github.com:dantheduke675/UMGC_SWEN_661_T7.git
 From there navigate to the respective front end directory and run the correspond files below is a breakdown for each language in how to run and or build the respective frontend.
 
 ### Flutter:
+WARNING for certain parts of running this application you may need to build with plugins in this case windows may yell at you because it limits the symlinks flutter typically uses to administrators by default to ensure that a smooth experience is had by all use 
+```
+start ms-settings:developers
+```
+This will bring you to the developer settings in windows and allow you to turn them on and off with a toggle. Ensure developer settings are turned on if you are using windows
+
 After cloning the repository down into your working directory move into the care_connect_flutter_frontend directory
 ```
 cd ./care_connect_flutter_frontend
 ```
+now that you are in the main flutter frontend directory there are a large amount of operations that could be performed if you wanted to simply run the application
+```
+flutter run
+```
+then selecting which mode is appropriate for you.
 
 ### Electron:
 <TODO>
