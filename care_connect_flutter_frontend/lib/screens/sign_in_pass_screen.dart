@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
+import '../data.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -11,23 +13,32 @@ class SignInPassScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
     final isTablet = MediaQuery.of(context).size.width >= 700;
-    final px = isTablet ? 65.0 : 26.0;
-    final pt = isTablet ? 110.0 : 50.0;
-    final pb = isTablet ? 130.0 : 50.0;
+    final horizontalPadding = isTablet ? 65.0 : 26.0;
+    final topPadding = isTablet ? 110.0 : 50.0;
+    final bottomPadding = isTablet ? 130.0 : 50.0;
 
     final fields = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AuthBtn(label: '← Back', variant: 'text', lg: isTablet, onPressed: () => context.go('/landing')),
+        AuthBtn(
+          label: '← Back',
+          variant: 'text',
+          lg: isTablet,
+          onPressed: () => context.go('/landing'),
+        ),
         const SizedBox(height: 12),
         Text(
           'Sign in',
-          style: TextStyle(fontSize: isTablet ? 36 : 28, fontWeight: FontWeight.w800, color: scheme.text),
+          style: TextStyle(
+            fontSize: isTablet ? 36 : 28,
+            fontWeight: FontWeight.w800,
+            color: scheme.text,
+          ),
         ),
         const SizedBox(height: 24),
         AuthField(
           label: 'Email address',
-          value: 'maddy@example.com',
+          value: patient.email,
           filled: true,
           helper: 'We will never share this.',
           lg: isTablet,
@@ -45,9 +56,18 @@ class SignInPassScreen extends StatelessWidget {
 
     final actions = Column(
       children: [
-        AuthBtn(label: 'Sign in', lg: isTablet, onPressed: () => context.go('/today')),
+        AuthBtn(
+          label: 'Sign in',
+          lg: isTablet,
+          onPressed: () => context.go('/today'),
+        ),
         const SizedBox(height: 16),
-        AuthBtn(label: 'Use Face ID instead', variant: 'text', lg: isTablet, onPressed: null), // we will have to assing the onpressed to an actual go route navigation once we work on those screens
+        AuthBtn(
+          label: 'Use Face ID instead',
+          variant: 'text',
+          lg: isTablet,
+          onPressed: () => context.go('/sign-in-bio'),
+        ),
       ],
     );
 
@@ -57,7 +77,12 @@ class SignInPassScreen extends StatelessWidget {
         children: [
           SafeArea(
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(px, pt, px, pb),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                topPadding,
+                horizontalPadding,
+                bottomPadding,
+              ),
               child: isTablet
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

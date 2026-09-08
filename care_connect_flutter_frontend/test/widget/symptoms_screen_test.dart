@@ -140,6 +140,37 @@ void main() {
       expect(find.text('Breathing'), findsOneWidget);
     });
 
+    testWidgets('logging a symptom adds an undoable action, and undoing it removes the log', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const SymptomsScreen()));
+
+      await tester.tap(find.text('Log a symptom'));
+      await tester.pump();
+      await tester.tap(find.text('Breathing'));
+      await tester.pump();
+      final submitBtn = find.text('Log symptom');
+      await tester.ensureVisible(submitBtn);
+      await tester.pump();
+      await tester.tap(submitBtn);
+      await tester.pump();
+      expect(find.text('Breathing'), findsOneWidget);
+
+      // The persistent undo button appears and lists the logging action.
+      await tester.tap(find.text('↺'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recent actions'), findsOneWidget);
+      expect(find.textContaining('Logged Breathing'), findsOneWidget);
+
+      // The FAB behind the sheet also says "Undo" (white); the sheet's
+      // per-action button is styled differently — match on that.
+      final undoInSheet = find.byWidgetPredicate(
+        (w) => w is Text && w.data == 'Undo' && w.style?.color != Colors.white,
+      );
+      await tester.tap(undoInSheet);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Breathing'), findsNothing);
+    });
+
     testWidgets('Log symptom button is disabled when no symptom is selected', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const SymptomsScreen()));
       await tester.tap(find.text('Log a symptom'));

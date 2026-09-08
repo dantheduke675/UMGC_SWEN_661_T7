@@ -14,9 +14,7 @@ class MsgThreadScreen extends StatefulWidget {
 }
 
 class _MsgThreadScreenState extends State<MsgThreadScreen> {
-  late List<ChatMessage> _messages;
   final _controller = TextEditingController();
-  final _scrollController = ScrollController();
 
   static const _quickReplies = [
     'Thank you!',
@@ -28,28 +26,32 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
   @override
   void initState() {
     super.initState();
-    _messages = List.of(threadById(widget.threadId).messages);
+    // Opening the thread reads it — clear its unread flag so the messages
+    // list no longer shows the red unread indicator for it.
+    threadById(widget.threadId).unread = false;
   }
 
   @override
   void dispose() {
     _controller.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
   void _send(String text) {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+    // Mutates the shared Thread from data.dart, so the message persists for
+    // the app session even after leaving and re-entering this screen.
     setState(() {
-      _messages.add(ChatMessage(from: 'me', text: trimmed, time: 'Now'));
+      threadById(widget.threadId).messages.add(ChatMessage(from: 'me', text: trimmed, time: 'Now'));
     });
     _controller.clear();
     // Scroll to bottom after frame
+    final scrollController = context.read<ScrollController>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -60,6 +62,7 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme  = context.watch<ThemeNotifier>().scheme;
+    final scrollController = context.read<ScrollController>();
     final thread  = threadById(widget.threadId);
     final contact = contactById(thread.contactId);
 
@@ -76,11 +79,11 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
         // ── Message bubbles ──────────────────────────────────────────────────
         Expanded(
           child: ListView.builder(
-            controller: _scrollController,
+            controller: scrollController,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            itemCount: _messages.length,
+            itemCount: thread.messages.length,
             itemBuilder: (_, i) => _Bubble(
-              message: _messages[i],
+              message: thread.messages[i],
               scheme: scheme,
               contact: contact,
             ),

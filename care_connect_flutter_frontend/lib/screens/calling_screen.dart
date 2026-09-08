@@ -56,11 +56,11 @@ class _CallingScreenState extends State<CallingScreen>
     // Tick the on-screen timer every second
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_connected && mounted) {
-        final s = _stopwatch.elapsed.inSeconds;
+        final totalSeconds = _stopwatch.elapsed.inSeconds;
         setState(() {
-          final m = s ~/ 60;
-          final sec = (s % 60).toString().padLeft(2, '0');
-          _elapsed = '$m:$sec';
+          final minutes = totalSeconds ~/ 60;
+          final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+          _elapsed = '$minutes:$seconds';
         });
       }
     });

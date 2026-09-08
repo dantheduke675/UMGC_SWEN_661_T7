@@ -11,9 +11,11 @@ class AccountScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final notifier = context.watch<ThemeNotifier>();
-    final scheme   = notifier.scheme;
+    final scheme = notifier.scheme;
+    final scrollController = context.read<ScrollController>();
 
     return ListView(
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       children: [
         // ── Header ─────────────────────────────────────────────────────────
@@ -148,7 +150,7 @@ class _ProfileCard extends StatelessWidget {
                       style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2F7A6B))),
                 ),
                 const SizedBox(height: 6),
-                Text('maddy@example.com',
+                Text(patient.email,
                     style: TextStyle(fontSize: 13, color: scheme.sub)),
               ],
             ),
