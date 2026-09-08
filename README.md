@@ -21,47 +21,95 @@ git clone git@github.com:dantheduke675/UMGC_SWEN_661_T7.git
 ```
 From there navigate to the respective front end directory and run the correspond files below is a breakdown for each language in how to run and or build the respective frontend.
 
-### Flutter:
-WARNING for certain parts of running this application you may need to build with plugins in this case windows may yell at you because it limits the symlinks flutter typically uses to administrators by default to ensure that a smooth experience is had by all use 
-```
-start ms-settings:developers
-```
-This will bring you to the developer settings in windows and allow you to turn them on and off with a toggle. Ensure developer settings are turned on if you are using windows
+## Flutter:
+This is the flutter front end for the CareConnect application
 
-After cloning the repository down into your working directory move into the care_connect_flutter_frontend directory
-```
-cd ./care_connect_flutter_frontend
-```
-now that you are in the main flutter frontend directory there are a large amount of operations that could be performed if you wanted to simply run the application
-```
-flutter run
-```
-then selecting which mode is appropriate for you. Typically #2 Google Chrome is the recommended option.
+## Running the Application
 
-If you want to build an application you can use the commands 
+There are multiple ways to run the application first run
+
 ```
-flutter build apk
+flutter pub get
 ```
-to build an android apk of the CareConnect application. To build an IOS version of the application use
+
+this will make sure that all your application dependencies are up to date.
+
+Next use
+
 ```
-flutter build ios
+flutter run -d chrome
 ```
-When it comes to testing the application there are multiple ways to test the application. While in the care_connect_flutter_frontend directory you can run the full test suite with 
+
+to run the application in Google Chrome.
+
+## Building the application
+
+There are multiple ways to build the application first run
+
+```
+flutter pub get
+```
+
+this will make sure that all your application dependencies are up to date.
+
+Next use
+
+```
+flutter build
+```
+
+and select which type of application you wish to build.
+
+## Running Tests
+
+Run the full suite with:
+
 ```
 flutter test
 ```
-You can run the unit tests using 
+or all unit tests with 
 ```
 flutter test ./test/unit
 ```
-and the widget tests using 
+or all widget tests with 
 ```
-flutter test ./test/uwidget
+flutter test ./test/widget
 ```
-to run tests on a specific file you would use 
+or a single file with:
+
 ```
 flutter test <path to file>
 ```
+
+## Test Coverage Report
+
+`coverage/` is git-ignored, so there is no hosted report — generate one locally:
+
+```
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
+```
+
+Then open `coverage/html/index.html` in a browser (requires `lcov`/`genhtml` installed). As of 2026-09-08, overall line coverage is 96.0% (1,524 of 1,587 lines).
+
+## Troubleshooting
+
+On Windows, Flutter's build process relies on symlinks, which are restricted to administrators by default. If `flutter run`/`flutter build` fails with a symlink-related error, enable Developer Mode via:
+
+```
+start ms-settings:developers
+```
+This will open the developers setting screen in the windows settings and allow the user to turn on the developer settings
+
+Additionally, Flutter may give some warning when building the apk ios it should build; however, if you do not want the warnings you can use.
+```
+flutter build apk --enable-native-access=ALL-UNNAMED
+```
+
+## Known Issues / Limitations
+
+- No backend/API integration yet — all data is static/in-memory (see `lib/data.dart`).
+- No CI/CD pipeline; run `flutter test` and regenerate coverage locally before opening a PR.
 
 ### Electron:
 <TODO>
