@@ -36,7 +36,32 @@ now that you are in the main flutter frontend directory there are a large amount
 ```
 flutter run
 ```
-then selecting which mode is appropriate for you.
+then selecting which mode is appropriate for you. Typically #2 Google Chrome is the recommended option.
+
+If you want to build an application you can use the commands 
+```
+flutter build apk
+```
+to build an android apk of the CareConnect application. To build an IOS version of the application use
+```
+flutter build ios
+```
+When it comes to testing the application there are multiple ways to test the application. While in the care_connect_flutter_frontend directory you can run the full test suite with 
+```
+flutter test
+```
+You can run the unit tests using 
+```
+flutter test ./test/unit
+```
+and the widget tests using 
+```
+flutter test ./test/uwidget
+```
+to run tests on a specific file you would use 
+```
+flutter test <path to file>
+```
 
 ### Electron:
 <TODO>
