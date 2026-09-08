@@ -66,6 +66,7 @@ class _CallingScreenState extends State<CallingScreen>
     });
   }
 
+  //disposes of the animations when done
   @override
   void dispose() {
     _pulseCtrl.dispose();
@@ -74,6 +75,7 @@ class _CallingScreenState extends State<CallingScreen>
     super.dispose();
   }
 
+  //ends the call and navihates to the messages page 
   void _endCall() => context.go('/messages');
 
   @override

@@ -33,6 +33,7 @@ void main() {
   );
 }
 
+//this is all the page naviagtion between screens as well as building all the possible routes 
 final _router = GoRouter(
   initialLocation: '/landing',
   routes: [
@@ -63,6 +64,7 @@ final _router = GoRouter(
   ],
 );
 
+// this of course actually builds the care connect application
 class CareConnectApp extends StatelessWidget {
   const CareConnectApp({super.key});
 
@@ -147,6 +149,7 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
+//this builds the bottom navigation bar and allows for naviagtion between the pages 
 class _BottomNav extends StatelessWidget {
   final CScheme scheme;
   final int currentIdx;
@@ -206,6 +209,7 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
+//this is the bar on which the options for scrolling and other accesibility options sit and are built
 class _AccessBar extends StatelessWidget {
   final CScheme scheme;
   const _AccessBar({required this.scheme});
@@ -247,6 +251,7 @@ class _AccessBar extends StatelessWidget {
     );
   }
 
+  //this helps to build the scroll buttons and allows for the buttons to actually scroll on the application
   void _scroll(BuildContext context, double delta) {
     final ctrl = context.read<ScrollController>();
     if (!ctrl.hasClients) return;
@@ -258,6 +263,7 @@ class _AccessBar extends StatelessWidget {
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
+  //this is the button that allows for the user to access the application.
   Widget _accessBtn(BuildContext context, String icon, String label, CScheme scheme, {required VoidCallback onTap}) {
     return Expanded(
       child: GestureDetector(

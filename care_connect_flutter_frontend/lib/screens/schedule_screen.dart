@@ -16,6 +16,7 @@ class _Appt {
   });
 }
 
+//this is the static datat for the appointments and events taking place in the schedule
 const _appts = [
   _Appt(
     title: 'Dr. Chen — Follow-up',

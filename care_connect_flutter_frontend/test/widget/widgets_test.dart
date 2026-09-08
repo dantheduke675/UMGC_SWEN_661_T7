@@ -78,7 +78,7 @@ void main() {
   });
 
   // ── AuthBtn ──────────────────────────────────────────────────────────────────
-
+  //this series of tests test the general widgets and ensures they work correctly in this case buttons
   group('AuthBtn — primary variant', () {
     testWidgets('renders label text', (tester) async {
       await tester.pumpWidget(wrap(AuthBtn(label: 'Continue', onPressed: () {})));
@@ -141,7 +141,7 @@ void main() {
   });
 
   // ── AuthField ────────────────────────────────────────────────────────────────
-
+  //this series of tests test the general widgets and ensures they work correctly in this case textfields
   group('AuthField', () {
     testWidgets('renders label', (tester) async {
       await tester.pumpWidget(wrap(const AuthField(label: 'Email', value: '')));
@@ -183,7 +183,7 @@ void main() {
   });
 
   // ── AuthStatusRing ────────────────────────────────────────────────────────────
-
+ //this series of tests test the general widgets and ensures they work correctly in this case the animation rings
   group('AuthStatusRing', () {
     testWidgets('renders 👤 emoji', (tester) async {
       await tester.pumpWidget(wrap(const AuthStatusRing()));

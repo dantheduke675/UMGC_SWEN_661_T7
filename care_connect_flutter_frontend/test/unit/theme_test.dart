@@ -4,7 +4,9 @@ import 'package:care_connect_flutter_frontend/theme.dart';
 import '../helpers/test_helpers.dart';
 
 void main() {
-
+  //this is a series of unit tests testing the theme of the website specific values and how they respond to
+  //certain situations essentially test the theme.dart
+  //while also testing the light vs darkmode
   group('CTokens — dark palette', () {
     test('darkBg matches Figma dark background token', () {
       expect(CTokens.darkBg, const Color(0xFF0E131D));

@@ -6,7 +6,7 @@ import '../helpers/test_helpers.dart';
 
 void main() {
   // ── Content ──────────────────────────────────────────────────────────────────
-
+  //ensures that the application renders correctly
   group('BiometricsScreen — content', () {
     testWidgets('renders heading', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const BiometricsScreen()));
@@ -45,7 +45,7 @@ void main() {
   });
 
   // ── Navigation ───────────────────────────────────────────────────────────────
-
+  //ensures naviagtion works correctly
   group('BiometricsScreen — navigation', () {
     testWidgets('Yes, use Face ID navigates to /sign-in-bio', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const BiometricsScreen()));

@@ -13,6 +13,7 @@ class MsgThreadScreen extends StatefulWidget {
   State<MsgThreadScreen> createState() => _MsgThreadScreenState();
 }
 
+//the preset messages that exist in the messages thread screen
 class _MsgThreadScreenState extends State<MsgThreadScreen> {
   final _controller = TextEditingController();
 

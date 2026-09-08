@@ -8,6 +8,7 @@ import '../widgets.dart';
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
 
+  //the building of the actual landing screen 
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
@@ -16,6 +17,8 @@ class LandingScreen extends StatelessWidget {
     final horizontalPadding = isTablet ? 65.0 : 26.0;
     final verticalPadding = isTablet ? 140.0 : 50.0;
 
+    //this is the set up for the landing screen with the careconnect logo the two buttons allowing
+    //the user to sing in and create their account i.e. moving to the next possible screen
     return Scaffold(
       backgroundColor: scheme.bg,
       body: Stack(

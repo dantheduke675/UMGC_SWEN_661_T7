@@ -9,6 +9,7 @@ import '../widgets.dart';
 class SignInPassScreen extends StatelessWidget {
   const SignInPassScreen({super.key});
 
+  //builds the normal sign in screen that allows the user to use their password to sign in
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
@@ -17,6 +18,7 @@ class SignInPassScreen extends StatelessWidget {
     final topPadding = isTablet ? 110.0 : 50.0;
     final bottomPadding = isTablet ? 130.0 : 50.0;
 
+    //the user can go back to their landing screen 
     final fields = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -54,6 +56,7 @@ class SignInPassScreen extends StatelessWidget {
       ],
     );
 
+    // allows the user to sign in using their password or go to sign in using Face ID
     final actions = Column(
       children: [
         AuthBtn(

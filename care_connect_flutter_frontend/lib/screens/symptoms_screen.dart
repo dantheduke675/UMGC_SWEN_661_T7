@@ -133,6 +133,7 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
 
 // ── Log new symptom card ──────────────────────────────────────────────────────
 
+//essentially the questionaire for the care recipients symptoms
 class _LogCard extends StatelessWidget {
   final CScheme scheme;
   final bool expanded;
