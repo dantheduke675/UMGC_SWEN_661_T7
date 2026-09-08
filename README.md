@@ -115,10 +115,24 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 - No backend/API integration yet — all data is static/in-memory (see `lib/data.dart`).
 - No CI/CD pipeline; run `flutter test` and regenerate coverage locally before opening a PR.
 
+
 # Electron:
 <TODO>
 
 # React:
+<TODO>
+
+# Weekly Contributions
+## Daniel
+Worked to build out majority of the testing Suite
+Designed the landing, create account, sign in screens, and biometric face id screens
+Contributed alot of comments 
+Worked on the README
+
+##Justin
+<TODO>
+
+##Ashvini
 <TODO>
 
 ### AI Disclosure: The code in this project was written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
