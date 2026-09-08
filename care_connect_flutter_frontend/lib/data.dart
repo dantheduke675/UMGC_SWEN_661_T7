@@ -29,14 +29,17 @@ class ChatMessage {
 
 class Thread {
   final int id, contactId;
-  final bool unread;
+  // Mutable so opening the thread can clear it, and messages can persist
+  // in-memory for the app session, even after leaving and re-entering the
+  // thread screen.
+  bool unread;
   final List<ChatMessage> messages;
-  const Thread({required this.id, required this.contactId, required this.unread, required this.messages});
+  Thread({required this.id, required this.contactId, required this.unread, required this.messages});
 }
 
 // ── Static data ───────────────────────────────────────────────────────────────
 
-const patient = (name: 'Maddy', full: 'Madison Hughes', initials: 'MH');
+const patient = (name: 'Maddy', full: 'Madison Hughes', initials: 'MH', email: 'maddy@example.com');
 
 const contacts = [
   Contact(id: 1, name: 'Aunt Joyce',     role: 'Caregiver',  initials: 'AJ', color: 0xFF6366F1),
@@ -58,7 +61,18 @@ List<MedSlot> buildSlots() => [
       MedSlot(med: m, time: m.times[i], key: '${m.id}-$i'),
 ];
 
-const threads = [
+// ── Shared dose status ───────────────────────────────────────────────────────
+// Keyed by MedSlot.key. Shared (not per-screen) so marking a dose taken/missed
+// on the Today screen or the Medications screen stays in sync on both.
+
+enum SlotStatus { none, taken, missed }
+
+final Map<String, SlotStatus> slotStatuses = {
+  '1-0': SlotStatus.taken,
+  '3-0': SlotStatus.taken,
+};
+
+final threads = [
   Thread(id: 1, contactId: 1, unread: true, messages: [
     ChatMessage(from: 'them', text: 'Hi Maddy, did you take your morning medications?',    time: '9:02 AM'),
     ChatMessage(from: 'me',   text: 'Yes! Just finished breakfast too.',                   time: '9:15 AM'),

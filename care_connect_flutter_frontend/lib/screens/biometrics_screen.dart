@@ -11,9 +11,9 @@ class BiometricsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
     final isTablet = MediaQuery.of(context).size.width >= 700;
-    final px = isTablet ? 65.0 : 26.0;
-    final pt = isTablet ? 110.0 : 60.0;
-    final pb = isTablet ? 130.0 : 50.0;
+    final horizontalPadding = isTablet ? 65.0 : 26.0;
+    final topPadding = isTablet ? 110.0 : 60.0;
+    final bottomPadding = isTablet ? 130.0 : 50.0;
 
     final content = Column(
       children: [
@@ -55,18 +55,12 @@ class BiometricsScreen extends StatelessWidget {
         children: [
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(px, pt, px, pb),
-              child: isTablet
-                  ? SingleChildScrollView(
-                      child: Column(
-                        children: [content, const SizedBox(height: 24), actions],
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      child: Column(
-                        children: [content, const SizedBox(height: 24), actions],
-                      ),
-                    ),
+              padding: EdgeInsets.fromLTRB(horizontalPadding, topPadding, horizontalPadding, bottomPadding),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [content, const SizedBox(height: 24), actions],
+                ),
+              ),
             ),
           ),
           const ThemeToggleBtn(),

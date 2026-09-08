@@ -11,9 +11,9 @@ class CreateAccountScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
     final isTablet = MediaQuery.of(context).size.width >= 700;
-    final px = isTablet ? 65.0 : 26.0;
-    final pt = isTablet ? 110.0 : 16.0;
-    final pb = isTablet ? 130.0 : 24.0;
+    final horizontalPadding = isTablet ? 65.0 : 26.0;
+    final topPadding = isTablet ? 110.0 : 16.0;
+    final bottomPadding = isTablet ? 130.0 : 24.0;
 
     final topSection = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,7 +57,7 @@ class CreateAccountScreen extends StatelessWidget {
         children: [
           SafeArea(
             child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(px, pt, px, pb),
+              padding: EdgeInsets.fromLTRB(horizontalPadding, topPadding, horizontalPadding, bottomPadding),
               child: isTablet
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'action_history.dart';
 import 'theme.dart';
 import 'screens/landing_screen.dart';
 import 'screens/create_account_screen.dart';
@@ -68,13 +69,16 @@ class CareConnectApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeNotifier = context.watch<ThemeNotifier>();
-    return MaterialApp.router(
-      title: 'CareConnect',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(false),
-      darkTheme: buildTheme(true),
-      themeMode: themeNotifier.isDark ? ThemeMode.dark : ThemeMode.light,
-      routerConfig: _router,
+    return ChangeNotifierProvider<ActionHistory>(
+      create: (_) => ActionHistory(),
+      child: MaterialApp.router(
+        title: 'CareConnect',
+        debugShowCheckedModeBanner: false,
+        theme: buildTheme(false),
+        darkTheme: buildTheme(true),
+        themeMode: themeNotifier.isDark ? ThemeMode.dark : ThemeMode.light,
+        routerConfig: _router,
+      ),
     );
   }
 }
@@ -92,34 +96,52 @@ const _navItems = [
 
 // ── App shell with adaptive bottom nav ─────────────────────────────────────────
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   final Widget child;
   const AppShell({super.key, required this.child});
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
     final location = GoRouterState.of(context).matchedLocation;
-    final isThread   = location.startsWith('/messages/');
     final isCalling  = location.startsWith('/calling/');
-    final isFullScreen = isThread || isCalling;
+    final isFullScreen = isCalling;
     final currentIdx = _navItems.indexWhere((n) => location.startsWith(n.path));
 
-    return Scaffold(
-      backgroundColor: scheme.bg,
-      body: child,
-      bottomNavigationBar: isFullScreen ? null : Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Accessibility bar
-          _AccessBar(scheme: scheme),
-          // Bottom nav
-          _BottomNav(
-            scheme: scheme,
-            currentIdx: currentIdx < 0 ? 0 : currentIdx,
-            onTap: (i) => context.go(_navItems[i].path),
-          ),
-        ],
+    // A plain Provider (not PrimaryScrollController) so each nested route's
+    // own ModalRoute-provided PrimaryScrollController can't shadow it - tab
+    // screens read this directly and pass it to their top-level ListView.
+    return ChangeNotifierProvider<ScrollController>.value(
+      value: _scrollController,
+      child: Scaffold(
+        backgroundColor: scheme.bg,
+        body: widget.child,
+        bottomNavigationBar: isFullScreen ? null : Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Accessibility bar
+            _AccessBar(scheme: scheme),
+            // Bottom nav
+            _BottomNav(
+              scheme: scheme,
+              currentIdx: currentIdx < 0 ? 0 : currentIdx,
+              onTap: (i) => context.go(_navItems[i].path),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -226,8 +248,8 @@ class _AccessBar extends StatelessWidget {
   }
 
   void _scroll(BuildContext context, double delta) {
-    final ctrl = PrimaryScrollController.maybeOf(context);
-    if (ctrl == null || !ctrl.hasClients) return;
+    final ctrl = context.read<ScrollController>();
+    if (!ctrl.hasClients) return;
     final target = (ctrl.offset + delta).clamp(
       ctrl.position.minScrollExtent,
       ctrl.position.maxScrollExtent,

@@ -74,17 +74,13 @@ void main() {
       expect(find.text('stub:today'), findsOneWidget);
     });
 
-    testWidgets('Use Face ID instead is not yet wired to navigation', (tester) async {
-      // AuthBtn(onPressed: null) — this link has no navigation assigned yet
-      // (see the TODO comment in sign_in_pass_screen.dart), so tapping it
-      // is a no-op and the screen stays put.
+    testWidgets('Use Face ID instead navigates to sign-in-bio', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const SignInPassScreen()));
       final btn = find.text('Use Face ID instead');
       await tester.ensureVisible(btn);
       await tester.tap(btn);
       await tester.pumpAndSettle();
-      expect(find.text('Use Face ID instead'), findsOneWidget);
-      expect(find.text('stub:sign-in-bio'), findsNothing);
+      expect(find.text('stub:sign-in-bio'), findsOneWidget);
     });
   });
 

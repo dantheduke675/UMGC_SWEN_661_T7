@@ -11,8 +11,10 @@ class MessagesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
+    final scrollController = context.read<ScrollController>();
 
     return ListView(
+      controller: scrollController,
       padding: EdgeInsets.zero,
       children: [
         // Header
