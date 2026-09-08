@@ -124,10 +124,12 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 
 # Weekly Contributions
 ## Daniel
-Worked to build out majority of the testing Suite
-Designed the landing, create account, sign in screens, and biometric face id screens
-Contributed alot of comments 
-Worked on the README
+- Worked to build out majority of the testing Suite
+- Designed the landing, create account, sign in screens, and biometric face id screens
+- Contributed alot of comments 
+- Worked on the README
+- Took the screenshots in the screenshots document
+- Built the application
 
 ## Justin
 <TODO>
