@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../action_history.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -49,17 +50,26 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
     if (_selectedSymptom == null) return;
     final opt = _symptomOptions.firstWhere((o) => o.label == _selectedSymptom);
     final now = DateTime.now();
+    final entry = _SymptomLog(
+      name: _selectedSymptom!,
+      time: 'Today · ${_formatTime(now)}',
+      severity: _severity,
+      emoji: opt.emoji,
+    );
     setState(() {
-      _logs.insert(0, _SymptomLog(
-        name: _selectedSymptom!,
-        time: 'Today · ${_formatTime(now)}',
-        severity: _severity,
-        emoji: opt.emoji,
-      ));
+      _logs.insert(0, entry);
       _selectedSymptom = null;
       _severity = 3;
       _showLogger = false;
     });
+    context.read<ActionHistory>().push(
+      'Logged ${entry.name} (severity ${entry.severity}/5)',
+      // No setState here: this undo can also be triggered from another
+      // tab's undo button, after this screen (and its State) is gone.
+      // ActionHistory.notifyListeners() plus the context.watch below is
+      // what refreshes this screen's list when it's still around.
+      () => _logs.remove(entry),
+    );
   }
 
   String _formatTime(DateTime d) {
@@ -71,40 +81,51 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
+    final scrollController = context.read<ScrollController>();
+    // Rebuild whenever an action is pushed/undone (from this screen or any
+    // other tab) so a symptom log undone via the shared undo button
+    // disappears from this list too.
+    context.watch<ActionHistory>();
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+    return Stack(
       children: [
-        // ── Header ─────────────────────────────────────────────────────────
-        Text('Symptoms',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.text)),
-        const SizedBox(height: 2),
-        Text('Track how you feel throughout the day',
-            style: TextStyle(fontSize: 13, color: scheme.sub)),
-        const SizedBox(height: 20),
+        ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          children: [
+            // ── Header ─────────────────────────────────────────────────────
+            Text('Symptoms',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.text)),
+            const SizedBox(height: 2),
+            Text('Track how you feel throughout the day',
+                style: TextStyle(fontSize: 13, color: scheme.sub)),
+            const SizedBox(height: 20),
 
-        // ── Log new symptom card ────────────────────────────────────────────
-        _LogCard(
-          scheme: scheme,
-          expanded: _showLogger,
-          selected: _selectedSymptom,
-          severity: _severity,
-          onToggle: () => setState(() => _showLogger = !_showLogger),
-          onSelect: (s) => setState(() => _selectedSymptom = s),
-          onSeverityChange: (v) => setState(() => _severity = v),
-          onSubmit: _logSymptom,
+            // ── Log new symptom card ──────────────────────────────────────
+            _LogCard(
+              scheme: scheme,
+              expanded: _showLogger,
+              selected: _selectedSymptom,
+              severity: _severity,
+              onToggle: () => setState(() => _showLogger = !_showLogger),
+              onSelect: (s) => setState(() => _selectedSymptom = s),
+              onSeverityChange: (v) => setState(() => _severity = v),
+              onSubmit: _logSymptom,
+            ),
+            const SizedBox(height: 20),
+
+            // ── Recent logs ───────────────────────────────────────────────
+            Text('Recent logs',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text)),
+            const SizedBox(height: 10),
+
+            ..._logs.map((log) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _LogTile(log: log, scheme: scheme),
+            )),
+          ],
         ),
-        const SizedBox(height: 20),
-
-        // ── Recent logs ─────────────────────────────────────────────────────
-        Text('Recent logs',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text)),
-        const SizedBox(height: 10),
-
-        ..._logs.map((log) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _LogTile(log: log, scheme: scheme),
-        )),
+        const UndoFab(),
       ],
     );
   }
@@ -112,6 +133,7 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
 
 // ── Log new symptom card ──────────────────────────────────────────────────────
 
+//essentially the questionaire for the care recipients symptoms
 class _LogCard extends StatelessWidget {
   final CScheme scheme;
   final bool expanded;

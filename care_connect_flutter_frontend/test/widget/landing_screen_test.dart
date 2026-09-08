@@ -7,6 +7,7 @@ import '../helpers/test_helpers.dart';
 void main() {
 
   group('LandingScreen — content', () {
+    //makes sure that the application renders its various widgets and components
     testWidgets('renders app name', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const LandingScreen()));
       expect(find.text('CareConnect'), findsOneWidget);
@@ -27,6 +28,7 @@ void main() {
       expect(find.text('Sign in'), findsOneWidget);
     });
 
+    //tests to make sure the widgets renders and logos work in the various different modes 
     testWidgets('renders pill emoji in logo', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const LandingScreen()));
       expect(find.text('💊'), findsOneWidget);
@@ -59,6 +61,7 @@ void main() {
     });
   });
 
+  //this section of tests tests the themeing of the appication and the light vs dark mode 
   group('LandingScreen — theming', () {
     testWidgets('Scaffold background is dark bg in dark mode', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const LandingScreen(), isDark: true));

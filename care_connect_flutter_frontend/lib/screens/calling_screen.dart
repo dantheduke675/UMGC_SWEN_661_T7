@@ -56,16 +56,17 @@ class _CallingScreenState extends State<CallingScreen>
     // Tick the on-screen timer every second
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_connected && mounted) {
-        final s = _stopwatch.elapsed.inSeconds;
+        final totalSeconds = _stopwatch.elapsed.inSeconds;
         setState(() {
-          final m = s ~/ 60;
-          final sec = (s % 60).toString().padLeft(2, '0');
-          _elapsed = '$m:$sec';
+          final minutes = totalSeconds ~/ 60;
+          final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+          _elapsed = '$minutes:$seconds';
         });
       }
     });
   }
 
+  //disposes of the animations when done
   @override
   void dispose() {
     _pulseCtrl.dispose();
@@ -74,6 +75,7 @@ class _CallingScreenState extends State<CallingScreen>
     super.dispose();
   }
 
+  //ends the call and navihates to the messages page 
   void _endCall() => context.go('/messages');
 
   @override

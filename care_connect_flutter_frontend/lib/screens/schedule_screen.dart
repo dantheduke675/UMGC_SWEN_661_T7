@@ -16,6 +16,7 @@ class _Appt {
   });
 }
 
+//this is the static datat for the appointments and events taking place in the schedule
 const _appts = [
   _Appt(
     title: 'Dr. Chen — Follow-up',
@@ -69,10 +70,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
+    final scrollController = context.read<ScrollController>();
     final now    = DateTime.now();
     final filtered = _appts.where((a) => a.dayOffset == _selectedDay).toList();
 
     return ListView(
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(0, 20, 0, 24),
       children: [
         // ── Header ─────────────────────────────────────────────────────────

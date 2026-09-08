@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:care_connect_flutter_frontend/action_history.dart';
 import 'package:care_connect_flutter_frontend/theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -43,11 +44,22 @@ Widget buildTestApp({
 
   return ChangeNotifierProvider<ThemeNotifier>.value(
     value: notifier,
-    child: MaterialApp.router(
-      routerConfig: router,
-      theme: buildTheme(false),
-      darkTheme: buildTheme(true),
-      themeMode: notifier.isDark ? ThemeMode.dark : ThemeMode.light,
+    child: ChangeNotifierProvider<ScrollController>(
+      // The real AppShell provides this to every tab screen so the
+      // accessibility bar's scroll up/down buttons can drive the screen's
+      // ListView; screens read it via `context.read<ScrollController>()`.
+      create: (_) => ScrollController(),
+      child: ChangeNotifierProvider<ActionHistory>(
+        // The real CareConnectApp provides this app-wide so the persistent
+        // undo button (see UndoFab) works from any screen.
+        create: (_) => ActionHistory(),
+        child: MaterialApp.router(
+          routerConfig: router,
+          theme: buildTheme(false),
+          darkTheme: buildTheme(true),
+          themeMode: notifier.isDark ? ThemeMode.dark : ThemeMode.light,
+        ),
+      ),
     ),
   );
 }
