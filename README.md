@@ -22,7 +22,7 @@ git clone git@github.com:dantheduke675/UMGC_SWEN_661_T7.git
 From there navigate to the respective front end directory and run the correspond files below is a breakdown for each language in how to run and or build the respective frontend.
 
 # Flutter:
-##Navigatio
+## Navigation
 First when in the home directory navigate to the main flutter front end using the
 ```
 cd ./care_connect_flutter_frontend
