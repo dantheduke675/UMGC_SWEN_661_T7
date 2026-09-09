@@ -5,6 +5,7 @@ import 'package:care_connect_flutter_frontend/main.dart';
 import 'package:care_connect_flutter_frontend/theme.dart';
 import 'package:care_connect_flutter_frontend/widgets.dart';
 
+//tests ensuring that the access bar scroll buttons work
 void main() {
   testWidgets('scroll down button in access bar actually scrolls the tab content', (tester) async {
     tester.view.physicalSize = const Size(800, 800);

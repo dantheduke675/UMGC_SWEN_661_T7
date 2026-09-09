@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 // floating button (see UndoFab in widgets.dart) lets the user browse and
 // undo individually, in any order, with no time limit.
 
+//essentially whenever an action can be undone it gets added to an undo list
 class UndoableAction {
   final int id;
   final String description;
@@ -20,6 +21,7 @@ class UndoableAction {
   });
 }
 
+//pushes an undoable action to the list and then allows for the user to undo that action whenever they want
 class ActionHistory extends ChangeNotifier {
   final List<UndoableAction> _actions = [];
   int _nextId = 0;

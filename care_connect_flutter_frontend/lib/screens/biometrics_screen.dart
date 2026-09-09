@@ -7,6 +7,7 @@ import '../widgets.dart';
 class BiometricsScreen extends StatelessWidget {
   const BiometricsScreen({super.key});
 
+  //the building of the actual biometrics screen
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
@@ -41,6 +42,7 @@ class BiometricsScreen extends StatelessWidget {
       ],
     );
 
+    //the list of actions being built into the buttons with the application
     final actions = Column(
       children: [
         AuthBtn(label: 'Yes, use Face ID', lg: isTablet, onPressed: () => context.go('/sign-in-bio')),

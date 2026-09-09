@@ -5,6 +5,7 @@ import 'theme.dart';
 
 // ── Auth shared widgets ─────────────────────────────────────────────────────────
 
+//the careconnect logo
 class AuthLogo extends StatelessWidget {
   final bool lg;
   const AuthLogo({super.key, this.lg = false});
@@ -21,6 +22,7 @@ class AuthLogo extends StatelessWidget {
   }
 }
 
+//smaller version of the logo
 class AuthLogoSmall extends StatelessWidget {
   final bool lg;
   const AuthLogoSmall({super.key, this.lg = false});
@@ -36,6 +38,7 @@ class AuthLogoSmall extends StatelessWidget {
   }
 }
 
+//the typical button created and built out for the application and for specific circumstances
 class AuthBtn extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -96,6 +99,7 @@ class AuthBtn extends StatelessWidget {
   }
 }
 
+//the auhtorization access text fields
 class AuthField extends StatelessWidget {
   final String label;
   final String value;
@@ -181,6 +185,7 @@ class AuthSpinner extends StatefulWidget {
   State<AuthSpinner> createState() => _AuthSpinnerState();
 }
 
+//the spinning anitmation seene when used by the biometrics screen
 class _AuthSpinnerState extends State<AuthSpinner> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
@@ -220,6 +225,7 @@ class _AuthSpinnerState extends State<AuthSpinner> with SingleTickerProviderStat
   }
 }
 
+//determines the roll in this application though you can only be the care recipient
 class AuthRoleTile extends StatelessWidget {
   final String role; // 'recipient' | 'caregiver'
   final VoidCallback? onPressed;
@@ -252,6 +258,7 @@ class AuthRoleTile extends StatelessWidget {
 
 // ── App shared widgets ──────────────────────────────────────────────────────────
 
+//avatar logo that appears representing the user
 class CAvatarBadge extends StatelessWidget {
   final String initials;
   final Color color;
@@ -292,6 +299,7 @@ class CChip extends StatelessWidget {
   }
 }
 
+//this is the coloring for symptom severity and the bar of how bad the symtpom is
 class CSeverityBar extends StatelessWidget {
   final int level;
   const CSeverityBar({super.key, required this.level});
@@ -413,6 +421,7 @@ class UndoFab extends StatelessWidget {
   }
 }
 
+//when the undo button is clicked it builds this sheet which allows for 
 class _UndoSheet extends StatelessWidget {
   final CScheme scheme;
   const _UndoSheet({required this.scheme});

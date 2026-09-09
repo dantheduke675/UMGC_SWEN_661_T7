@@ -71,6 +71,11 @@ On Windows, Flutter's build process relies on symlinks, which are restricted to 
 start ms-settings:developers
 ```
 
+Additionally, Flutter may give some warning when building the apk ios it should build; however, if you do not want the warnings you can use.
+```
+flutter build apk --enable-native-access=ALL-UNNAMED
+```
+
 ## Known Issues / Limitations
 
 - No backend/API integration yet — all data is static/in-memory (see `lib/data.dart`).

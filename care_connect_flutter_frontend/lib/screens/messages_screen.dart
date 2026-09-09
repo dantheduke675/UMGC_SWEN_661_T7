@@ -8,6 +8,8 @@ import '../widgets.dart';
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
 
+  //the building of the messages screen widget including the people their names
+  // and the last thing said in the conversation
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;

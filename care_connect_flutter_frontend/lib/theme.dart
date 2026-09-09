@@ -34,6 +34,7 @@ class CTokens {
   static const lightLink     = Color(0xFF2F7A6B);
 }
 
+//this enables the changing of the theme between light and dark mode
 class CScheme {
   final Color bg, surface, surface2, border, inputBorder;
   final Color text, sub, muted, link, primary;

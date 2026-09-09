@@ -7,6 +7,7 @@ import '../widgets.dart';
 class CreateAccountScreen extends StatelessWidget {
   const CreateAccountScreen({super.key});
 
+  //the building of the creating account screen
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
@@ -15,6 +16,7 @@ class CreateAccountScreen extends StatelessWidget {
     final topPadding = isTablet ? 110.0 : 16.0;
     final bottomPadding = isTablet ? 130.0 : 24.0;
 
+    //the initalization of the values in the buttons and the text fields
     final topSection = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -43,6 +45,7 @@ class CreateAccountScreen extends StatelessWidget {
       ],
     );
 
+    //creating the authrole tiles/ button so the user cna choose what user type they are
     final roleTiles = Column(
       children: [
         AuthRoleTile(role: 'recipient', lg: isTablet, onPressed: () => context.go('/biometrics')),
@@ -51,6 +54,7 @@ class CreateAccountScreen extends StatelessWidget {
       ],
     );
 
+    //returning the buttons and the value assigned to them and the user
     return Scaffold(
       backgroundColor: scheme.bg,
       body: Stack(
