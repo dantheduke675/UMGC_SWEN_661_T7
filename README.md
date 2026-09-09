@@ -70,6 +70,7 @@ If you were on a device that used MacOS you could build an IOS application using
 ```
 flutter build ios
 ```
+to install the android version of the application you can drag and drop it into an android studio emulator or run/build it while connected to an android device
 
 ## Running Tests
 
