@@ -1,51 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../action_history.dart';
 import '../data.dart';
 import '../theme.dart';
+import '../widgets.dart';
 
-class TodayScreen extends StatefulWidget {
+class TodayScreen extends StatelessWidget {
   const TodayScreen({super.key});
 
-  @override
-  State<TodayScreen> createState() => _TodayScreenState();
-}
+  // Same full slot list as the Medications screen, so the two stay in sync.
+  List<MedSlot> get _slots => buildSlots();
 
-class _TodayScreenState extends State<TodayScreen> {
-  // Initial taken state: slot keys '1-0' and '3-0' pre-taken
-  final Map<String, bool> _taken = {'1-0': true, '3-0': true};
-  final List<_Toast> _toasts = [];
-  int _toastCounter = 0;
-
-  List<MedSlot> get _slots => buildSlots().take(4).toList(); // show first 4 on today
-
-  void _markTaken(String key) {
-    final wasUntaken = !(_taken[key] ?? false);
-    if (!wasUntaken) return;
-    setState(() => _taken[key] = true);
-    _addToast('Marked as taken', () => setState(() => _taken.remove(key)));
+  void _markTaken(BuildContext context, MedSlot slot) {
+    final prev = slotStatuses[slot.key] ?? SlotStatus.none;
+    if (prev == SlotStatus.taken) return;
+    slotStatuses[slot.key] = SlotStatus.taken;
+    context.read<ActionHistory>().push(
+      'Marked ${slot.med.name} (${slot.time}) as taken',
+      () => slotStatuses[slot.key] = prev,
+    );
   }
 
-  void _addToast(String msg, VoidCallback undo) {
-    final id = ++_toastCounter;
-    setState(() => _toasts.add(_Toast(id: id, msg: msg, undo: undo)));
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) setState(() => _toasts.removeWhere((t) => t.id == id));
-    });
+  void _unmarkTaken(BuildContext context, MedSlot slot) {
+    if ((slotStatuses[slot.key] ?? SlotStatus.none) != SlotStatus.taken) return;
+    slotStatuses[slot.key] = SlotStatus.none;
+    context.read<ActionHistory>().push(
+      'Unmarked ${slot.med.name} (${slot.time}) as taken',
+      () => slotStatuses[slot.key] = SlotStatus.taken,
+    );
   }
 
-  void _dismissToast(int id) => setState(() => _toasts.removeWhere((t) => t.id == id));
+  String _formatDate(DateTime d) {
+    const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return '${days[d.weekday % 7]}, ${months[d.month - 1]} ${d.day}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
+    final scrollController = context.read<ScrollController>();
+    // Rebuild whenever an action is pushed/undone (from this screen or
+    // Medications) so slotStatuses is always shown up to date here too.
+    context.watch<ActionHistory>();
     final now = DateTime.now();
-    final taken  = _taken.values.where((v) => v).length;
-    final total  = buildSlots().length; // full day total for progress
+    final taken  = slotStatuses.values.where((s) => s == SlotStatus.taken).length;
+    final total  = _slots.length;
     final pct    = total > 0 ? (taken / total * 100).round() : 0;
 
     return Stack(
       children: [
         ListView(
+          controller: scrollController,
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
           children: [
             // ── Date + greeting ──────────────────────────────────────────────
@@ -78,36 +84,18 @@ class _TodayScreenState extends State<TodayScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: _MedCard(
                 slot: slot,
-                isTaken: _taken[slot.key] ?? false,
+                isTaken: (slotStatuses[slot.key] ?? SlotStatus.none) == SlotStatus.taken,
                 scheme: scheme,
-                onTake: () => _markTaken(slot.key),
+                onTake: () => _markTaken(context, slot),
+                onUntake: () => _unmarkTaken(context, slot),
               ),
             )),
           ],
         ),
 
-        // ── Undo toasts ──────────────────────────────────────────────────────
-        if (_toasts.isNotEmpty)
-          Positioned(
-            bottom: 16, left: 20, right: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: _toasts.map((t) => _UndoToast(
-                toast: t,
-                scheme: scheme,
-                onUndo: () { t.undo(); _dismissToast(t.id); },
-                onDismiss: () => _dismissToast(t.id),
-              )).toList(),
-            ),
-          ),
+        const UndoFab(),
       ],
     );
-  }
-
-  String _formatDate(DateTime d) {
-    const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-    return '${days[d.weekday % 7]}, ${months[d.month - 1]} ${d.day}';
   }
 }
 
@@ -225,11 +213,11 @@ class _MedCard extends StatelessWidget {
   final MedSlot slot;
   final bool isTaken;
   final CScheme scheme;
-  final VoidCallback onTake;
+  final VoidCallback onTake, onUntake;
 
   const _MedCard({
     required this.slot, required this.isTaken,
-    required this.scheme, required this.onTake,
+    required this.scheme, required this.onTake, required this.onUntake,
   });
 
   @override
@@ -286,9 +274,9 @@ class _MedCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          // Take button
+          // Take / undo-take button
           GestureDetector(
-            onTap: isTaken ? null : onTake,
+            onTap: isTaken ? onUntake : onTake,
             child: Container(
               width: double.infinity, height: 52,
               decoration: BoxDecoration(
@@ -299,7 +287,7 @@ class _MedCard extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  isTaken ? '✓ Taken' : 'I took this',
+                  isTaken ? '✓ Taken — tap to undo' : 'I took this',
                   style: TextStyle(
                     fontSize: 15, fontWeight: FontWeight.w700,
                     color: isTaken ? scheme.primary : Colors.white,
@@ -325,56 +313,5 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(text,
         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text));
-  }
-}
-
-// ── Toast model ───────────────────────────────────────────────────────────────
-
-class _Toast {
-  final int id;
-  final String msg;
-  final VoidCallback undo;
-  const _Toast({required this.id, required this.msg, required this.undo});
-}
-
-// ── Undo toast widget ─────────────────────────────────────────────────────────
-
-class _UndoToast extends StatelessWidget {
-  final _Toast toast;
-  final CScheme scheme;
-  final VoidCallback onUndo, onDismiss;
-  const _UndoToast({required this.toast, required this.scheme, required this.onUndo, required this.onDismiss});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1D2534),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(toast.msg,
-              style: const TextStyle(color: Color(0xFFF5F7FA), fontWeight: FontWeight.w600, fontSize: 15)),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: onUndo,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF357C6F),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text('Undo',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

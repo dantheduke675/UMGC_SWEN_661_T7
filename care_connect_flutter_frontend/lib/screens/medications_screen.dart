@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../action_history.dart';
 import '../data.dart';
 import '../theme.dart';
 import '../widgets.dart';
-
-// ── Medication slot status ────────────────────────────────────────────────────
-
-enum SlotStatus { none, taken, missed }
 
 class MedicationsScreen extends StatefulWidget {
   const MedicationsScreen({super.key});
@@ -16,52 +13,57 @@ class MedicationsScreen extends StatefulWidget {
 }
 
 class _MedicationsScreenState extends State<MedicationsScreen> {
-  final Map<String, SlotStatus> _status = {
-    '1-0': SlotStatus.taken,
-    '3-0': SlotStatus.taken,
-  };
   String? _pendingMissedKey; // key awaiting confirm dialog
-  final List<_Toast> _toasts = [];
-  int _toastId = 0;
 
   List<MedSlot> get _slots => buildSlots();
 
-  void _markTaken(String key) {
-    final prev = _status[key] ?? SlotStatus.none;
-    setState(() => _status[key] = SlotStatus.taken);
-    _addToast('Marked as taken', () => setState(() => _status[key] = prev));
+  void _markTaken(MedSlot slot) {
+    final prev = slotStatuses[slot.key] ?? SlotStatus.none;
+    if (prev == SlotStatus.taken) return;
+    slotStatuses[slot.key] = SlotStatus.taken;
+    context.read<ActionHistory>().push(
+      'Marked ${slot.med.name} (${slot.time}) as taken',
+      () => slotStatuses[slot.key] = prev,
+    );
+  }
+
+  void _unmarkTaken(MedSlot slot) {
+    if ((slotStatuses[slot.key] ?? SlotStatus.none) != SlotStatus.taken) return;
+    slotStatuses[slot.key] = SlotStatus.none;
+    context.read<ActionHistory>().push(
+      'Unmarked ${slot.med.name} (${slot.time}) as taken',
+      () => slotStatuses[slot.key] = SlotStatus.taken,
+    );
   }
 
   void _confirmMissed(String key) => setState(() => _pendingMissedKey = key);
 
-  void _markMissed(String key) {
-    final prev = _status[key] ?? SlotStatus.none;
+  void _markMissed(MedSlot slot) {
+    final prev = slotStatuses[slot.key] ?? SlotStatus.none;
     setState(() {
-      _status[key] = SlotStatus.missed;
+      slotStatuses[slot.key] = SlotStatus.missed;
       _pendingMissedKey = null;
     });
-    _addToast('Marked as missed', () => setState(() => _status[key] = prev));
+    context.read<ActionHistory>().push(
+      'Marked ${slot.med.name} (${slot.time}) as missed',
+      () => slotStatuses[slot.key] = prev,
+    );
   }
-
-  void _addToast(String msg, VoidCallback undo) {
-    final id = ++_toastId;
-    setState(() => _toasts.add(_Toast(id: id, msg: msg, undo: undo)));
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) setState(() => _toasts.removeWhere((t) => t.id == id));
-    });
-  }
-
-  void _dismissToast(int id) => setState(() => _toasts.removeWhere((t) => t.id == id));
 
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
-    final takenCount  = _status.values.where((s) => s == SlotStatus.taken).length;
-    final missedCount = _status.values.where((s) => s == SlotStatus.missed).length;
+    final scrollController = context.read<ScrollController>();
+    // Rebuild whenever an action is pushed/undone (from this screen or
+    // Today) so slotStatuses is always shown up to date here too.
+    context.watch<ActionHistory>();
+    final takenCount  = slotStatuses.values.where((s) => s == SlotStatus.taken).length;
+    final missedCount = slotStatuses.values.where((s) => s == SlotStatus.missed).length;
 
     return Stack(
       children: [
         ListView(
+          controller: scrollController,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
             // ── Header ───────────────────────────────────────────────────────
@@ -82,14 +84,15 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
 
             // ── Medication cards ─────────────────────────────────────────────
             ..._slots.map((slot) {
-              final status = _status[slot.key] ?? SlotStatus.none;
+              final status = slotStatuses[slot.key] ?? SlotStatus.none;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _MedCard(
                   slot: slot,
                   status: status,
                   scheme: scheme,
-                  onTake:   () => _markTaken(slot.key),
+                  onTake:   () => _markTaken(slot),
+                  onUntake: () => _unmarkTaken(slot),
                   onMissed: () => _confirmMissed(slot.key),
                 ),
               );
@@ -101,24 +104,11 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
         if (_pendingMissedKey != null)
           _ConfirmDialog(
             scheme: scheme,
-            onConfirm: () => _markMissed(_pendingMissedKey!),
+            onConfirm: () => _markMissed(_slots.firstWhere((s) => s.key == _pendingMissedKey)),
             onCancel:  () => setState(() => _pendingMissedKey = null),
           ),
 
-        // ── Undo toasts ──────────────────────────────────────────────────────
-        if (_toasts.isNotEmpty)
-          Positioned(
-            bottom: 16, left: 20, right: 20,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: _toasts.map((t) => _UndoToast(
-                toast: t,
-                scheme: scheme,
-                onUndo: () { t.undo(); _dismissToast(t.id); },
-                onDismiss: () => _dismissToast(t.id),
-              )).toList(),
-            ),
-          ),
+        const UndoFab(),
       ],
     );
   }
@@ -180,11 +170,11 @@ class _MedCard extends StatelessWidget {
   final MedSlot slot;
   final SlotStatus status;
   final CScheme scheme;
-  final VoidCallback onTake, onMissed;
+  final VoidCallback onTake, onUntake, onMissed;
 
   const _MedCard({
     required this.slot, required this.status,
-    required this.scheme, required this.onTake, required this.onMissed,
+    required this.scheme, required this.onTake, required this.onUntake, required this.onMissed,
   });
 
   Color get _leftBorderColor {
@@ -262,7 +252,7 @@ class _MedCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: isTaken ? null : onTake,
+                              onTap: isTaken ? onUntake : onTake,
                               child: Container(
                                 height: 52,
                                 decoration: BoxDecoration(
@@ -273,7 +263,7 @@ class _MedCard extends StatelessWidget {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    isTaken ? '✓ Taken' : 'I took this',
+                                    isTaken ? '✓ Taken — tap to undo' : 'I took this',
                                     style: TextStyle(
                                       fontSize: 15, fontWeight: FontWeight.w700,
                                       color: isTaken ? scheme.primary : Colors.white,
@@ -390,53 +380,6 @@ class _ConfirmDialog extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Toast model + widget ──────────────────────────────────────────────────────
-
-class _Toast {
-  final int id;
-  final String msg;
-  final VoidCallback undo;
-  const _Toast({required this.id, required this.msg, required this.undo});
-}
-
-class _UndoToast extends StatelessWidget {
-  final _Toast toast;
-  final CScheme scheme;
-  final VoidCallback onUndo, onDismiss;
-  const _UndoToast({required this.toast, required this.scheme, required this.onUndo, required this.onDismiss});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1D2534),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(toast.msg,
-              style: const TextStyle(color: Color(0xFFF5F7FA), fontWeight: FontWeight.w600, fontSize: 15)),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: onUndo,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF357C6F), borderRadius: BorderRadius.circular(12)),
-              child: const Text('Undo',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-            ),
-          ),
-        ],
       ),
     );
   }
