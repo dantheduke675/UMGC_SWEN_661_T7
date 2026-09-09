@@ -139,7 +139,13 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 - Built the application
 
 ## Justin
-<TODO>
+- Designed the Today, Medications, Messages, and Message thread screens
+- Implemented the undo functionality across the application
+- Implemented the accessibility scroll bar across the bottom of the screen
+- Implemented message persistence and message unread state
+- Added some unit testing to the suite Daniel started.
+- Enabled Synchorous tile status across the Today and the Medication screens
+- Contributed to the README
 
 ## Ashvini
 - Designed the Schedule, Symptoms, Account and calling screens
