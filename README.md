@@ -62,7 +62,14 @@ Next use
 flutter build
 ```
 
-and select which type of application you wish to build.
+and select which type of application you wish to build. For example building an android application you would use
+```
+flutter build apk
+```
+If you were on a device that used MacOS you could build an IOS application using
+```
+flutter build ios
+```
 
 ## Running Tests
 
