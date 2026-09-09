@@ -62,7 +62,14 @@ Next use
 flutter build
 ```
 
-and select which type of application you wish to build.
+and select which type of application you wish to build. For example building an android application you would use
+```
+flutter build apk
+```
+If you were on a device that used MacOS you could build an IOS application using
+```
+flutter build ios
+```
 
 ## Running Tests
 
@@ -132,9 +139,17 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 - Built the application
 
 ## Justin
-<TODO>
+- Designed the Today, Medications, Messages, and Message thread screens
+- Implemented the undo functionality across the application
+- Implemented the accessibility scroll bar across the bottom of the screen
+- Implemented message persistence and message unread state
+- Added some unit testing to the suite Daniel started.
+- Enabled Synchorous tile status across the Today and the Medication screens
+- Contributed to the README
 
 ## Ashvini
-<TODO>
+- Designed the Schedule, Symptoms, Account and calling screens
+- Reviewed the screenshot document and made adjustments
+- Tested the app
 
 ### AI Disclosure: The code in this project was written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
