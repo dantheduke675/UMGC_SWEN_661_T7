@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'action_history.dart';
 import 'theme.dart';
 import 'screens/landing_screen.dart';
 import 'screens/create_account_screen.dart';
@@ -32,6 +33,7 @@ void main() {
   );
 }
 
+//this is all the page naviagtion between screens as well as building all the possible routes 
 final _router = GoRouter(
   initialLocation: '/landing',
   routes: [
@@ -62,19 +64,23 @@ final _router = GoRouter(
   ],
 );
 
+// this of course actually builds the care connect application
 class CareConnectApp extends StatelessWidget {
   const CareConnectApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final themeNotifier = context.watch<ThemeNotifier>();
-    return MaterialApp.router(
-      title: 'CareConnect',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(false),
-      darkTheme: buildTheme(true),
-      themeMode: themeNotifier.isDark ? ThemeMode.dark : ThemeMode.light,
-      routerConfig: _router,
+    return ChangeNotifierProvider<ActionHistory>(
+      create: (_) => ActionHistory(),
+      child: MaterialApp.router(
+        title: 'CareConnect',
+        debugShowCheckedModeBanner: false,
+        theme: buildTheme(false),
+        darkTheme: buildTheme(true),
+        themeMode: themeNotifier.isDark ? ThemeMode.dark : ThemeMode.light,
+        routerConfig: _router,
+      ),
     );
   }
 }
@@ -92,39 +98,58 @@ const _navItems = [
 
 // ── App shell with adaptive bottom nav ─────────────────────────────────────────
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   final Widget child;
   const AppShell({super.key, required this.child});
+
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
     final location = GoRouterState.of(context).matchedLocation;
-    final isThread   = location.startsWith('/messages/');
     final isCalling  = location.startsWith('/calling/');
-    final isFullScreen = isThread || isCalling;
+    final isFullScreen = isCalling;
     final currentIdx = _navItems.indexWhere((n) => location.startsWith(n.path));
 
-    return Scaffold(
-      backgroundColor: scheme.bg,
-      body: child,
-      bottomNavigationBar: isFullScreen ? null : Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Accessibility bar
-          _AccessBar(scheme: scheme),
-          // Bottom nav
-          _BottomNav(
-            scheme: scheme,
-            currentIdx: currentIdx < 0 ? 0 : currentIdx,
-            onTap: (i) => context.go(_navItems[i].path),
-          ),
-        ],
+    // A plain Provider (not PrimaryScrollController) so each nested route's
+    // own ModalRoute-provided PrimaryScrollController can't shadow it - tab
+    // screens read this directly and pass it to their top-level ListView.
+    return ChangeNotifierProvider<ScrollController>.value(
+      value: _scrollController,
+      child: Scaffold(
+        backgroundColor: scheme.bg,
+        body: widget.child,
+        bottomNavigationBar: isFullScreen ? null : Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Accessibility bar
+            _AccessBar(scheme: scheme),
+            // Bottom nav
+            _BottomNav(
+              scheme: scheme,
+              currentIdx: currentIdx < 0 ? 0 : currentIdx,
+              onTap: (i) => context.go(_navItems[i].path),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+//this builds the bottom navigation bar and allows for naviagtion between the pages 
 class _BottomNav extends StatelessWidget {
   final CScheme scheme;
   final int currentIdx;
@@ -184,6 +209,7 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
+//this is the bar on which the options for scrolling and other accesibility options sit and are built
 class _AccessBar extends StatelessWidget {
   final CScheme scheme;
   const _AccessBar({required this.scheme});
@@ -225,9 +251,10 @@ class _AccessBar extends StatelessWidget {
     );
   }
 
+  //this helps to build the scroll buttons and allows for the buttons to actually scroll on the application
   void _scroll(BuildContext context, double delta) {
-    final ctrl = PrimaryScrollController.maybeOf(context);
-    if (ctrl == null || !ctrl.hasClients) return;
+    final ctrl = context.read<ScrollController>();
+    if (!ctrl.hasClients) return;
     final target = (ctrl.offset + delta).clamp(
       ctrl.position.minScrollExtent,
       ctrl.position.maxScrollExtent,
@@ -236,6 +263,7 @@ class _AccessBar extends StatelessWidget {
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
+  //this is the button that allows for the user to access the application.
   Widget _accessBtn(BuildContext context, String icon, String label, CScheme scheme, {required VoidCallback onTap}) {
     return Expanded(
       child: GestureDetector(

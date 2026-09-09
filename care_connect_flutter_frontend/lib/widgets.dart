@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'action_history.dart';
 import 'theme.dart';
 
 // ── Auth shared widgets ─────────────────────────────────────────────────────────
 
+//the careconnect logo
 class AuthLogo extends StatelessWidget {
   final bool lg;
   const AuthLogo({super.key, this.lg = false});
@@ -20,6 +22,7 @@ class AuthLogo extends StatelessWidget {
   }
 }
 
+//smaller version of the logo
 class AuthLogoSmall extends StatelessWidget {
   final bool lg;
   const AuthLogoSmall({super.key, this.lg = false});
@@ -35,6 +38,7 @@ class AuthLogoSmall extends StatelessWidget {
   }
 }
 
+//the typical button created and built out for the application and for specific circumstances
 class AuthBtn extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -95,6 +99,7 @@ class AuthBtn extends StatelessWidget {
   }
 }
 
+//the auhtorization access text fields
 class AuthField extends StatelessWidget {
   final String label;
   final String value;
@@ -180,6 +185,7 @@ class AuthSpinner extends StatefulWidget {
   State<AuthSpinner> createState() => _AuthSpinnerState();
 }
 
+//the spinning anitmation seene when used by the biometrics screen
 class _AuthSpinnerState extends State<AuthSpinner> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
 
@@ -219,6 +225,7 @@ class _AuthSpinnerState extends State<AuthSpinner> with SingleTickerProviderStat
   }
 }
 
+//determines the roll in this application though you can only be the care recipient
 class AuthRoleTile extends StatelessWidget {
   final String role; // 'recipient' | 'caregiver'
   final VoidCallback? onPressed;
@@ -251,6 +258,7 @@ class AuthRoleTile extends StatelessWidget {
 
 // ── App shared widgets ──────────────────────────────────────────────────────────
 
+//avatar logo that appears representing the user
 class CAvatarBadge extends StatelessWidget {
   final String initials;
   final Color color;
@@ -291,6 +299,7 @@ class CChip extends StatelessWidget {
   }
 }
 
+//this is the coloring for symptom severity and the bar of how bad the symtpom is
 class CSeverityBar extends StatelessWidget {
   final int level;
   const CSeverityBar({super.key, required this.level});
@@ -314,59 +323,6 @@ class CSeverityBar extends StatelessWidget {
   }
 }
 
-class CBtn extends StatelessWidget {
-  final Widget child;
-  final VoidCallback? onPressed;
-  final String variant; // 'primary' | 'secondary' | 'ghost' | 'danger'
-  final bool sm;
-  final bool fullWidth;
-
-  const CBtn({
-    super.key,
-    required this.child,
-    this.onPressed,
-    this.variant = 'primary',
-    this.sm = false,
-    this.fullWidth = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = context.watch<ThemeNotifier>().scheme;
-    final h = sm ? 48.0 : 64.0;
-    final fs = sm ? 15.0 : 17.0;
-
-    Color bg, fg;
-    Border? border;
-
-    switch (variant) {
-      case 'danger':   bg = const Color(0xFFC53030); fg = Colors.white; break;
-      case 'secondary': bg = scheme.surface2; fg = scheme.text; border = Border.all(color: scheme.border, width: 2); break;
-      case 'ghost':    bg = Colors.transparent; fg = scheme.primary; break;
-      default:         bg = scheme.primary; fg = Colors.white;
-    }
-
-    final btn = GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        height: h,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
-          border: border,
-        ),
-        child: Center(
-          child: DefaultTextStyle(
-            style: TextStyle(fontSize: fs, fontWeight: FontWeight.w700, color: fg),
-            child: child,
-          ),
-        ),
-      ),
-    );
-
-    return fullWidth ? SizedBox(width: double.infinity, child: btn) : btn;
-  }
-}
 
 // ── Floating theme toggle used on auth screens ──────────────────────────────────
 
@@ -387,6 +343,193 @@ class ThemeToggleBtn extends StatelessWidget {
             shape: BoxShape.circle,
           ),
           child: Center(child: Text(notifier.isDark ? '☀️' : '🌙', style: const TextStyle(fontSize: 18))),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Persistent undo button ───────────────────────────────────────────────────
+// Place inside a Stack (alongside the screen's main scroll view). Renders
+// nothing when there's no history. Tapping it opens a sheet listing every
+// undoable action — most recent first — so the user can undo any of them,
+// not just the last one.
+
+class UndoFab extends StatelessWidget {
+  const UndoFab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.watch<ThemeNotifier>().scheme;
+    final count = context.watch<ActionHistory>().actions.length;
+    if (count == 0) return const SizedBox.shrink();
+
+    return Positioned(
+      right: 20, bottom: 16,
+      child: GestureDetector(
+        onTap: () => showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          builder: (_) => _UndoSheet(scheme: scheme),
+        ),
+        child: Semantics(
+          button: true,
+          label: 'Undo, $count recent ${count == 1 ? 'action' : 'actions'}',
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: scheme.primary,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 12, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text('↺', style: TextStyle(fontSize: 24, color: Colors.white)),
+                    SizedBox(width: 8),
+                    Text('Undo', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: -4, right: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  constraints: const BoxConstraints(minWidth: 20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC53030),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: scheme.bg, width: 2),
+                  ),
+                  child: Text(
+                    '$count',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+//when the undo button is clicked it builds this sheet which allows for 
+class _UndoSheet extends StatelessWidget {
+  final CScheme scheme;
+  const _UndoSheet({required this.scheme});
+
+  String _timeAgo(DateTime t) {
+    final diff = DateTime.now().difference(t);
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    return '${diff.inHours}h ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = context.watch<ActionHistory>().actions;
+
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(20),
+        constraints: const BoxConstraints(maxHeight: 480),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: scheme.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Recent actions',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: scheme.text)),
+                ),
+                Semantics(
+                  button: true,
+                  label: 'Close',
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: scheme.surface2,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text('✕', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.sub)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text('Undo any of your recent changes.',
+                style: TextStyle(fontSize: 13, color: scheme.sub)),
+            const SizedBox(height: 12),
+            if (actions.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text('Nothing to undo.',
+                    style: TextStyle(fontSize: 14, color: scheme.sub)),
+              )
+            else
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: actions.length,
+                  separatorBuilder: (_, _) => Divider(color: scheme.border, height: 1),
+                  itemBuilder: (_, i) {
+                    final action = actions[i];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(action.description,
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.text)),
+                                const SizedBox(height: 2),
+                                Text(_timeAgo(action.timestamp),
+                                    style: TextStyle(fontSize: 12, color: scheme.muted)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: () => context.read<ActionHistory>().undoAction(action.id),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: scheme.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text('Undo',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.primary)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
         ),
       ),
     );

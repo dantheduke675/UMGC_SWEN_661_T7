@@ -7,14 +7,17 @@ import '../widgets.dart';
 class SignInBioScreen extends StatelessWidget {
   const SignInBioScreen({super.key});
 
+  //this is the screen that occurrs when the care recipient tries to sign in with their facial scan 
   @override
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
     final isTablet = MediaQuery.of(context).size.width >= 700;
-    final px = isTablet ? 65.0 : 26.0;
-    final pt = isTablet ? 140.0 : 70.0;
-    final pb = isTablet ? 140.0 : 50.0;
+    final horizontalPadding = isTablet ? 65.0 : 26.0;
+    final topPadding = isTablet ? 140.0 : 70.0;
+    final bottomPadding = isTablet ? 140.0 : 50.0;
 
+    //the application triggers the facial spin animation to show the user that it is scanning their face
+    //and attempts to sign them in
     final content = Column(
       children: [
         AuthLogoSmall(lg: isTablet),
@@ -43,42 +46,28 @@ class SignInBioScreen extends StatelessWidget {
       ],
     );
 
+    //if the user gets frustrated they are able to go back and their use their password to sign in instead
     return Scaffold(
       backgroundColor: scheme.bg,
       body: Stack(
         children: [
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(px, pt, px, pb),
-              child: isTablet
-                  ? SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          content,
-                          const SizedBox(height: 24),
-                          AuthBtn(
-                            label: 'Use my password instead',
-                            variant: 'secondary',
-                            lg: isTablet,
-                            onPressed: () => context.go('/sign-in-pass'),
-                          ),
-                        ],
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          content,
-                          const SizedBox(height: 24),
-                          AuthBtn(
-                            label: 'Use my password instead',
-                            variant: 'secondary',
-                            lg: isTablet,
-                            onPressed: () => context.go('/sign-in-pass'),
-                          ),
-                        ],
-                      ),
+              padding: EdgeInsets.fromLTRB(horizontalPadding, topPadding, horizontalPadding, bottomPadding),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    content,
+                    const SizedBox(height: 24),
+                    AuthBtn(
+                      label: 'Use my password instead',
+                      variant: 'secondary',
+                      lg: isTablet,
+                      onPressed: () => context.go('/sign-in-pass'),
                     ),
+                  ],
+                ),
+              ),
             ),
           ),
           const ThemeToggleBtn(),
