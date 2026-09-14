@@ -20,6 +20,7 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  //SafeAreaView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -223,10 +224,15 @@ import TodayScreen       from '../screens/TodayScreen';
 import MedicationsScreen from '../screens/MedicationsScreen';
 import MessagesScreen    from '../screens/MessagesScreen';
 import MsgThreadScreen   from '../screens/MsgThreadScreen';
+import ScheduleScreen    from '../screens/ScheduleScreen';
+import SymptomsScreen    from '../screens/SymptomsScreen';
+import AccountScreen     from '../screens/AccountScreen';
+import CallingScreen     from '../screens/CallingScreen';
 
 type ViewState =
   | { type: 'tab'; tab: TabKey }
-  | { type: 'thread'; threadId: number };
+  | { type: 'thread'; threadId: number }
+  | { type: 'calling'; contactId: number };
 
 export default function AppShellNavigator() {
   const [isDark, setIsDark] = useState(true);
@@ -234,8 +240,8 @@ export default function AppShellNavigator() {
 
   const [view, setView] = useState<ViewState>({ type: 'tab', tab: 'today' });
 
-  const activeTab = view.type === 'tab' ? view.tab : 'messages';
-  const isFullScreen = view.type === 'thread';
+  const activeTab    = view.type === 'tab' ? view.tab : 'messages';
+  const isFullScreen = view.type === 'thread' || view.type === 'calling';
 
   function renderScreen() {
     if (view.type === 'thread') {
@@ -244,6 +250,15 @@ export default function AppShellNavigator() {
           threadId={view.threadId}
           scheme={scheme}
           onBack={() => setView({ type: 'tab', tab: 'messages' })}
+        />
+      );
+    }
+
+    if (view.type === 'calling') {
+      return (
+        <CallingScreen
+          contactId={view.contactId}
+          onEnd={() => setView({ type: 'tab', tab: 'messages' })}
         />
       );
     }
@@ -261,11 +276,19 @@ export default function AppShellNavigator() {
           />
         );
       case 'schedule':
-        return <PlaceholderScreen label="Schedule" scheme={scheme} />;
+        return <ScheduleScreen scheme={scheme} />;
       case 'symptoms':
-        return <PlaceholderScreen label="Symptoms" scheme={scheme} />;
+        return <SymptomsScreen scheme={scheme} />;
       case 'account':
-        return <PlaceholderScreen label="Account" scheme={scheme} />;
+        return (
+          <AccountScreen
+            scheme={scheme}
+            isDark={isDark}
+            onToggleTheme={() => setIsDark(d => !d)}
+            onSignOut={() => {}}
+            onMessages={() => setView({ type: 'tab', tab: 'messages' })}
+          />
+        );
     }
   }
 
@@ -278,18 +301,6 @@ export default function AppShellNavigator() {
     >
       {renderScreen()}
     </AppShell>
-  );
-}
-
-// ── Placeholder for screens not yet ported ────────────────────────────────────
-
-function PlaceholderScreen({ label, scheme }: { label: string; scheme: ColorScheme }) {
-  return (
-    <View style={[styles.placeholder, { backgroundColor: scheme.bg }]}>
-      <Text style={[styles.placeholderText, { color: scheme.sub }]}>
-        {label} — coming soon
-      </Text>
-    </View>
   );
 }
 
@@ -380,14 +391,4 @@ const styles = StyleSheet.create({
     marginTop:  2,
   },
 
-  // Placeholder
-  placeholder: {
-    flex:           1,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
-  placeholderText: {
-    fontSize:   18,
-    fontWeight: '600',
-  },
 });
