@@ -6,7 +6,7 @@
  * user can open the full history and undo anything in it, not just the most
  * recent action.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface UndoEntry {
   id:      number;
@@ -20,6 +20,15 @@ export function useUndoHistory() {
   const [history, setHistory] = useState<UndoEntry[]>([]);
   const [nextId, setNextId]   = useState(0);
   const [toastId, setToastId] = useState<number | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending toast timer on unmount so it can't fire (and update
+  // state) after the component is gone.
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   // Push a new undoable action onto the stack and surface it as a toast
   // (the toast fades from view after a few seconds, but the entry itself
@@ -30,7 +39,9 @@ export function useUndoHistory() {
       setNextId(id);
       setHistory(prev => [{ id, message, undo }, ...prev]);
       setToastId(id);
-      setTimeout(() => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => {
+        toastTimer.current = null;
         setToastId(curr => (curr === id ? null : curr));
       }, TOAST_DURATION_MS);
     },
@@ -48,7 +59,13 @@ export function useUndoHistory() {
     setToastId(curr => (curr === id ? null : curr));
   }, []);
 
-  const dismissToast = useCallback(() => setToastId(null), []);
+  const dismissToast = useCallback(() => {
+    if (toastTimer.current) {
+      clearTimeout(toastTimer.current);
+      toastTimer.current = null;
+    }
+    setToastId(null);
+  }, []);
 
   const toastEntry = history.find(e => e.id === toastId) ?? null;
 
