@@ -15,7 +15,7 @@ import {
   useWindowDimensions,
   SafeAreaView,
 } from 'react-native';
-import { contactById } from '../data';
+import { contactById } from '../constants/data';
 
 // ── Pulse ring ────────────────────────────────────────────────────────────────
 
