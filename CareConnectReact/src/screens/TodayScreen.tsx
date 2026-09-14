@@ -16,20 +16,15 @@ import { buildSlots, patient, MedSlot } from '../constants/data';
 import {
   SectionLabel,
   UndoToast,
+  UndoHistoryButton,
+  UndoHistoryPanel,
   LinearProgressBar,
 } from '../components/AppComponents';
 import { useScrollContext } from '../context/ScrollContext';
+import { useUndoHistory } from '../hooks/useUndoHistory';
 
 interface Props {
   scheme?: ColorScheme;
-}
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface Toast {
-  id:   number;
-  msg:  string;
-  undo: () => void;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -178,8 +173,8 @@ export default function TodayScreen({ scheme = dark }: Props) {
     '1-0': true,
     '3-0': true,
   });
-  const [toasts, setToasts]   = useState<Toast[]>([]);
-  const [toastId, setToastId] = useState(0);
+  const { history, toastEntry, pushAction, undoEntry, dismissToast } = useUndoHistory();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const allSlots  = buildSlots();
   const todaySlots = allSlots.slice(0, 4);
@@ -187,23 +182,11 @@ export default function TodayScreen({ scheme = dark }: Props) {
   const totalCount = allSlots.length;
   const pct        = totalCount > 0 ? Math.round((takenCount / totalCount) * 100) : 0;
 
-  const addToast = useCallback(
-    (msg: string, undo: () => void) => {
-      const id = toastId + 1;
-      setToastId(id);
-      setToasts(prev => [...prev, { id, msg, undo }]);
-      setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id));
-      }, 5000);
-    },
-    [toastId],
-  );
-
   const markTaken = useCallback(
     (key: string) => {
       if (taken[key]) return;
       setTaken(prev => ({ ...prev, [key]: true }));
-      addToast('Marked as taken', () => {
+      pushAction('Marked as taken', () => {
         setTaken(prev => {
           const next = { ...prev };
           delete next[key];
@@ -211,11 +194,8 @@ export default function TodayScreen({ scheme = dark }: Props) {
         });
       });
     },
-    [taken, addToast],
+    [taken, pushAction],
   );
-
-  const dismissToast = (id: number) =>
-    setToasts(prev => prev.filter(t => t.id !== id));
 
   const now = new Date();
 
@@ -236,7 +216,14 @@ export default function TodayScreen({ scheme = dark }: Props) {
         <Text style={[styles.greeting, { color: scheme.text }]}>
           Good morning, {patient.name} 👋
         </Text>
-        <View style={{ height: 20 }} />
+        <View style={{ height: 12 }} />
+
+        <UndoHistoryButton
+          count={history.length}
+          scheme={scheme}
+          onPress={() => setHistoryOpen(true)}
+        />
+        <View style={{ height: 8 }} />
 
         {/* Progress card */}
         <ProgressCard taken={takenCount} total={totalCount} pct={pct} scheme={scheme} />
@@ -263,19 +250,25 @@ export default function TodayScreen({ scheme = dark }: Props) {
         ))}
       </ScrollView>
 
-      {/* Undo toasts — overlaid at bottom */}
-      {toasts.length > 0 && (
+      {/* Quick undo toast for the most recent action */}
+      {toastEntry && (
         <View style={styles.toastContainer} pointerEvents="box-none">
-          {toasts.map(t => (
-            <UndoToast
-              key={t.id}
-              message={t.msg}
-              onUndo={() => { t.undo(); dismissToast(t.id); }}
-              onDismiss={() => dismissToast(t.id)}
-            />
-          ))}
+          <UndoToast
+            message={toastEntry.message}
+            onUndo={() => undoEntry(toastEntry.id)}
+            onDismiss={dismissToast}
+          />
         </View>
       )}
+
+      {/* Full undo history — every action can be undone, not just the latest */}
+      <UndoHistoryPanel
+        visible={historyOpen}
+        entries={history}
+        scheme={scheme}
+        onUndo={undoEntry}
+        onClose={() => setHistoryOpen(false)}
+      />
     </View>
   );
 }

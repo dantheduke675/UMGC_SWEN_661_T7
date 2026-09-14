@@ -230,8 +230,8 @@ export function AuthStatusRing({ scheme, scanning = false }: AuthStatusRingProps
     if (!scanning) return;
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
     anim.start();
@@ -397,6 +397,9 @@ const styles = StyleSheet.create({
     width: '50%',
     height: '50%',
   },
+  spinnerLabel: {
+    fontWeight: '600',
+  },
   themeToggle: {
     position: 'absolute',
     top: 16,
@@ -406,5 +409,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
+    elevation: 10,
   },
 });
