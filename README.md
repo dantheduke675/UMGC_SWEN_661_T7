@@ -184,7 +184,7 @@ To run on a device or emulator without a native build, use
 npm start
 ```
 
-which starts the Metro bundler and prints a menu of targets — press `a` for an Android emulator, `i` for an iOS simulator (macOS only), or `w` for web. You can also scan the QR code with the Expo Go app to open the application on a physical phone.
+which starts the Metro bundler and prints a menu of targets — press `a` for an Android emulator, `i` for an iOS simulator (macOS only), or `w` for web. You can also scan the QR code with the Expo Go app to open the application on a physical phone. You will find out how to run straight into a specific emulator in the build section as the commands that use npm run typically both build and run the application
 
 ## Building the application
 
@@ -212,20 +212,29 @@ npx expo run:android
 
 This generates the native `android/` project, compiles a debug build, and installs it onto a connected Android device or a running Android Studio emulator. The generated `android/` and `ios/` folders are git ignored, so they are recreated on demand rather than committed.
 
+You can also specify release and debug versions of the application using
+
+```
+npx expo run:android --variant release
+npx expo run:android --variant debug
+```
+
 If you were on a device that used MacOS you could build an IOS application using
 
 ```
 npx expo run:ios
 ```
 
-For a distributable release build (for example a standalone APK) use EAS Build. There is no `eas.json` in the repository yet, so it has to be configured once before the first build:
+For a distributable release build (for example a standalone APK or ABB) use EAS Build. There is no `eas.json` in the repository yet, so it has to be configured once before the first build:
 
 ```
 npx eas build:configure
 npx eas build -p android --profile preview
 ```
 
-Note that EAS requires a free Expo account and runs the build in the cloud by default.
+### Note 1. that EAS requires a free Expo account and runs the build in the cloud by default.
+
+### Note 2. Though not necessary opening an emulator in android studio when building the android application will automatically boot the app into the running emulator making testing easier.
 
 ## Running Tests
 
@@ -283,6 +292,12 @@ Note the trailing `.` in the script — a bare `expo lint` only checks `src/`, `
 npx jest --coverage --forceExit --collectCoverageFrom="src/**/*.{ts,tsx}"
 ```
 
+You can alternatively use 
+
+```
+npm test -- --coverage
+```
+
 Then open `coverage/lcov-report/index.html` in a browser. Unlike the Flutter report this needs no extra tooling — Jest writes the HTML itself. As of 2026-09-14 the suite is 19 files / 117 tests, all passing, and overall line coverage is 92.4% (461 of 499 lines).
 
 ## Troubleshooting
@@ -310,6 +325,7 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 - No backend/API integration yet — all data is static/in-memory (see `src/constants/data.ts`).
 - No CI/CD pipeline; run `npm run test:ci` and regenerate coverage locally before opening a PR.
 - No EAS build profile is committed, so release builds require a one-time `eas build:configure`.
+- Some of the packages used have depreciated and are depreciating soon however the application still builds just with warnings
 
 # Weekly Contributions 09/02-09/08
 
@@ -342,7 +358,14 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 
 ## Daniel
 
--
+- Worked to build out all of the testing Suite
+- Worked to build the undo history/stack
+- Fixed the navigation to the calling screen from the msg thread screen
+- Fixed the display of the light vs dark mode button
+- Fixed the Navigation on the application sign out button
+- Completed the react test coverage/screenshot document
+- Worked some on the comparison document
+- Added some smaller notes to the README
 
 ## Justin
 
