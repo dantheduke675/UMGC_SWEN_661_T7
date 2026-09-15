@@ -64,9 +64,11 @@ export function UndoToast({ message, onUndo, onDismiss }: ToastProps) {
   const opacity = useAnimatedValue(0);
 
   useEffect(() => {
-    Animated.timing(opacity, {
+    const anim = Animated.timing(opacity, {
       toValue: 1, duration: 200, useNativeDriver: true,
-    }).start();
+    });
+    anim.start();
+    return () => anim.stop();
   }, [opacity]);
 
   return (

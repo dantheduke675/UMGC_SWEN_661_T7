@@ -18,6 +18,14 @@ function renderScreen() {
 }
 
 describe('TodayScreen', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('greets the patient by name', async () => {
     await renderScreen();
     expect(screen.getByText(new RegExp(`Good morning, ${patient.name}`))).toBeTruthy();
@@ -59,14 +67,6 @@ describe('TodayScreen', () => {
   });
 
   describe('undo history', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     it('does not show the undo history trigger until an action has been taken', async () => {
       await renderScreen();
       expect(screen.queryByText(/Undo history/)).toBeNull();

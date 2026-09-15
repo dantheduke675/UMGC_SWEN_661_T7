@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { Dimensions } from 'react-native';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import {
   CAvatarBadge,
   CChip,
@@ -14,6 +14,14 @@ import {
   LinearProgressBar,
 } from '../src/components/AppComponents';
 import { dark } from '../src/constants/theme';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('CAvatarBadge', () => {
   it('renders the given initials', async () => {
@@ -78,9 +86,11 @@ describe('UndoHistoryPanel', () => {
     { id: 1, message: 'Marked as missed' },
   ];
 
-  afterEach(() => {
+  afterEach(async () => {
     // Restore a typical phone-sized window after any test that changes it.
-    Dimensions.set({ window: { width: 400, height: 800, scale: 2, fontScale: 1 } });
+    await act(async () => {
+      Dimensions.set({ window: { width: 400, height: 800, scale: 2, fontScale: 1 } });
+    });
   });
 
   it('shows an empty state when there is nothing to undo', async () => {

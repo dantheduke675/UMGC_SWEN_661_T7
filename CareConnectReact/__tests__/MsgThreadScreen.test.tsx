@@ -9,6 +9,14 @@ import { contactById, threadById } from '../src/constants/data';
 import { dark } from '../src/constants/theme';
 
 describe('MsgThreadScreen', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('renders the contact name and role in the header', async () => {
     const thread = threadById(1);
     const contact = contactById(thread.contactId);

@@ -18,6 +18,14 @@ function renderScreen(props: Partial<React.ComponentProps<typeof AccountScreen>>
 }
 
 describe('AccountScreen', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('renders the patient profile info', async () => {
     await renderScreen();
     expect(screen.getByText(patient.full)).toBeTruthy();
