@@ -10,12 +10,12 @@ import {
   Text,
   TouchableOpacity,
   Animated,
-  useAnimatedValue,
   Easing,
   StyleSheet,
   useWindowDimensions,
   SafeAreaView,
 } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { contactById } from '../constants/data';
 
 // ── Pulse ring ────────────────────────────────────────────────────────────────

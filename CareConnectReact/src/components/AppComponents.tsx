@@ -9,11 +9,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
-  useAnimatedValue,
   Modal,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { ColorScheme } from '../constants/theme';
 
 // ── CAvatarBadge ──────────────────────────────────────────────────────────────

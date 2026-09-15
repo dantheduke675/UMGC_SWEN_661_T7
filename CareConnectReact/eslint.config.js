@@ -21,6 +21,22 @@ module.exports = defineConfig([
   },
 
   {
+    // react-native-web does not re-export every hook that react-native does.
+    // Importing one of these from 'react-native' type-checks and bundles fine,
+    // then throws "is not a function" the moment the screen renders on web.
+    files: ['src/**/*.{ts,tsx}', 'App.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        paths: [{
+          name: 'react-native',
+          importNames: ['useAnimatedValue'],
+          message: "react-native-web does not export this. Import { useAnimatedValue } from the local 'hooks/useAnimatedValue' instead.",
+        }],
+      }],
+    },
+  },
+
+  {
     // Jest injects describe/it/expect/jest as globals in the test suite.
     files: ['__tests__/**/*.{ts,tsx,js,jsx}'],
     languageOptions: {

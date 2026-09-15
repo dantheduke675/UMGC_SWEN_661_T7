@@ -10,10 +10,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  useAnimatedValue,
   Easing,
   StyleSheet,
 } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { ColorScheme, dark } from '../constants/theme';
 import { contacts, patient } from '../constants/data';
 import { CAvatarBadge } from '../components/AppComponents';

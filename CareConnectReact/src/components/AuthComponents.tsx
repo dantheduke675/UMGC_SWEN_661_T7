@@ -11,9 +11,9 @@ import {
   TextInput,
   StyleSheet,
   Animated,
-  useAnimatedValue,
   Easing,
 } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { ColorScheme, tokens } from '../constants/theme';
 
 // ── AuthLogo ──────────────────────────────────────────────────────────────────

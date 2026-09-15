@@ -15,9 +15,9 @@ import {
   useWindowDimensions,
   StatusBar,
   Animated,
-  useAnimatedValue,
   Easing,
 } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { dark, light } from '../constants/theme';
 import { AuthLogo, AuthSpinner, AuthBtn, ThemeToggleBtn } from '../components/AuthComponents';
 
