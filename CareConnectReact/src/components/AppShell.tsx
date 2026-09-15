@@ -26,6 +26,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ColorScheme, dark, light } from '../constants/theme';
 import { ScrollProvider, useScrollContext } from '../context/ScrollContext';
+import { ThemeToggleBtn } from './AuthComponents';
+import TodayScreen       from '../screens/TodayScreen';
+import MedicationsScreen from '../screens/MedicationsScreen';
+import MessagesScreen    from '../screens/MessagesScreen';
+import MsgThreadScreen   from '../screens/MsgThreadScreen';
+import ScheduleScreen    from '../screens/ScheduleScreen';
+import SymptomsScreen    from '../screens/SymptomsScreen';
+import AccountScreen     from '../screens/AccountScreen';
+import CallingScreen     from '../screens/CallingScreen';
 
 // ── Nav item definitions ──────────────────────────────────────────────────────
 
@@ -175,6 +184,8 @@ interface AppShellProps {
   scheme:         ColorScheme;
   isFullScreen?:  boolean; // true for thread / calling — hides both bars
   onTabPress:     (key: TabKey) => void;
+  isDark?:        boolean;
+  onToggleTheme?: () => void;
 }
 
 export function AppShell({
@@ -183,12 +194,27 @@ export function AppShell({
   scheme,
   isFullScreen = false,
   onTabPress,
+  isDark,
+  onToggleTheme,
 }: AppShellProps) {
+  // Account tab has its own theme switch in Preferences — avoid showing both.
+  const showThemeToggle = !isFullScreen && activeTab !== 'account' && onToggleTheme;
+
   return (
     <ScrollProvider>
       <View style={[styles.root, { backgroundColor: scheme.bg }]}>
         {/* Screen content */}
         <View style={styles.body}>{children}</View>
+
+        {showThemeToggle && (
+          <SafeAreaView
+            edges={['top']}
+            style={styles.themeToggleOverlay}
+            pointerEvents="box-none"
+          >
+            <ThemeToggleBtn isDark={!!isDark} onToggle={onToggleTheme} />
+          </SafeAreaView>
+        )}
 
         {/* Bottom bars — hidden in full-screen modes */}
         {!isFullScreen && (
@@ -219,22 +245,18 @@ export function AppShell({
  *   // In your root navigator, replace the Today/app stack with:
  *   <Stack.Screen name="App" component={AppShellNavigator} />
  */
-
-import TodayScreen       from '../screens/TodayScreen';
-import MedicationsScreen from '../screens/MedicationsScreen';
-import MessagesScreen    from '../screens/MessagesScreen';
-import MsgThreadScreen   from '../screens/MsgThreadScreen';
-import ScheduleScreen    from '../screens/ScheduleScreen';
-import SymptomsScreen    from '../screens/SymptomsScreen';
-import AccountScreen     from '../screens/AccountScreen';
-import CallingScreen     from '../screens/CallingScreen';
-
 type ViewState =
   | { type: 'tab'; tab: TabKey }
   | { type: 'thread'; threadId: number }
   | { type: 'calling'; contactId: number };
 
-export default function AppShellNavigator() {
+interface AppShellNavigatorProps {
+  navigation?: {
+    reset: (state: { index: number; routes: { name: string }[] }) => void;
+  };
+}
+
+export default function AppShellNavigator({ navigation }: AppShellNavigatorProps) {
   const [isDark, setIsDark] = useState(true);
   const scheme = isDark ? dark : light;
 
@@ -250,6 +272,7 @@ export default function AppShellNavigator() {
           threadId={view.threadId}
           scheme={scheme}
           onBack={() => setView({ type: 'tab', tab: 'messages' })}
+          onCall={contactId => setView({ type: 'calling', contactId })}
         />
       );
     }
@@ -285,7 +308,9 @@ export default function AppShellNavigator() {
             scheme={scheme}
             isDark={isDark}
             onToggleTheme={() => setIsDark(d => !d)}
-            onSignOut={() => {}}
+            onSignOut={() => {
+              navigation?.reset({ index: 0, routes: [{ name: 'Landing' }] });
+            }}
             onMessages={() => setView({ type: 'tab', tab: 'messages' })}
           />
         );
@@ -298,6 +323,8 @@ export default function AppShellNavigator() {
       scheme={scheme}
       isFullScreen={isFullScreen}
       onTabPress={tab => setView({ type: 'tab', tab })}
+      isDark={isDark}
+      onToggleTheme={() => setIsDark(d => !d)}
     >
       {renderScreen()}
     </AppShell>
@@ -313,19 +340,26 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
   },
+  themeToggleOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
 
   // Accessibility bar
   accessBar: {
     height:            64,
     flexDirection:     'row',
-    alignItems:        'center',
+    alignItems:        'flex-end',
     paddingHorizontal: 12,
-    paddingVertical:   8,
+    paddingTop:        12,
+    paddingBottom:     0,
     borderTopWidth:    1,
   },
   accessBtn: {
     flex:           1,
-    height:         48,
+    height:         52,
     borderRadius:   16,
     borderWidth:    2,
     alignItems:     'center',
@@ -341,7 +375,7 @@ const styles = StyleSheet.create({
   },
   voiceBtn: {
     width:          72,
-    height:         48,
+    height:         52,
     borderRadius:   16,
     alignItems:     'center',
     justifyContent: 'center',

@@ -14,8 +14,14 @@ import {
 } from 'react-native';
 import { ColorScheme, dark, tokens } from '../constants/theme';
 import { buildSlots, MedSlot } from '../constants/data';
-import { CChip, UndoToast } from '../components/AppComponents';
+import {
+  CChip,
+  UndoToast,
+  UndoHistoryButton,
+  UndoHistoryPanel,
+} from '../components/AppComponents';
 import { useScrollContext } from '../context/ScrollContext';
+import { useUndoHistory } from '../hooks/useUndoHistory';
 
 interface Props {
   scheme?: ColorScheme;
@@ -217,12 +223,6 @@ function ConfirmMissedModal({
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-interface Toast {
-  id:   number;
-  msg:  string;
-  undo: () => void;
-}
-
 export default function MedicationsScreen({ scheme = dark }: Props) {
   const slots = buildSlots();
 
@@ -243,29 +243,19 @@ export default function MedicationsScreen({ scheme = dark }: Props) {
     '3-0': 'taken',
   });
   const [pendingMissedKey, setPendingMissedKey] = useState<string | null>(null);
-  const [toasts, setToasts]                     = useState<Toast[]>([]);
-  const [toastId, setToastId]                   = useState(0);
+  const { history, toastEntry, pushAction, undoEntry, dismissToast } = useUndoHistory();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const takenCount  = Object.values(status).filter(s => s === 'taken').length;
   const missedCount = Object.values(status).filter(s => s === 'missed').length;
-
-  const addToast = useCallback(
-    (msg: string, undo: () => void) => {
-      const id = toastId + 1;
-      setToastId(id);
-      setToasts(prev => [...prev, { id, msg, undo }]);
-      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
-    },
-    [toastId],
-  );
 
   const markTaken = useCallback(
     (key: string) => {
       const prev = status[key] ?? 'none';
       setStatus(s => ({ ...s, [key]: 'taken' }));
-      addToast('Marked as taken', () => setStatus(s => ({ ...s, [key]: prev })));
+      pushAction('Marked as taken', () => setStatus(s => ({ ...s, [key]: prev })));
     },
-    [status, addToast],
+    [status, pushAction],
   );
 
   const markMissed = useCallback(
@@ -273,13 +263,10 @@ export default function MedicationsScreen({ scheme = dark }: Props) {
       const prev = status[key] ?? 'none';
       setStatus(s => ({ ...s, [key]: 'missed' }));
       setPendingMissedKey(null);
-      addToast('Marked as missed', () => setStatus(s => ({ ...s, [key]: prev })));
+      pushAction('Marked as missed', () => setStatus(s => ({ ...s, [key]: prev })));
     },
-    [status, addToast],
+    [status, pushAction, setPendingMissedKey],
   );
-
-  const dismissToast = (id: number) =>
-    setToasts(prev => prev.filter(t => t.id !== id));
 
   return (
     <View style={styles.root}>
@@ -296,7 +283,14 @@ export default function MedicationsScreen({ scheme = dark }: Props) {
         <Text style={[styles.subheading, { color: scheme.sub }]}>
           {slots.length} doses today
         </Text>
-        <View style={{ height: 16 }} />
+        <View style={{ height: 12 }} />
+
+        <UndoHistoryButton
+          count={history.length}
+          scheme={scheme}
+          onPress={() => setHistoryOpen(true)}
+        />
+        <View style={{ height: 8 }} />
 
         {/* Summary row */}
         <View style={styles.statsRow}>
@@ -330,19 +324,25 @@ export default function MedicationsScreen({ scheme = dark }: Props) {
         onCancel={()  => setPendingMissedKey(null)}
       />
 
-      {/* Undo toasts */}
-      {toasts.length > 0 && (
+      {/* Quick undo toast for the most recent action */}
+      {toastEntry && (
         <View style={styles.toastContainer} pointerEvents="box-none">
-          {toasts.map(t => (
-            <UndoToast
-              key={t.id}
-              message={t.msg}
-              onUndo={() => { t.undo(); dismissToast(t.id); }}
-              onDismiss={() => dismissToast(t.id)}
-            />
-          ))}
+          <UndoToast
+            message={toastEntry.message}
+            onUndo={() => undoEntry(toastEntry.id)}
+            onDismiss={dismissToast}
+          />
         </View>
       )}
+
+      {/* Full undo history — every action can be undone, not just the latest */}
+      <UndoHistoryPanel
+        visible={historyOpen}
+        entries={history}
+        scheme={scheme}
+        onUndo={undoEntry}
+        onClose={() => setHistoryOpen(false)}
+      />
     </View>
   );
 }

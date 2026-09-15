@@ -3,7 +3,7 @@
  * Patient profile, care team list, preferences, and sign out.
  * Mirrors Flutter's account_screen.dart exactly.
  */
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
   Easing,
   StyleSheet,
 } from 'react-native';
-import { ColorScheme, dark, light } from '../constants/theme';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
+import { ColorScheme, dark } from '../constants/theme';
 import { contacts, patient } from '../constants/data';
 import { CAvatarBadge } from '../components/AppComponents';
 import { useScrollContext } from '../context/ScrollContext';
@@ -87,7 +88,7 @@ function ThemeSwitch({
   scheme:   ColorScheme;
   onToggle: () => void;
 }) {
-  const anim = useRef(new Animated.Value(isDark ? 1 : 0)).current;
+  const anim = useAnimatedValue(isDark ? 1 : 0);
 
   function toggle() {
     Animated.timing(anim, {

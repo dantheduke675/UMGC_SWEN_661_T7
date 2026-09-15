@@ -3,7 +3,7 @@
  * All components accept the active ColorScheme so they render correctly in both
  * light and dark mode without needing a context provider.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,8 @@ import {
   StyleSheet,
   Animated,
   Easing,
-  ViewStyle,
-  TextStyle,
 } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { ColorScheme, tokens } from '../constants/theme';
 
 // ── AuthLogo ──────────────────────────────────────────────────────────────────
@@ -224,14 +223,14 @@ interface AuthStatusRingProps {
 }
 
 export function AuthStatusRing({ scheme, scanning = false }: AuthStatusRingProps) {
-  const pulse = useRef(new Animated.Value(1)).current;
+  const pulse = useAnimatedValue(1);
 
   useEffect(() => {
     if (!scanning) return;
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.08, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
     anim.start();
@@ -263,7 +262,7 @@ interface AuthSpinnerProps {
 }
 
 export function AuthSpinner({ label, scheme, large = false }: AuthSpinnerProps) {
-  const rotation = useRef(new Animated.Value(0)).current;
+  const rotation = useAnimatedValue(0);
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -397,6 +396,9 @@ const styles = StyleSheet.create({
     width: '50%',
     height: '50%',
   },
+  spinnerLabel: {
+    fontWeight: '600',
+  },
   themeToggle: {
     position: 'absolute',
     top: 16,
@@ -406,5 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 10,
+    elevation: 10,
   },
 });

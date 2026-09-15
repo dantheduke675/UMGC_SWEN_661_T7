@@ -15,7 +15,8 @@ import {
   useWindowDimensions,
   SafeAreaView,
 } from 'react-native';
-import { contactById } from '../data';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
+import { contactById } from '../constants/data';
 
 // ── Pulse ring ────────────────────────────────────────────────────────────────
 
@@ -124,17 +125,19 @@ export default function CallingScreen({ contactId, onEnd }: Props) {
   const contactColor = contact.color;
 
   // Pulse animation
-  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useAnimatedValue(0);
   useEffect(() => {
-    Animated.loop(
+    const anim = Animated.loop(
       Animated.timing(pulseAnim, {
         toValue:         1,
         duration:        1600,
         easing:          Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ).start();
-  }, []);
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [pulseAnim]);
 
   // Call state
   const [isMuted,   setIsMuted]   = useState(false);

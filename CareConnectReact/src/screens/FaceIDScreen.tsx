@@ -5,7 +5,7 @@
  * On success (auto after 2 s in demo) → Today screen.
  * Mirrors Flutter's SignInBioScreen.
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { dark, light } from '../constants/theme';
 import { AuthLogo, AuthSpinner, AuthBtn, ThemeToggleBtn } from '../components/AuthComponents';
 
@@ -29,8 +30,8 @@ interface Props {
 
 // Pulsing face-scan ring with two staggered rings — mirrors CallingScreen pulse style
 function ScanRing({ scheme }: { scheme: typeof dark }) {
-  const pulse1 = useRef(new Animated.Value(0)).current;
-  const pulse2 = useRef(new Animated.Value(0)).current;
+  const pulse1 = useAnimatedValue(0);
+  const pulse2 = useAnimatedValue(0);
 
   useEffect(() => {
     const makePulse = (anim: Animated.Value, delay: number) =>
