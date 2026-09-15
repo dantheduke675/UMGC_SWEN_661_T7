@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   Animated,
+  useAnimatedValue,
   Easing,
   StyleSheet,
   useWindowDimensions,
@@ -124,7 +125,7 @@ export default function CallingScreen({ contactId, onEnd }: Props) {
   const contactColor = contact.color;
 
   // Pulse animation
-  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useAnimatedValue(0);
   useEffect(() => {
     Animated.loop(
       Animated.timing(pulseAnim, {
@@ -134,7 +135,7 @@ export default function CallingScreen({ contactId, onEnd }: Props) {
         useNativeDriver: true,
       }),
     ).start();
-  }, []);
+  }, [pulseAnim]);
 
   // Call state
   const [isMuted,   setIsMuted]   = useState(false);

@@ -2,13 +2,14 @@
  * Shared app-screen components — mirrors Flutter's widgets.dart app section.
  * CAvatarBadge, CChip, UndoToast, SectionLabel, ProgressBar.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   Animated,
+  useAnimatedValue,
   Modal,
   StyleSheet,
   useWindowDimensions,
@@ -60,7 +61,7 @@ interface ToastProps {
 }
 
 export function UndoToast({ message, onUndo, onDismiss }: ToastProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity = useAnimatedValue(0);
 
   useEffect(() => {
     Animated.timing(opacity, {
@@ -214,7 +215,7 @@ interface ProgressBarProps {
 }
 
 export function LinearProgressBar({ value }: ProgressBarProps) {
-  const width = useRef(new Animated.Value(0)).current;
+  const width = useAnimatedValue(0);
 
   useEffect(() => {
     Animated.timing(width, {

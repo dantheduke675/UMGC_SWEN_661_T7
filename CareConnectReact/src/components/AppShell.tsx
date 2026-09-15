@@ -27,6 +27,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ColorScheme, dark, light } from '../constants/theme';
 import { ScrollProvider, useScrollContext } from '../context/ScrollContext';
 import { ThemeToggleBtn } from './AuthComponents';
+import TodayScreen       from '../screens/TodayScreen';
+import MedicationsScreen from '../screens/MedicationsScreen';
+import MessagesScreen    from '../screens/MessagesScreen';
+import MsgThreadScreen   from '../screens/MsgThreadScreen';
+import ScheduleScreen    from '../screens/ScheduleScreen';
+import SymptomsScreen    from '../screens/SymptomsScreen';
+import AccountScreen     from '../screens/AccountScreen';
+import CallingScreen     from '../screens/CallingScreen';
 
 // ── Nav item definitions ──────────────────────────────────────────────────────
 
@@ -237,16 +245,6 @@ export function AppShell({
  *   // In your root navigator, replace the Today/app stack with:
  *   <Stack.Screen name="App" component={AppShellNavigator} />
  */
-
-import TodayScreen       from '../screens/TodayScreen';
-import MedicationsScreen from '../screens/MedicationsScreen';
-import MessagesScreen    from '../screens/MessagesScreen';
-import MsgThreadScreen   from '../screens/MsgThreadScreen';
-import ScheduleScreen    from '../screens/ScheduleScreen';
-import SymptomsScreen    from '../screens/SymptomsScreen';
-import AccountScreen     from '../screens/AccountScreen';
-import CallingScreen     from '../screens/CallingScreen';
-
 type ViewState =
   | { type: 'tab'; tab: TabKey }
   | { type: 'thread'; threadId: number }

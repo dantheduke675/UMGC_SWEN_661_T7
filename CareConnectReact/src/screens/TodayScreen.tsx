@@ -46,7 +46,7 @@ function ProgressCard({
   return (
     <View style={[styles.progressCard, { backgroundColor: scheme.primary }]}>
       <View style={styles.progressLeft}>
-        <Text style={styles.progressLabel}>TODAY'S MEDICATIONS</Text>
+        <Text style={styles.progressLabel}>{"TODAY'S MEDICATIONS"}</Text>
         <Text style={styles.progressCount}>{taken} of {total} taken</Text>
         <View style={{ height: 14 }} />
         <LinearProgressBar value={total > 0 ? taken / total : 0} />

@@ -265,7 +265,7 @@ export default function MedicationsScreen({ scheme = dark }: Props) {
       setPendingMissedKey(null);
       pushAction('Marked as missed', () => setStatus(s => ({ ...s, [key]: prev })));
     },
-    [status, pushAction],
+    [status, pushAction, setPendingMissedKey],
   );
 
   return (

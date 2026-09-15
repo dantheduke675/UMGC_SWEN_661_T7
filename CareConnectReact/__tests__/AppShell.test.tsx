@@ -5,7 +5,7 @@
  * MsgThreadScreen never received an onCall handler.
  */
 import React from 'react';
-import { act, render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import AppShellNavigator, { AppShell } from '../src/components/AppShell';
 import { dark } from '../src/constants/theme';
 import { threads, contactById } from '../src/constants/data';

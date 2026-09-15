@@ -3,7 +3,7 @@
  * All components accept the active ColorScheme so they render correctly in both
  * light and dark mode without needing a context provider.
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,8 @@ import {
   TextInput,
   StyleSheet,
   Animated,
+  useAnimatedValue,
   Easing,
-  ViewStyle,
-  TextStyle,
 } from 'react-native';
 import { ColorScheme, tokens } from '../constants/theme';
 
@@ -224,7 +223,7 @@ interface AuthStatusRingProps {
 }
 
 export function AuthStatusRing({ scheme, scanning = false }: AuthStatusRingProps) {
-  const pulse = useRef(new Animated.Value(1)).current;
+  const pulse = useAnimatedValue(1);
 
   useEffect(() => {
     if (!scanning) return;
@@ -263,7 +262,7 @@ interface AuthSpinnerProps {
 }
 
 export function AuthSpinner({ label, scheme, large = false }: AuthSpinnerProps) {
-  const rotation = useRef(new Animated.Value(0)).current;
+  const rotation = useAnimatedValue(0);
 
   useEffect(() => {
     const anim = Animated.loop(
