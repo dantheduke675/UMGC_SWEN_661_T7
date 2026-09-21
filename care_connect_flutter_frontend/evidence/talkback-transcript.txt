@@ -1,0 +1,179 @@
+TalkBack traversal transcript - CareConnect (Flutter)
+Captured 2026-09-21 22:21 UTC - Android 17 (API 37) - emulator-5554
+TalkBack: com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
+touchExplorationEnabled=true
+
+Each numbered line is one stop on TalkBack's traversal, in traversal order:
+the node's accessible name, its role, and its state. Text fields are named
+by their Android hint, which is where Flutter puts a field's label and what
+TalkBack reads as the field's name.
+
+SOURCE: the platform accessibility tree (uiautomator dump) -- the material
+TalkBack composes speech FROM, not a recording of TalkBack speaking.
+Release TalkBack does not log utterance text, so no speech log exists.
+This establishes that every control has a name, a role and correct state,
+and the order they are reached in. It does not establish exact wording,
+pacing or perceived verbosity. TalkBack was running and drove the
+navigation (tap to focus, double-tap to activate); the text below is the
+tree's, and the phrasing of it is TalkBack's.
+
+── Landing ──────────────────────────────────────────────────────────────
+  1. [Switch  ] Switch to light theme   - checked
+  2. [View    ] CareConnect
+  3. [View    ] Your caregiver sets reminders and appointments; you simply check things off. Everyone stays on the same page.
+  4. [Button  ] Create account
+  5. [Button  ] Sign in
+
+    5 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Sign in - password ──────────────────────────────────────────────────────────────
+  1. [Switch  ] Switch to light theme   - checked
+  2. [Button  ] Back to welcome screen
+  3. [View    ] Sign in
+  4. [EditText] Email address   - value "maddy@example.com"
+  5. [View    ] We will never share this.
+  6. [EditText] Password   - obscured
+  7. [View    ] Your password manager can fill this for you.
+  8. [Button  ] Sign in
+  9. [Button  ] Use Face ID instead
+
+    9 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Today ──────────────────────────────────────────────────────────────
+  1. [View    ] Monday, September 21
+  2. [View    ] Good morning, Maddy
+  3. [View    ] Today's medications: 2 of 9 taken, 22 percent complete
+  4. [View    ] Next appointment
+  5. [View    ] Dr. Chen — Follow-up. Today at 2:30 PM, 45 min
+  6. [View    ] Today's medications
+  7. [Button  ] Undo: mark Ropivacaine at 8:00 AM as not taken
+  8. [View    ] Ropivacaine, 10 mg, due at 8:00 AM, taken
+  9. [Button  ] Mark Ropivacaine at 8:00 PM as taken
+ 10. [View    ] Ropivacaine, 10 mg, due at 8:00 PM
+ 11. [Button  ] Mark Loratadip / Carbiopa at 7:00 AM as taken
+ 12. [View    ] Loratadip / Carbiopa, 25 mg / 100 mg, due at 7:00 AM
+ 13. [Button  ] Scroll up
+ 14. [Button  ] Voice input, Not available yet   - disabled
+ 15. [Button  ] Scroll down
+ 16. [Button  ] Today, Tab 1 of 6   - selected
+ 17. [Button  ] Meds, Tab 2 of 6
+ 18. [Button  ] Messages, Tab 3 of 6
+ 19. [Button  ] Schedule, Tab 4 of 6
+ 20. [Button  ] Symptoms, Tab 5 of 6
+ 21. [Button  ] Account, Tab 6 of 6
+
+    21 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Medications ──────────────────────────────────────────────────────────────
+  1. [View    ] Medications
+  2. [View    ] 9 doses today
+  3. [View    ] 9 doses today, 2 taken, 0 missed
+  4. [Button  ] Undo: mark Ropivacaine at 8:00 AM as not taken
+  5. [View    ] Ropivacaine, Pain, 10 mg, due at 8:00 AM, Twice daily, taken
+  6. [View    ] Ropivacaine, Pain, 10 mg, due at 8:00 PM, Twice daily
+  7. [Button  ] Mark Ropivacaine at 8:00 PM as taken
+  8. [Button  ] Mark Ropivacaine at 8:00 PM as missed, Asks you to confirm
+  9. [View    ] Loratadip / Carbiopa, Neurological, 25 mg / 100 mg, due at 7:00 AM, Three times daily
+ 10. [Button  ] Mark Loratadip / Carbiopa at 7:00 AM as taken
+ 11. [Button  ] Mark Loratadip / Carbiopa at 7:00 AM as missed, Asks you to confirm
+ 12. [View    ] Loratadip / Carbiopa, Neurological, 25 mg / 100 mg, due at 12:00 PM, Three times daily
+ 13. [Button  ] Scroll up
+ 14. [Button  ] Voice input, Not available yet   - disabled
+ 15. [Button  ] Scroll down
+ 16. [Button  ] Today, Tab 1 of 6
+ 17. [Button  ] Meds, Tab 2 of 6   - selected
+ 18. [Button  ] Messages, Tab 3 of 6
+ 19. [Button  ] Schedule, Tab 4 of 6
+ 20. [Button  ] Symptoms, Tab 5 of 6
+ 21. [Button  ] Account, Tab 6 of 6
+
+    21 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Schedule ──────────────────────────────────────────────────────────────
+  1. [View    ] Schedule / 6 appointments this week
+  2. [Button  ] Monday, September 21, today, Has appointments   - selected
+  3. [Button  ] Tuesday, September 22, Has appointments
+  4. [Button  ] Wednesday, September 23, Has appointments
+  5. [Button  ] Thursday, September 24, No appointments
+  6. [Button  ] Friday, September 25, Has appointments
+  7. [Button  ] Saturday, September 26, No appointments
+  8. [Button  ] Sunday, September 27, No appointments
+  9. [View    ] Today
+ 10. [View    ] Dr. Chen — Follow-up. Dr. Sarah Chen · Physician. Today at 2:30 PM, 45 min
+ 11. [Button  ] Scroll up
+ 12. [Button  ] Voice input, Not available yet   - disabled
+ 13. [Button  ] Scroll down
+ 14. [Button  ] Today, Tab 1 of 6
+ 15. [Button  ] Meds, Tab 2 of 6
+ 16. [Button  ] Messages, Tab 3 of 6
+ 17. [Button  ] Schedule, Tab 4 of 6   - selected
+ 18. [Button  ] Symptoms, Tab 5 of 6
+ 19. [Button  ] Account, Tab 6 of 6
+
+    19 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Symptoms ──────────────────────────────────────────────────────────────
+  1. [View    ] Symptoms
+  2. [View    ] Track how you feel throughout the day
+  3. [Button  ] Log a symptom, Collapsed. Activate to expand
+  4. [View    ] Recent logs, 5 entries
+  5. [View    ] Pain, severity 2 of 5, Today · 9:10 AM. Mild knee ache after morning walk
+  6. [View    ] Fatigue, severity 3 of 5, Today · 7:30 AM. Felt tired after waking up
+  7. [View    ] Dizziness, severity 4 of 5, Yesterday · 3:45 PM. Brief episode when standing
+  8. [View    ] Nausea, severity 2 of 5, Yesterday · 12:00 PM. After lunch — passed quickly
+  9. [Button  ] Scroll up
+ 10. [Button  ] Voice input, Not available yet   - disabled
+ 11. [Button  ] Scroll down
+ 12. [Button  ] Today, Tab 1 of 6
+ 13. [Button  ] Meds, Tab 2 of 6
+ 14. [Button  ] Messages, Tab 3 of 6
+ 15. [Button  ] Schedule, Tab 4 of 6
+ 16. [Button  ] Symptoms, Tab 5 of 6   - selected
+ 17. [Button  ] Account, Tab 6 of 6
+
+    17 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Messages ──────────────────────────────────────────────────────────────
+  1. [View    ] Messages
+  2. [View    ] 3 conversations
+  3. [Button  ] Unread. Aunt Joyce, Caregiver. We thank you. I have everything I need. 2:34 PM, Opens conversation
+  4. [Button  ] Dr. Sarah Chen, Physician. Thank you Dr. Chen! Mon, Opens conversation
+  5. [Button  ] James Rivera, Home Aide. Arrived for today's visit. All morning medications confirmed taken. BP was 128/82. Yesterday, Opens conversation
+  6. [Button  ] Scroll up
+  7. [Button  ] Voice input, Not available yet   - disabled
+  8. [Button  ] Scroll down
+  9. [Button  ] Today, Tab 1 of 6
+ 10. [Button  ] Meds, Tab 2 of 6
+ 11. [Button  ] Messages, Tab 3 of 6   - selected
+ 12. [Button  ] Schedule, Tab 4 of 6
+ 13. [Button  ] Symptoms, Tab 5 of 6
+ 14. [Button  ] Account, Tab 6 of 6
+
+    14 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Account ──────────────────────────────────────────────────────────────
+  1. [View    ] Account
+  2. [View    ] Madison Hughes / Care recipient / maddy@example.com
+  3. [View    ] Care team
+  4. [Button  ] Message Aunt Joyce
+  5. [View    ] Aunt Joyce, Caregiver
+  6. [Button  ] Message Dr. Sarah Chen
+  7. [View    ] Dr. Sarah Chen, Physician
+  8. [Button  ] Message James Rivera
+  9. [View    ] James Rivera, Home Aide
+ 10. [View    ] Preferences
+ 11. [Switch  ] Dark mode   - checked
+ 12. [View    ] Appearance: Dark mode
+ 13. [View    ] Medication reminders: On · 15 min before
+ 14. [View    ] Face ID unlock: Enabled
+ 15. [Button  ] Scroll up
+ 16. [Button  ] Voice input, Not available yet   - disabled
+ 17. [Button  ] Scroll down
+ 18. [Button  ] Today, Tab 1 of 6
+ 19. [Button  ] Meds, Tab 2 of 6
+ 20. [Button  ] Messages, Tab 3 of 6
+ 21. [Button  ] Schedule, Tab 4 of 6
+ 22. [Button  ] Symptoms, Tab 5 of 6
+ 23. [Button  ] Account, Tab 6 of 6   - selected
+
+    23 nodes TalkBack can stop on; 0 unnamed control(s)

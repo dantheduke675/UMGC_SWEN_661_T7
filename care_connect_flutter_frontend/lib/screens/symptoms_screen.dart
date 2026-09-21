@@ -70,6 +70,8 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
       // what refreshes this screen's list when it's still around.
       () => _logs.remove(entry),
     );
+    announceStatus(context,
+        '${entry.name} logged at severity ${entry.severity} of 5');
   }
 
   String _formatTime(DateTime d) {
@@ -94,8 +96,7 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
           children: [
             // ── Header ─────────────────────────────────────────────────────
-            Text('Symptoms',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.text)),
+            CScreenTitle('Symptoms', scheme: scheme),
             const SizedBox(height: 2),
             Text('Track how you feel throughout the day',
                 style: TextStyle(fontSize: 13, color: scheme.sub)),
@@ -115,8 +116,15 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
             const SizedBox(height: 20),
 
             // ── Recent logs ───────────────────────────────────────────────
-            Text('Recent logs',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text)),
+            // Live region: logging a symptom changes the count, which is how
+            // TalkBack learns the entry landed (SC 4.1.3).
+            Semantics(
+              liveRegion: true,
+              label: 'Recent logs, ${_logs.length} '
+                  '${_logs.length == 1 ? 'entry' : 'entries'}',
+              excludeSemantics: true,
+              child: CSectionHeader('Recent logs', scheme: scheme),
+            ),
             const SizedBox(height: 10),
 
             ..._logs.map((log) => Padding(
@@ -163,22 +171,25 @@ class _LogCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header row
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          CTappable(
+            label: 'Log a symptom',
+            hint: expanded
+                ? 'Expanded. Activate to collapse'
+                : 'Collapsed. Activate to expand',
             onTap: onToggle,
             child: Row(
               children: [
                 Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle),
-                  child: const Center(child: Text('+', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.w700))),
+                  child: const Center(child: CGlyph('+', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.w700))),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text('Log a symptom',
                       style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.text)),
                 ),
-                Text(expanded ? '▲' : '▼',
+                CGlyph(expanded ? '▲' : '▼',
                     style: TextStyle(fontSize: 13, color: scheme.sub)),
               ],
             ),
@@ -186,15 +197,28 @@ class _LogCard extends StatelessWidget {
 
           if (expanded) ...[
             const SizedBox(height: 16),
-            // Symptom picker
-            Text('What are you feeling?',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.sub)),
+            // Symptom picker.
+            //
+            // `container: true` keeps this prompt as its own node. Without it
+            // Flutter merges the loose labels in this card into one, and the
+            // on-device tree read "What are you feeling? Severity Mild
+            // Severe" as a single blob announced before any of the controls
+            // it describes — the prompt detached from the chips, the slider's
+            // scale detached from the slider (WCAG 2.1 SC 1.3.1).
+            Semantics(
+              container: true,
+              child: Text('What are you feeling?',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.sub)),
+            ),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8, runSpacing: 8,
               children: _symptomOptions.map((opt) {
                 final isSel = selected == opt.label;
-                return GestureDetector(
+                return CTappable(
+                  label: opt.label,
+                  selected: isSel,
+                  borderRadius: BorderRadius.circular(12),
                   onTap: () => onSelect(opt.label),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -202,13 +226,13 @@ class _LogCard extends StatelessWidget {
                       color: isSel ? scheme.primary : scheme.surface,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isSel ? scheme.primary : scheme.border, width: 2,
+                        color: isSel ? scheme.primary : scheme.controlBorder, width: 2,
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(opt.emoji, style: const TextStyle(fontSize: 16)),
+                        CGlyph(opt.emoji, style: const TextStyle(fontSize: 16)),
                         const SizedBox(width: 6),
                         Text(opt.label,
                             style: TextStyle(
@@ -223,9 +247,12 @@ class _LogCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Severity slider
-            Text('Severity',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.sub)),
+            // Severity slider — same story as the prompt above.
+            Semantics(
+              container: true,
+              child: Text('Severity',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: scheme.sub)),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -236,6 +263,11 @@ class _LogCard extends StatelessWidget {
                     child: Slider(
                       value: severity.toDouble(),
                       min: 1, max: 5, divisions: 4,
+                      // Without these the slider announced a bare number with
+                      // no indication of what it measured (SC 3.3.2, 4.1.2).
+                      label: 'Severity $severity of 5',
+                      semanticFormatterCallback: (v) =>
+                          'Severity ${v.round()} of 5',
                       activeColor: scheme.primary,
                       inactiveColor: scheme.surface2,
                       onChanged: (v) => onSeverityChange(v.round()),
@@ -248,7 +280,12 @@ class _LogCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Submit
-            GestureDetector(
+            CTappable(
+              label: 'Log symptom',
+              hint: selected == null
+                  ? 'Choose what you are feeling first'
+                  : 'Logs $selected at severity $severity of 5',
+              borderRadius: BorderRadius.circular(14),
               onTap: selected != null ? onSubmit : null,
               child: Container(
                 width: double.infinity, height: 52,
@@ -295,7 +332,12 @@ class _LogTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: scheme.border),
       ),
-      child: Column(
+      child: Semantics(
+        container: true,
+        label: '${log.name}, severity ${log.severity} of 5, ${log.time}'
+            '${log.notes.isNotEmpty ? '. ${log.notes}' : ''}',
+        excludeSemantics: true,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -306,7 +348,7 @@ class _LogTile extends StatelessWidget {
                   color: col.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Center(child: Text(log.emoji, style: const TextStyle(fontSize: 20))),
+                child: Center(child: CGlyph(log.emoji, style: const TextStyle(fontSize: 20))),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -328,7 +370,8 @@ class _LogTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text('${log.severity}/5',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: col)),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+                        color: readableOnTint(col, scheme.surface, 0.12))),
               ),
             ],
           ),
@@ -340,6 +383,7 @@ class _LogTile extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: scheme.sub, height: 1.4)),
           ],
         ],
+      ),
       ),
     );
   }

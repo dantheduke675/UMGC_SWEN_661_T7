@@ -1,0 +1,57 @@
+appId: com.example.care_connect_flutter_frontend
+name: Log a symptom
+tags:
+  - critical
+  - symptoms
+---
+# ── Critical flow 3 of 4 ─────────────────────────────────────────────────────
+# The app's one multi-step form: expand, choose what you feel, grade it,
+# submit. Forms are where an unlabelled control costs the most, so this flow
+# leans on the names rather than the layout.
+#
+# The severity slider is the interesting part. It is the only control in the
+# app that a screen reader operates with increase/decrease rather than a tap,
+# and before the accessibility work it announced a bare number with no
+# indication of what it measured (SC 3.3.2, SC 4.1.2).
+
+- runFlow: ../subflows/sign-in.yaml
+
+- tapOn: "Symptoms, Tab 5 of 6"
+
+- extendedWaitUntil:
+    visible: ".*Recent logs.*"
+    timeout: 10000
+
+# Collapsed to start with; the hint says which way activating it will go.
+- assertVisible: "Log a symptom, Collapsed. Activate to expand"
+- tapOn: "Log a symptom, Collapsed. Activate to expand"
+
+- extendedWaitUntil:
+    visible: "What are you feeling\\?"
+    timeout: 10000
+
+# The chips carry an emoji and a word. The emoji is decorative and must not
+# reach the tree on its own (SC 1.1.1).
+- assertVisible: "Nausea"
+- assertNotVisible: "🤢"
+
+- tapOn: "Nausea"
+
+# Severity reads out with its units, not as "3".
+- assertVisible: ".*Severity 3 of 5.*"
+
+- takeScreenshot: 03-symptom-form
+
+# The hint changes once a symptom is chosen: before, it says what to do
+# first; after, it says exactly what activating will record.
+- assertVisible: "Log symptom, Logs Nausea at severity 3 of 5"
+- tapOn: "Log symptom, Logs Nausea at severity 3 of 5"
+
+# The form collapses and the entry lands, announced as one sentence rather
+# than as loose fragments (SC 1.3.1).
+- extendedWaitUntil:
+    visible: ".*Nausea, severity 3 of 5, Today.*"
+    timeout: 10000
+- assertNotVisible: "What are you feeling\\?"
+
+- takeScreenshot: 03-symptom-logged

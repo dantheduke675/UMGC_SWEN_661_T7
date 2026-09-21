@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../data.dart';
+import '../theme.dart';
+import '../widgets.dart';
 
 class CallingScreen extends StatefulWidget {
   final int contactId;
@@ -81,6 +83,8 @@ class _CallingScreenState extends State<CallingScreen>
   @override
   Widget build(BuildContext context) {
     final contactColor = Color(_contact.color);
+    // White initials on the amber contact measured 2.15:1 (SC 1.4.3).
+    final avatar = legibleOn(contactColor);
     final screenH     = MediaQuery.of(context).size.height;
 
     return Container(
@@ -92,7 +96,13 @@ class _CallingScreenState extends State<CallingScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            contactColor.withValues(alpha: 0.9),
+            // Pre-composited over the dark base rather than left translucent.
+            // A translucent stop takes its lightness from whatever happens to
+            // be painted behind the screen, so the contrast of the white
+            // status text on top of it was not actually guaranteed by the
+            // screen itself. Blending here fixes the result (SC 1.4.3).
+            Color.alphaBlend(
+                contactColor.withValues(alpha: 0.55), const Color(0xFF0E131D)),
             const Color(0xFF0E131D),
             const Color(0xFF0E131D),
           ],
@@ -118,11 +128,14 @@ class _CallingScreenState extends State<CallingScreen>
                         foregroundColor: Colors.white70,
                       ),
                       child: const Text('←',
+                          semanticsLabel: 'End call and go back',
                           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
                     ),
                   ),
+                  // Sits on the brightest part of the gradient, so it takes
+                  // full white rather than white60 (3.09:1 on amber).
                   Text(_connected ? 'On call' : 'Calling…',
-                      style: const TextStyle(fontSize: 14, color: Colors.white60,
+                      style: const TextStyle(fontSize: 14, color: Colors.white,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(width: 48), // balance
                 ],
@@ -180,14 +193,16 @@ class _CallingScreenState extends State<CallingScreen>
                   Container(
                     width: 130, height: 130,
                     decoration: BoxDecoration(
-                      color: contactColor,
+                      color: avatar.fill,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 3),
                     ),
                     child: Center(
-                      child: Text(_contact.initials,
-                          style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w800,
-                              color: Colors.white)),
+                      child: ExcludeSemantics(
+                        child: Text(_contact.initials,
+                            style: TextStyle(fontSize: 44, fontWeight: FontWeight.w800,
+                                color: avatar.foreground)),
+                      ),
                     ),
                   ),
                 ],
@@ -197,13 +212,24 @@ class _CallingScreenState extends State<CallingScreen>
             const SizedBox(height: 24),
 
             // ── Name + role ───────────────────────────────────────────────
-            Text(_contact.name,
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800,
-                    color: Colors.white)),
-            const SizedBox(height: 6),
-            Text(_contact.role,
-                style: const TextStyle(fontSize: 15, color: Colors.white60,
-                    fontWeight: FontWeight.w500)),
+            Semantics(
+              header: true,
+              headingLevel: 1,
+              container: true,
+              label: 'Call with ${_contact.name}, ${_contact.role}',
+              excludeSemantics: true,
+              child: Column(
+                children: [
+                  Text(_contact.name,
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800,
+                          color: Colors.white)),
+                  const SizedBox(height: 6),
+                  Text(_contact.role,
+                      style: const TextStyle(fontSize: 15, color: Colors.white60,
+                          fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 16),
 
@@ -213,6 +239,7 @@ class _CallingScreenState extends State<CallingScreen>
               child: _connected
                   ? Text(_elapsed,
                       key: const ValueKey('timer'),
+                      semanticsLabel: 'Call duration $_elapsed',
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700,
                           color: Colors.white))
                   : const _CallingDots(key: ValueKey('dots')),
@@ -225,6 +252,7 @@ class _CallingScreenState extends State<CallingScreen>
               padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Mute
                   _CtrlBtn(
@@ -285,7 +313,11 @@ class _CallingDotsState extends State<_CallingDots>
 
   @override
   Widget build(BuildContext context) {
+    // The trailing dots animate twice a second. Pinning a constant
+    // `semanticsLabel` keeps the visual animation while stopping a screen
+    // reader from re-announcing the string on every tick.
     return Text('Connecting${'.' * _dotCount}',
+        semanticsLabel: 'Connecting',
         style: const TextStyle(fontSize: 16, color: Colors.white60, fontWeight: FontWeight.w500));
   }
 }
@@ -304,7 +336,10 @@ class _CtrlBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return CTappable(
+      label: label,
+      toggled: active,
+      borderRadius: BorderRadius.circular(32),
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -317,14 +352,20 @@ class _CtrlBtn extends StatelessWidget {
                   : Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Center(child: Text(icon, style: const TextStyle(fontSize: 26))),
+            child: Center(child: CGlyph(icon, style: const TextStyle(fontSize: 26))),
           ),
           const SizedBox(height: 8),
-          Text(label,
-              style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600,
-                color: active ? Colors.white : Colors.white60,
-              )),
+          // Constrained and centred so a scaled-up label wraps instead of
+          // pushing the row past the screen edge (SC 1.4.4).
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 88),
+            child: Text(label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600,
+                  color: active ? Colors.white : Colors.white60,
+                )),
+          ),
         ],
       ),
     );
@@ -339,7 +380,9 @@ class _EndCallBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return CTappable(
+      label: 'End call',
+      borderRadius: BorderRadius.circular(36),
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -351,13 +394,17 @@ class _EndCallBtn extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: const Center(
-              child: Text('📵', style: TextStyle(fontSize: 28)),
+              child: CGlyph('📵', style: TextStyle(fontSize: 28)),
             ),
           ),
           const SizedBox(height: 8),
-          const Text('End',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
-                  color: Color(0xFFFF6B6B))),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 88),
+            child: const Text('End',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+                    color: Color(0xFFFF6B6B))),
+          ),
         ],
       ),
     );

@@ -1,0 +1,62 @@
+appId: com.example.care_connect_flutter_frontend
+name: Message a caregiver
+tags:
+  - critical
+  - messages
+---
+# ── Critical flow 4 of 4 ─────────────────────────────────────────────────────
+# Read an unread message and answer it.
+#
+# The unread state is drawn as a small red dot, which is colour carrying
+# meaning on its own — so the word "Unread" leads the row's accessible name
+# (WCAG 2.1 SC 1.4.1). This flow reads that name before and after opening the
+# thread, which is the only non-visual way to tell the state changed.
+
+- runFlow: ../subflows/sign-in.yaml
+
+- tapOn: "Messages, Tab 3 of 6"
+
+- extendedWaitUntil:
+    visible: ".*3 conversations.*"
+    timeout: 10000
+
+# Sender, role, unread state and a preview, in that order, as one sentence.
+- assertVisible: ".*Unread. Aunt Joyce, Caregiver..*"
+
+- tapOn: ".*Unread. Aunt Joyce.*"
+
+# The thread header is a level-1 heading naming who you are talking to.
+- extendedWaitUntil:
+    visible: "Conversation with Aunt Joyce, Caregiver"
+    timeout: 10000
+
+# Bubbles say who spoke and when — both of which are conveyed visually by
+# which side of the screen the bubble is on (SC 1.3.1).
+- assertVisible: ".*Aunt Joyce said: Hi Maddy, did you take your morning medications.*"
+
+- tapOn: "Send quick reply: Thank you!"
+
+- extendedWaitUntil:
+    visible: ".*You said: Thank you!.*"
+    timeout: 10000
+
+- takeScreenshot: 04-reply-sent
+
+# The call button draws a telephone emoji and nothing else.
+- assertVisible: "Call Aunt Joyce"
+- assertNotVisible: "📞"
+
+# The send button likewise draws only an arrow.
+- assertVisible: "Send message"
+- assertNotVisible: "↑"
+
+# ── Leaving clears the unread state ──────────────────────────────────────────
+- tapOn: "Back to messages"
+
+- extendedWaitUntil:
+    visible: ".*3 conversations.*"
+    timeout: 10000
+- assertNotVisible: ".*Unread. Aunt Joyce.*"
+- assertVisible: ".*Aunt Joyce, Caregiver..*"
+
+- takeScreenshot: 04-thread-read

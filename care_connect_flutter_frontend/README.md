@@ -40,10 +40,13 @@ and select which type of application you wish to build.
 
 ## Running Tests
 
-Run the full suite with:
+The suite runs at three levels. The first needs nothing but Flutter; the other
+two need a connected device or emulator.
 
 ```
-flutter test
+flutter test                                  # 606 widget/unit/a11y tests
+flutter test integration_test -d <device-id>  # 40 on-device workflow tests
+maestro test .maestro --debug-output .maestro/artifacts   # 5 E2E flows
 ```
 
 or a single file with:
@@ -52,16 +55,52 @@ or a single file with:
 flutter test <path to file>
 ```
 
+The Maestro flows drive the installed APK through Android's accessibility
+tree, so the app must be built with semantics on — see
+[`.maestro/README.md`](.maestro/README.md):
+
+```
+flutter build apk --debug --dart-define=E2E_SEMANTICS=true
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
 ## Test Coverage Report
 
-`coverage/` is git-ignored, so there is no hosted report — generate one locally:
+`coverage/` is git-ignored, so the generated report is not committed. The
+per-file summary is, at [`evidence/coverage-summary.txt`](evidence/coverage-summary.txt).
+Regenerate both with:
 
 ```
 flutter test --coverage
-genhtml coverage/lcov.info -o coverage/html
+dart run tool/coverage_summary.dart --out=evidence/coverage-summary.txt
 ```
 
-Then open `coverage/html/index.html` in a browser (requires `lcov`/`genhtml` installed). As of 2026-09-08, overall line coverage is 96.0% (1,524 of 1,587 lines).
+`tool/coverage_summary.dart` needs no extra tooling and exits non-zero if
+coverage falls below 75% (`--min=` moves the gate). For a browsable HTML
+report instead, `genhtml coverage/lcov.info -o coverage/html` still works
+where `lcov` is installed.
+
+**As of 2026-09-21: 98.90% line coverage (1,795 of 1,815 lines), 606 tests
+passing, `flutter analyze` clean.**
+
+## Accessibility
+
+The app targets **WCAG 2.1 Level AA**. The full record — what was changed,
+what was measured before and after, and how each criterion is verified — is in
+[`ACCESSIBILITY.md`](ACCESSIBILITY.md).
+
+Testing is in four layers:
+
+| Layer | Checks |
+|---|---|
+| `test/accessibility/` | Contrast, semantics, keyboard, focus, text scaling, status messages |
+| `integration_test/` | The same, on a real device, across screens |
+| `.maestro/` | The platform accessibility tree, as TalkBack reads it |
+| `tool/talkback_walk.sh` | A real TalkBack pass; transcript in [`evidence/`](evidence/) |
+
+A TalkBack pass was run on an Android 17 emulator: 8 screens, 129 nodes
+reachable, **0 unnamed controls**. VoiceOver has not been run — no macOS or
+iOS device is available to this project. Both are covered in `ACCESSIBILITY.md` §8.
 
 ## Troubleshooting
 

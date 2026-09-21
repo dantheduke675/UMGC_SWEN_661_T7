@@ -41,6 +41,27 @@ void main() {
       await pumpScreen(tester, buildTestApp(child: const TodayScreen()));
       expect(find.textContaining('I took this'), findsWidgets);
     });
+
+    testWidgets('the next-appointment card speaks one sentence', (tester) async {
+      // Left to merge on its own this card read "Dr. Chen — Follow-up /
+      // Today at 2:30 PM · 45 min / 2:30 PM", saying the time twice because
+      // the trailing chip repeats it. Caught by the TalkBack pass.
+      await pumpScreen(tester, buildTestApp(child: const TodayScreen()));
+
+      expect(
+        find.bySemanticsLabel('Dr. Chen — Follow-up. Today at 2:30 PM, 45 min'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the appointment time is not announced twice', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const TodayScreen()));
+
+      final label = tester
+          .getSemantics(find.bySemanticsLabel(RegExp('Dr. Chen')))
+          .label;
+      expect('2:30 PM'.allMatches(label).length, 1, reason: label);
+    });
   });
 
   // ── Interaction ───────────────────────────────────────────────────────────────

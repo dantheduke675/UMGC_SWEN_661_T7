@@ -43,13 +43,17 @@ class LandingScreen extends StatelessWidget {
                           children: [
                             AuthLogo(lg: isTablet),
                             SizedBox(height: screenHeight * 0.03),
-                            Text(
-                              'CareConnect',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: isTablet ? 40 : 32,
-                                fontWeight: FontWeight.w800,
-                                color: scheme.text,
+                            Semantics(
+                              header: true,
+                              headingLevel: 1,
+                              child: Text(
+                                'CareConnect',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: isTablet ? 40 : 32,
+                                  fontWeight: FontWeight.w800,
+                                  color: scheme.text,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 16),
