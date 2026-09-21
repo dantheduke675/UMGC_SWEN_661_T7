@@ -1,0 +1,19 @@
+# Flow: open a conversation thread, send a quick reply, and navigate back to
+# the thread list.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- tapOn: "Sign in"
+- tapOn:
+    text: "Sign in"
+    index: 1
+- tapOn: "Messages"
+- assertVisible: ".*conversations.*"
+- tapOn: ".*Aunt Joyce.*"
+- assertVisible: "Caregiver"
+- assertVisible: "Type a message…"
+- tapOn: "I took my medications"
+- assertVisible: "Send message"
+- tapOn: "Back"
+- assertVisible: ".*conversations.*"
+- assertVisible: ".*Aunt Joyce.*"

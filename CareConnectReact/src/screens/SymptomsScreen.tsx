@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { ColorScheme, dark } from '../constants/theme';
+import { ColorScheme, dark, accessibleAccentText, accessibleFillForWhiteText } from '../constants/theme';
 import { useScrollContext } from '../context/ScrollContext';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ function SeverityPicker({
     '#EF4444';
 
   return (
-    <View style={styles.severityPicker}>
+    <View style={styles.severityPicker} accessibilityRole="radiogroup">
       <Text style={[styles.severityEdge, { color: scheme.muted }]}>Mild</Text>
       <View style={styles.severityDots}>
         {[1, 2, 3, 4, 5].map(v => (
@@ -90,15 +90,22 @@ function SeverityPicker({
             key={v}
             onPress={() => onChange(v)}
             activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={[
               styles.severityDot,
               {
-                backgroundColor: v <= value ? col : scheme.surface2,
+                backgroundColor: v <= value
+                  ? (v === value ? accessibleFillForWhiteText(col) : col)
+                  : scheme.surface2,
                 borderColor:     v <= value ? col : scheme.border,
                 width:  v === value ? 36 : 28,
                 height: v === value ? 36 : 28,
               },
             ]}
+            accessible
+            accessibilityRole="radio"
+            accessibilityLabel={`Severity ${v} of 5`}
+            accessibilityState={{ selected: v === value }}
           >
             {v === value && (
               <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF' }}>
@@ -145,12 +152,24 @@ function LogCard({
       ]}
     >
       {/* Header row */}
-      <TouchableOpacity onPress={onToggle} activeOpacity={0.8} style={styles.logCardHeader}>
-        <View style={[styles.logCardPlus, { backgroundColor: scheme.primary }]}>
+      <TouchableOpacity
+        onPress={onToggle}
+        activeOpacity={0.8}
+        style={[styles.logCardHeader, { minHeight: 44 }]}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel="Log a symptom"
+        accessibilityState={{ expanded }}
+      >
+        <View
+          style={[styles.logCardPlus, { backgroundColor: scheme.primary }]}
+        >
           <Text style={styles.logCardPlusText}>+</Text>
         </View>
         <Text style={[styles.logCardTitle, { color: scheme.text }]}>Log a symptom</Text>
-        <Text style={[styles.logCardChevron, { color: scheme.sub }]}>
+        <Text
+          style={[styles.logCardChevron, { color: scheme.sub }]}
+        >
           {expanded ? '▲' : '▼'}
         </Text>
       </TouchableOpacity>
@@ -179,8 +198,16 @@ function LogCard({
                       borderColor:     isSel ? scheme.primary : scheme.border,
                     },
                   ]}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={opt.label}
+                  accessibilityState={{ selected: isSel }}
                 >
-                  <Text style={{ fontSize: 16 }}>{opt.emoji}</Text>
+                  <Text
+                    style={{ fontSize: 16 }}
+                  >
+                    {opt.emoji}
+                  </Text>
                   <Text
                     style={[
                       styles.symptomChipLabel,
@@ -209,6 +236,11 @@ function LogCard({
               styles.submitBtn,
               { backgroundColor: selected ? scheme.primary : scheme.surface2 },
             ]}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Log symptom"
+            accessibilityHint={selected ? undefined : 'Choose a symptom above first'}
+            accessibilityState={{ disabled: !selected }}
           >
             <Text
               style={[
@@ -233,12 +265,16 @@ function LogTile({ log, scheme }: { log: SymptomLog; scheme: ColorScheme }) {
     log.severity === 3 ? '#F59E0B' :
     '#EF4444';
 
+  const textCol = accessibleAccentText(col, scheme);
+
   return (
     <View
       style={[
         styles.logTile,
         { backgroundColor: scheme.surface, borderColor: scheme.border },
       ]}
+      accessible
+      accessibilityLabel={`${log.name}, severity ${log.severity} of 5, ${log.time}${log.notes ? `. ${log.notes}` : ''}`}
     >
       <View style={styles.logTileTop}>
         <View
@@ -254,7 +290,7 @@ function LogTile({ log, scheme }: { log: SymptomLog; scheme: ColorScheme }) {
           <Text style={[styles.logTileTime, { color: scheme.sub }]}>{log.time}</Text>
         </View>
         <View style={[styles.severityBadge, { backgroundColor: col + '1F' }]}>
-          <Text style={[styles.severityBadgeText, { color: col }]}>{log.severity}/5</Text>
+          <Text style={[styles.severityBadgeText, { color: textCol }]}>{log.severity}/5</Text>
         </View>
       </View>
       <View style={{ height: 10 }} />
@@ -325,7 +361,7 @@ export default function SymptomsScreen({ scheme = dark }: Props) {
       scrollEventThrottle={16}
       contentContainerStyle={styles.content}
     >
-      <Text style={[styles.heading, { color: scheme.text }]}>Symptoms</Text>
+      <Text style={[styles.heading, { color: scheme.text }]} accessibilityRole="header">Symptoms</Text>
       <Text style={[styles.subheading, { color: scheme.sub }]}>
         Track how you feel throughout the day
       </Text>
@@ -343,7 +379,7 @@ export default function SymptomsScreen({ scheme = dark }: Props) {
       />
       <View style={{ height: 20 }} />
 
-      <Text style={[styles.sectionLabel, { color: scheme.text }]}>Recent logs</Text>
+      <Text style={[styles.sectionLabel, { color: scheme.text }]} accessibilityRole="header">Recent logs</Text>
       <View style={{ height: 10 }} />
 
       {logs.map((log, i) => (
@@ -399,8 +435,10 @@ const styles = StyleSheet.create({
   symptomChip: {
     flexDirection:  'row',
     alignItems:     'center',
+    justifyContent: 'center',
     paddingHorizontal: 14,
     paddingVertical:   10,
+    minHeight:      44,
     borderRadius:   12,
     borderWidth:    2,
     gap:            6,

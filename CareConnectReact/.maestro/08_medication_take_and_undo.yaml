@@ -1,0 +1,13 @@
+# Flow: mark a medication as taken from Today, then undo it from the toast.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- tapOn: "Sign in"
+- tapOn:
+    text: "Sign in"
+    index: 1
+- assertVisible: ".*Good morning.*"
+- tapOn: "Ropivacaine, 10 mg, 8:00 PM"
+- assertVisible: "Marked as taken"
+- tapOn: "Undo"
+- assertNotVisible: "Marked as taken"
