@@ -1,5 +1,5 @@
 TalkBack traversal transcript - CareConnect (Flutter)
-Captured 2026-09-21 22:21 UTC - Android 17 (API 37) - emulator-5554
+Captured 2026-09-22 01:42 UTC - Android 17 (API 37) - emulator-5554
 TalkBack: com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
 touchExplorationEnabled=true
 
@@ -8,8 +8,11 @@ the node's accessible name, its role, and its state. Text fields are named
 by their Android hint, which is where Flutter puts a field's label and what
 TalkBack reads as the field's name.
 
-SOURCE: the platform accessibility tree (uiautomator dump) -- the material
-TalkBack composes speech FROM, not a recording of TalkBack speaking.
+SOURCE: the platform accessibility tree -- the material TalkBack
+composes speech FROM, not a recording of TalkBack speaking. It is read
+with uiautomator dump, except where a screen animates without pause and
+uiautomator can never see an idle window; those are read with maestro
+hierarchy, off the same tree, and each screen below says which was used.
 Release TalkBack does not log utterance text, so no speech log exists.
 This establishes that every control has a name, a role and correct state,
 and the order they are reached in. It does not establish exact wording,
@@ -25,6 +28,46 @@ tree's, and the phrasing of it is TalkBack's.
   5. [Button  ] Sign in
 
     5 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Create account ──────────────────────────────────────────────────────────────
+  1. [Switch  ] Switch to light theme   - checked
+  2. [Button  ] Back to welcome screen
+  3. [View    ] Create your account
+  4. [EditText] Full name   - value "Maddy Chen"
+  5. [EditText] Email address   - value "maddy@example.com"
+  6. [EditText] Password   - obscured
+  7. [View    ] At least 8 characters.
+  8. [View    ] I AM A…
+  9. [Button  ] Care recipient
+ 10. [Button  ] Caregiver   - disabled
+
+    10 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Face ID setup ──────────────────────────────────────────────────────────────
+  1. [Switch  ] Switch to light theme   - checked
+  2. [View    ] Sign in with your face?
+  3. [View    ] You would open CareConnect just by looking at it. No password, no keyboard.
+  4. [ImageView] Face scan preview
+  5. [View    ] Your face is never sent anywhere. It stays on this phone and is handled by iOS. You can change this at any time from the menu.
+  6. [Button  ] Yes, use Face ID
+  7. [Button  ] No, use my password
+
+    7 nodes TalkBack can stop on; 0 unnamed control(s)
+
+── Face ID sign-in ──────────────────────────────────────────────────────────────
+  1. [Switch  ] Switch to light theme   - checked
+  2. [View    ] Welcome back, Maddy
+  3. [View    ] Signing you in now. Look at your phone — there is nothing to tap.
+  4. [ImageView] Face scan preview
+  5. [ProgressBar] 75
+  6. [View    ] Looking for your face…
+  7. [View    ] A failed attempt never locks your account and never makes you wait. You will stay signed in afterwards.
+  8. [Button  ] Use my password instead
+
+    8 nodes TalkBack can stop on; 0 unnamed control(s)
+    read with `maestro hierarchy` - uiautomator cannot dump this screen, whose
+    progress spinner never lets the window go idle. There is no
+    password field here, which is the one state this reader omits.
 
 ── Sign in - password ──────────────────────────────────────────────────────────────
   1. [Switch  ] Switch to light theme   - checked

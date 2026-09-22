@@ -98,7 +98,7 @@ Testing is in four layers:
 | `.maestro/` | The platform accessibility tree, as TalkBack reads it |
 | `tool/talkback_walk.sh` | A real TalkBack pass; transcript in [`evidence/`](evidence/) |
 
-A TalkBack pass was run on an Android 17 emulator: 8 screens, 129 nodes
+A TalkBack pass was run on an Android 17 emulator: 11 screens, 154 nodes
 reachable, **0 unnamed controls**. VoiceOver has not been run — no macOS or
 iOS device is available to this project. Both are covered in `ACCESSIBILITY.md` §8.
 

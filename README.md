@@ -126,14 +126,14 @@ accessibility tests:
 flutter test ./test/accessibility
 ```
 
-| File | What it checks |
-|---|---|
-| `a11y_harness.dart` | Shared harness — mounts all 13 screens at their real routes, in the real shell |
-| `contrast_test.dart` | SC 1.4.3 — every painted paragraph, both themes, also at 200% text scale |
-| `semantics_test.dart` | SC 1.1.1, 1.3.1, 4.1.2 — names, roles, headings, tab state, emoji leakage, duplicate names |
+| File                             | What it checks                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `a11y_harness.dart`              | Shared harness — mounts all 13 screens at their real routes, in the real shell                                |
+| `contrast_test.dart`             | SC 1.4.3 — every painted paragraph, both themes, also at 200% text scale                                      |
+| `semantics_test.dart`            | SC 1.1.1, 1.3.1, 4.1.2 — names, roles, headings, tab state, emoji leakage, duplicate names                    |
 | `keyboard_and_targets_test.dart` | SC 2.1.1, 2.4.3, 2.4.7 and the 48×48 target size — focusability, Tab order, focus visibility, modal behaviour |
-| `text_scaling_test.dart` | SC 1.4.4 — 100/130/150/200% in both themes, and that text actually grows |
-| `status_messages_test.dart` | SC 4.1.3 — announcements and live regions |
+| `text_scaling_test.dart`         | SC 1.4.4 — 100/130/150/200% in both themes, and that text actually grows                                      |
+| `status_messages_test.dart`      | SC 4.1.3 — announcements and live regions                                                                     |
 
 One more sits outside that directory: `test/unit/contrast_helpers_test.dart`
 sweeps the contrast helpers SC 1.4.3 rests on across all 256 greys, the full
@@ -156,8 +156,12 @@ colour actually painted around each paragraph.
 ### Screen-reader testing
 
 A **TalkBack** pass was run on an Android 17 emulator with the screen reader
-switched on, covering 8 screens and 129 reachable nodes with **0 unnamed
-controls**. The transcript is committed at
+switched on, covering **11 screens and 154 reachable nodes with 0 unnamed
+controls**: Landing, Create account, Face ID setup, Face ID sign-in, Sign in,
+Today, Medications, Schedule, Symptoms, Messages and Account. The sign-up
+path — Create account and the two Face ID screens — was added by a second
+pass; the eight screens the first pass had already covered came back
+byte-identical. The transcript is committed at
 `care_connect_flutter_frontend/evidence/talkback-transcript.txt` and is
 reproduced by:
 
@@ -170,16 +174,34 @@ Switch TalkBack on first:
 ```
 adb shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
 adb shell settings put secure accessibility_enabled 1
+adb shell settings put secure touch_exploration_enabled 1
 ```
 
 and off again with `adb shell settings delete secure enabled_accessibility_services`.
+Touch exploration is the part the walk depends on and it does not always come
+up with the service, so confirm `touchExplorationEnabled=true` in
+`adb shell dumpsys accessibility` before trusting a run. The script also wants
+the Maestro CLI — it looks in `~/.maestro/bin/maestro` and takes a `MAESTRO=`
+override — for the one screen described below.
 
 The transcript is captured from the platform accessibility tree — the material
 TalkBack composes speech from — because release builds of TalkBack do not log
 utterance text. It establishes that every control has a name, a role and the
 correct state, and the order they are reached in; it does not establish exact
-wording or pacing. **VoiceOver has not been run**: no macOS host or iOS device
-is available to this project. Both are covered in full in
+wording or pacing. Ten screens are read with `uiautomator dump`. Face ID
+sign-in is read with `maestro hierarchy` off the same tree, because its
+spinner never lets the window go idle and `uiautomator dump` only ever returns
+an idle window; the transcript names the reader under that screen.
+
+The pass found one defect, recorded rather than fixed: on Face ID sign-in the
+indeterminate spinner reaches the tree as a progress node whose entire
+accessible name is `75`, so TalkBack announces a figure that refers to
+nothing. The screen remains usable — the `Looking for your face…` line beside
+it is what carries the meaning — and the fix is either to keep the indicator
+out of semantics or to give it a real label.
+
+**VoiceOver has not been run**: no macOS host or iOS device is available to
+this project. Both are covered in full in
 `care_connect_flutter_frontend/ACCESSIBILITY.md` §8.
 
 ## Integration Testing
@@ -194,13 +216,13 @@ flutter test integration_test -d <device-id>
 
 Use `flutter devices` to list device IDs.
 
-| File | Workflow |
-|---|---|
-| `e2e_harness.dart` | Shared — launches the real app, resets seeded state, addresses controls by accessible name |
-| `medication_flow_test.dart` | Sign in → take a dose → both screens agree → undo from another tab → the missed-dose dialog |
-| `symptom_flow_test.dart` | The symptom logger, including that submit stays inert until a symptom is chosen |
-| `messaging_flow_test.dart` | Open an unread thread, reply twice, leave and return; the call button |
-| `navigation_flow_test.dart` | All six tabs, exactly-one-selected, positional hints, theme persistence, sign out |
+| File                                | Workflow                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `e2e_harness.dart`                  | Shared — launches the real app, resets seeded state, addresses controls by accessible name  |
+| `medication_flow_test.dart`         | Sign in → take a dose → both screens agree → undo from another tab → the missed-dose dialog |
+| `symptom_flow_test.dart`            | The symptom logger, including that submit stays inert until a symptom is chosen             |
+| `messaging_flow_test.dart`          | Open an unread thread, reply twice, leave and return; the call button                       |
+| `navigation_flow_test.dart`         | All six tabs, exactly-one-selected, positional hints, theme persistence, sign out           |
 | `accessibility_on_device_test.dart` | Guidelines, control names, the slider's increase action, live regions, 100/130/200% scaling |
 
 The host widget tests mount one screen at a time behind stub routes, so a test
@@ -219,7 +241,7 @@ TalkBack reads — so a control with no accessible name is a control the flows
 cannot tap.
 
 Maestro is a separate CLI, not part of Flutter — install it from
-[maestro.dev](https://maestro.dev) first. Then, with a device or emulator
+[maestro.dev](https://maestro.mobile.dev/getting-started/installation) first. Then, with a device or emulator
 running:
 
 ```
@@ -228,13 +250,13 @@ adb install -r build/app/outputs/flutter-apk/app-debug.apk
 maestro test .maestro --debug-output .maestro/artifacts
 ```
 
-| Flow | Covers |
-|---|---|
-| `01-record-a-dose` | Sign in → mark a dose taken on Today → the same dose shows taken on Medications |
+| Flow                          | Covers                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `01-record-a-dose`            | Sign in → mark a dose taken on Today → the same dose shows taken on Medications                        |
 | `02-missed-dose-confirmation` | The confirmation dialog: it names itself, hides the screen behind it, and both cancel and confirm work |
-| `03-log-a-symptom` | The symptom form: expand, choose, grade, submit, and the entry appears |
-| `04-message-a-caregiver` | Open an unread thread, reply, return, and the unread state has cleared |
-| `05-screen-reader-names` | Walks the app asserting every control is named and no name is an emoji |
+| `03-log-a-symptom`            | The symptom form: expand, choose, grade, submit, and the entry appears                                 |
+| `04-message-a-caregiver`      | Open an unread thread, reply, return, and the unread state has cleared                                 |
+| `05-screen-reader-names`      | Walks the app asserting every control is named and no name is an emoji                                 |
 
 Two things to know before running them:
 
@@ -441,7 +463,7 @@ Note the trailing `.` in the script — a bare `expo lint` only checks `src/`, `
 npx jest --coverage --forceExit --collectCoverageFrom="src/**/*.{ts,tsx}"
 ```
 
-You can alternatively use 
+You can alternatively use
 
 ```
 npm test -- --coverage
@@ -527,8 +549,27 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 - Configured eslint for the project
 
 ## Ashvini
+
 - Designed the Symptoms, Schedule, Account, and Calling screens
 - Worked on the comparison document
 - Tested the app locally.
+
+# Weekly Contributions 09/16-09/22
+
+## Daniel
+
+-
+
+## Justin
+
+- Worked on the README
+- Added Accessibility testing for the Flutter application
+- Enhanced apects of the code to meet WCAG 2.1 Level AA Compliance
+- Added Integration testing for the Flutter application
+- Added End to End testing for the Flutter application
+
+## Ian
+
+-
 
 ### AI Disclosure: The code in this project was written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
