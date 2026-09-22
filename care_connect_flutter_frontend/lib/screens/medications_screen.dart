@@ -13,8 +13,6 @@ class MedicationsScreen extends StatefulWidget {
 }
 
 class _MedicationsScreenState extends State<MedicationsScreen> {
-  String? _pendingMissedKey; // key awaiting confirm dialog
-
   List<MedSlot> get _slots => buildSlots();
 
   void _markTaken(MedSlot slot) {
@@ -25,6 +23,7 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
       'Marked ${slot.med.name} (${slot.time}) as taken',
       () => slotStatuses[slot.key] = prev,
     );
+    announceStatus(context, '${slot.med.name} at ${slot.time} marked as taken');
   }
 
   void _unmarkTaken(MedSlot slot) {
@@ -34,20 +33,41 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
       'Unmarked ${slot.med.name} (${slot.time}) as taken',
       () => slotStatuses[slot.key] = SlotStatus.taken,
     );
+    announceStatus(context, '${slot.med.name} at ${slot.time} no longer marked as taken');
   }
 
-  void _confirmMissed(String key) => setState(() => _pendingMissedKey = key);
+  /// Opens the "are you sure?" step as a real dialog route.
+  ///
+  /// It used to be a plain `Container` laid over the screen inside a `Stack`.
+  /// That overlay was never announced as a dialog, left the whole screen
+  /// behind it exposed to screen readers, trapped neither focus nor pointers —
+  /// a tap on the bottom nav went straight through the dim layer and silently
+  /// abandoned the confirmation. `showDialog` gives a modal barrier, a focus
+  /// scope and route semantics for free (WCAG 2.1 SC 2.4.3, SC 4.1.2).
+  Future<void> _confirmMissed(MedSlot slot) async {
+    final scheme = context.read<ThemeNotifier>().scheme;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.6),
+      barrierLabel: 'Confirm missed dose',
+      builder: (_) => _ConfirmDialog(
+        scheme: scheme,
+        medName: slot.med.name,
+        time: slot.time,
+      ),
+    );
+    if (confirmed == true && mounted) _markMissed(slot);
+  }
 
   void _markMissed(MedSlot slot) {
     final prev = slotStatuses[slot.key] ?? SlotStatus.none;
-    setState(() {
-      slotStatuses[slot.key] = SlotStatus.missed;
-      _pendingMissedKey = null;
-    });
+    setState(() => slotStatuses[slot.key] = SlotStatus.missed);
     context.read<ActionHistory>().push(
       'Marked ${slot.med.name} (${slot.time}) as missed',
       () => slotStatuses[slot.key] = prev,
     );
+    announceStatus(context,
+        '${slot.med.name} at ${slot.time} marked as missed. Your caregiver has been notified.');
   }
 
   @override
@@ -67,8 +87,7 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
             // ── Header ───────────────────────────────────────────────────────
-            Text('Medications',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.text)),
+            CScreenTitle('Medications', scheme: scheme),
             const SizedBox(height: 4),
             Text('${_slots.length} doses today',
                 style: TextStyle(fontSize: 13, color: scheme.sub)),
@@ -93,20 +112,12 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
                   scheme: scheme,
                   onTake:   () => _markTaken(slot),
                   onUntake: () => _unmarkTaken(slot),
-                  onMissed: () => _confirmMissed(slot.key),
+                  onMissed: () => _confirmMissed(slot),
                 ),
               );
             }),
           ],
         ),
-
-        // ── Confirm "missed" dialog ──────────────────────────────────────────
-        if (_pendingMissedKey != null)
-          _ConfirmDialog(
-            scheme: scheme,
-            onConfirm: () => _markMissed(_slots.firstWhere((s) => s.key == _pendingMissedKey)),
-            onCancel:  () => setState(() => _pendingMissedKey = null),
-          ),
 
         const UndoFab(),
       ],
@@ -123,7 +134,14 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Semantics(
+      container: true,
+      // Live region so marking a dose taken or missed is announced without
+      // stealing focus from the button just pressed (SC 4.1.3).
+      liveRegion: true,
+      label: '$total doses today, $taken taken, $missed missed',
+      excludeSemantics: true,
+      child: Row(
       children: [
         _Stat(label: 'Total doses', value: '$total', color: scheme.sub, scheme: scheme),
         const SizedBox(width: 10),
@@ -131,6 +149,7 @@ class _SummaryRow extends StatelessWidget {
         const SizedBox(width: 10),
         _Stat(label: 'Missed', value: '$missed', color: const Color(0xFFC53030),   scheme: scheme),
       ],
+      ),
     );
   }
 }
@@ -151,13 +170,20 @@ class _Stat extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
-        child: Column(
-          children: [
-            Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: color)),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.sub),
-                textAlign: TextAlign.center),
-          ],
+        child: Semantics(
+          container: true,
+          label: '$label: $value',
+          excludeSemantics: true,
+          child: Column(
+            children: [
+              Text(value,
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800,
+                      color: readableOnTint(color, scheme.bg, 0.1, minRatio: 3.0))),
+              const SizedBox(height: 2),
+              Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: scheme.sub),
+                  textAlign: TextAlign.center),
+            ],
+          ),
         ),
       ),
     );
@@ -206,8 +232,14 @@ class _MedCard extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // Header
-                      Row(
+                      // Header — announced as one sentence (SC 1.3.1).
+                      Semantics(
+                        container: true,
+                        label: '${slot.med.name}, ${slot.med.category}, '
+                            '${slot.med.dose}, due at ${slot.time}, ${slot.med.freq}'
+                            '${isTaken ? ', taken' : isMissed ? ', missed' : ''}',
+                        excludeSemantics: true,
+                        child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
@@ -216,7 +248,7 @@ class _MedCard extends StatelessWidget {
                               color: scheme.surface2,
                               borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Center(child: Text('💊', style: TextStyle(fontSize: 22))),
+                            child: const Center(child: CGlyph('💊', style: TextStyle(fontSize: 22))),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -246,12 +278,18 @@ class _MedCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      ),
                       const SizedBox(height: 14),
-                      // Action buttons
+                      // Action buttons — same visible text on every card, so
+                      // each accessible name says which dose it acts on.
                       Row(
                         children: [
                           Expanded(
-                            child: GestureDetector(
+                            child: CTappable(
+                              label: isTaken
+                                  ? 'Undo: mark ${slot.med.name} at ${slot.time} as not taken'
+                                  : 'Mark ${slot.med.name} at ${slot.time} as taken',
+                              borderRadius: BorderRadius.circular(14),
                               onTap: isTaken ? onUntake : onTake,
                               child: Container(
                                 height: 52,
@@ -266,7 +304,9 @@ class _MedCard extends StatelessWidget {
                                     isTaken ? '✓ Taken — tap to undo' : 'I took this',
                                     style: TextStyle(
                                       fontSize: 15, fontWeight: FontWeight.w700,
-                                      color: isTaken ? scheme.primary : Colors.white,
+                                      color: isTaken
+                                          ? readableOnTint(scheme.primary, scheme.surface, 0.12)
+                                          : Colors.white,
                                     ),
                                   ),
                                 ),
@@ -276,7 +316,10 @@ class _MedCard extends StatelessWidget {
                           if (!isTaken) ...[
                             const SizedBox(width: 10),
                             Expanded(
-                              child: GestureDetector(
+                              child: CTappable(
+                                label: 'Mark ${slot.med.name} at ${slot.time} as missed',
+                                hint: 'Asks you to confirm',
+                                borderRadius: BorderRadius.circular(14),
                                 onTap: onMissed,
                                 child: Container(
                                   height: 52,
@@ -286,16 +329,19 @@ class _MedCard extends StatelessWidget {
                                         : Colors.transparent,
                                     borderRadius: BorderRadius.circular(14),
                                     border: Border.all(
-                                      color: const Color(0xFFC53030).withValues(alpha: 0.4),
+                                      color: readableOn(
+                                          const Color(0xFFC53030), scheme.surface,
+                                          minRatio: 3.0),
                                       width: 2,
                                     ),
                                   ),
                                   child: Center(
                                     child: Text(
                                       isMissed ? '✗ Missed' : 'I missed this',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 15, fontWeight: FontWeight.w700,
-                                        color: Color(0xFFC53030),
+                                        color: readableOn(
+                                            const Color(0xFFC53030), scheme.surface),
                                       ),
                                     ),
                                   ),
@@ -321,63 +367,74 @@ class _MedCard extends StatelessWidget {
 
 class _ConfirmDialog extends StatelessWidget {
   final CScheme scheme;
-  final VoidCallback onConfirm, onCancel;
-  const _ConfirmDialog({required this.scheme, required this.onConfirm, required this.onCancel});
+  final String medName, time;
+  const _ConfirmDialog({required this.scheme, required this.medName, required this.time});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.6),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: scheme.border),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Mark this dose as missed?\nYour caregiver will be notified.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600,
-                      color: scheme.text, height: 1.5),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity, height: 56,
-                  child: ElevatedButton(
-                    onPressed: onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC53030),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                    child: const Text('Yes, I missed this dose',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+    // The same wrapper AlertDialog uses: names the route so the screen reader
+    // announces "Confirm missed dose, dialog" on open, and scopes it so focus
+    // and exploration stay inside until it is dismissed.
+    return Semantics(
+      scopesRoute: true,
+      namesRoute: true,
+      explicitChildNodes: true,
+      label: 'Confirm missed dose',
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: scheme.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Mark this dose as missed?\nYour caregiver will be notified.',
+                textAlign: TextAlign.center,
+                semanticsLabel: 'Mark $medName at $time as missed? '
+                    'Your caregiver will be notified.',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600,
+                    color: scheme.text, height: 1.5),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity, height: 56,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFC53030),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
                   ),
+                  child: const Text('Yes, I missed this dose',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity, height: 56,
-                  child: OutlinedButton(
-                    onPressed: onCancel,
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: scheme.border, width: 2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      foregroundColor: scheme.text,
-                    ),
-                    child: const Text('Cancel — go back',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity, height: 56,
+                child: OutlinedButton(
+                  // Focus opens on the non-destructive choice, so a keyboard
+                  // user pressing Enter out of habit cannot confirm by accident.
+                  autofocus: true,
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: scheme.controlBorder, width: 2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    foregroundColor: scheme.text,
                   ),
+                  child: const Text('Cancel — go back',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

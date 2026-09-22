@@ -29,13 +29,15 @@ function ProfileCard({ scheme }: { scheme: ColorScheme }) {
         { backgroundColor: scheme.surface, borderColor: scheme.border },
       ]}
     >
-      <View style={[styles.profileAvatar, { backgroundColor: scheme.primary }]}>
+      <View
+        style={[styles.profileAvatar, { backgroundColor: scheme.primary }]}
+      >
         <Text style={styles.profileInitials}>{patient.initials}</Text>
       </View>
       <View style={styles.profileInfo}>
         <Text style={[styles.profileName, { color: scheme.text }]}>{patient.full}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>Care recipient</Text>
+        <View style={[styles.roleBadge, { backgroundColor: scheme.primary + '21' }]}>
+          <Text style={[styles.roleBadgeText, { color: scheme.primaryText }]}>Care recipient</Text>
         </View>
         <Text style={[styles.profileEmail, { color: scheme.sub }]}>maddy@example.com</Text>
       </View>
@@ -70,8 +72,16 @@ function CareTeamTile({
         onPress={onMessage}
         activeOpacity={0.7}
         style={[styles.msgBtn, { backgroundColor: scheme.primary + '1A' }]}
+        hitSlop={{ top: 2, bottom: 2, left: 2, right: 2 }}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={`Message ${contact.name}`}
       >
-        <Text style={{ fontSize: 18 }}>💬</Text>
+        <Text
+          style={{ fontSize: 18 }}
+        >
+          💬
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -110,7 +120,15 @@ function ThemeSwitch({
   });
 
   return (
-    <TouchableOpacity onPress={toggle} activeOpacity={0.8}>
+    <TouchableOpacity
+      onPress={toggle}
+      activeOpacity={0.8}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessible
+      accessibilityRole="switch"
+      accessibilityLabel="Dark mode"
+      accessibilityState={{ checked: isDark }}
+    >
       <Animated.View
         style={[styles.switchTrack, { backgroundColor: trackColor as any }]}
       >
@@ -143,8 +161,15 @@ function PrefTile({
         styles.prefTile,
         { backgroundColor: scheme.surface, borderColor: scheme.border },
       ]}
+      accessible={!trailing}
+      accessibilityLabel={!trailing ? `${label}${value ? `, ${value}` : ''}` : undefined}
+      importantForAccessibility={!trailing ? 'yes' : undefined}
     >
-      <Text style={{ fontSize: 20 }}>{icon}</Text>
+      <Text
+        style={{ fontSize: 20 }}
+      >
+        {icon}
+      </Text>
       <Text style={[styles.prefLabel, { color: scheme.text }]}>{label}</Text>
       {trailing ?? (
         value.length > 0 && (
@@ -192,13 +217,13 @@ export default function AccountScreen({
       scrollEventThrottle={16}
       contentContainerStyle={styles.content}
     >
-      <Text style={[styles.heading, { color: scheme.text }]}>Account</Text>
+      <Text style={[styles.heading, { color: scheme.text }]} accessibilityRole="header">Account</Text>
       <View style={{ height: 20 }} />
 
       <ProfileCard scheme={scheme} />
       <View style={{ height: 20 }} />
 
-      <Text style={[styles.sectionLabel, { color: scheme.text }]}>Care team</Text>
+      <Text style={[styles.sectionLabel, { color: scheme.text }]} accessibilityRole="header">Care team</Text>
       <View style={{ height: 10 }} />
       {contacts.map(c => (
         <View key={c.id} style={{ marginBottom: 10 }}>
@@ -211,7 +236,7 @@ export default function AccountScreen({
       ))}
       <View style={{ height: 20 }} />
 
-      <Text style={[styles.sectionLabel, { color: scheme.text }]}>Preferences</Text>
+      <Text style={[styles.sectionLabel, { color: scheme.text }]} accessibilityRole="header">Preferences</Text>
       <View style={{ height: 10 }} />
       <PrefTile
         icon={isDark ? '🌙' : '☀️'}
@@ -234,7 +259,7 @@ export default function AccountScreen({
       <PrefTile icon="📤" label="Share health data" value="With care team" scheme={scheme} />
       <View style={{ height: 20 }} />
 
-      <Text style={[styles.sectionLabel, { color: scheme.text }]}>App info</Text>
+      <Text style={[styles.sectionLabel, { color: scheme.text }]} accessibilityRole="header">App info</Text>
       <View style={{ height: 10 }} />
       <PrefTile icon="ℹ️" label="Version" value="1.0.0" scheme={scheme} />
       <View style={{ height: 8 }} />
@@ -246,8 +271,12 @@ export default function AccountScreen({
         onPress={() => onSignOut?.()}
         activeOpacity={0.85}
         style={styles.signOutBtn}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel="Sign out"
+        accessibilityHint="Signs you out of CareConnect"
       >
-        <Text style={styles.signOutText}>Sign out</Text>
+        <Text style={[styles.signOutText, { color: scheme.danger }]}>Sign out</Text>
       </TouchableOpacity>
       <View style={{ height: 24 }} />
     </ScrollView>

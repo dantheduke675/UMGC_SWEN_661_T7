@@ -59,7 +59,16 @@ const _appts = [
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 class ScheduleScreen extends StatefulWidget {
-  const ScheduleScreen({super.key});
+  /// The date the week strip is built around. Defaults to `DateTime.now()`.
+  ///
+  /// Only supplied by tests: the strip runs Monday-to-Sunday of the *current*
+  /// week, so which day offsets exist at all depends on what day it is today.
+  /// Pinning it lets the day-selection tests reach every cell — the empty
+  /// state, each weekday heading and each appointment type — on any day the
+  /// suite happens to run.
+  final DateTime? now;
+
+  const ScheduleScreen({super.key, this.now});
   @override
   State<ScheduleScreen> createState() => _ScheduleScreenState();
 }
@@ -71,7 +80,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     final scheme = context.watch<ThemeNotifier>().scheme;
     final scrollController = context.read<ScrollController>();
-    final now    = DateTime.now();
+    final now    = widget.now ?? DateTime.now();
     final filtered = _appts.where((a) => a.dayOffset == _selectedDay).toList();
 
     return ListView(
@@ -84,8 +93,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Schedule',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.text)),
+              CScreenTitle('Schedule', scheme: scheme),
               const SizedBox(height: 2),
               Text('${_appts.length} appointments this week',
                   style: TextStyle(fontSize: 13, color: scheme.sub)),
@@ -107,10 +115,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         // ── Day label ───────────────────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
+          child: CSectionHeader(
             _selectedDay == 0 ? 'Today' : _selectedDay == 1 ? 'Tomorrow'
                 : _weekdayName(now.add(Duration(days: _selectedDay)).weekday),
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text),
+            scheme: scheme,
           ),
         ),
         const SizedBox(height: 10),
@@ -122,7 +130,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             child: Center(
               child: Column(
                 children: [
-                  Text('🗓️', style: const TextStyle(fontSize: 40)),
+                  const CGlyph('🗓️', style: TextStyle(fontSize: 40)),
                   const SizedBox(height: 12),
                   Text('No appointments',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text)),
@@ -170,8 +178,13 @@ class _WeekStrip extends StatelessWidget {
     // Build 7 day entries starting from Monday of this week
     final mondayDate = today.subtract(Duration(days: todayWd - 1));
 
+    // A horizontal ListView needs a bounded height, so scale it with the
+    // user's text size instead of pinning it at 72 (SC 1.4.4).
+    final scale = MediaQuery.textScalerOf(context).scale(1.0);
+    // Base 76 rather than 72: the cell's gaps and the appointment dot do not
+    // scale, so a straight 72*scale left the day column 3px short at 200%.
     return SizedBox(
-      height: 72,
+      height: (76 * scale).clamp(76.0, 190.0),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -185,11 +198,28 @@ class _WeekStrip extends StatelessWidget {
           final isSel   = offset == selectedOffset;
           final hasDot  = appointments.any((a) => a.dayOffset == offset);
 
-          return GestureDetector(
+          const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June', 'July',
+            'August', 'September', 'October', 'November', 'December',
+          ];
+          const dayNames = [
+            'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
+            'Saturday', 'Sunday',
+          ];
+          return CTappable(
+            // "M / 14" told a screen reader nothing; spell the date out and
+            // say whether anything is booked (SC 1.1.1, SC 4.1.2).
+            label: '${dayNames[i]}, ${monthNames[date.month - 1]} $dayNum'
+                '${isToday ? ', today' : ''}',
+            hint: hasDot ? 'Has appointments' : 'No appointments',
+            selected: isSel,
+            borderRadius: BorderRadius.circular(16),
             onTap: () => onSelect(offset),
             child: Container(
-              width: 52,
-              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              // 56 wide with 2px side margins keeps the tap target at least
+              // 48 logical px across, which 52/4 did not.
+              width: 56,
+              margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
               decoration: BoxDecoration(
                 color: isSel ? scheme.primary : scheme.surface,
                 borderRadius: BorderRadius.circular(16),
@@ -210,7 +240,11 @@ class _WeekStrip extends StatelessWidget {
                   Text('$dayNum',
                       style: TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w800,
-                        color: isSel ? Colors.white : isToday ? scheme.primary : scheme.text,
+                        color: isSel
+                            ? Colors.white
+                            : isToday
+                                ? readableOn(scheme.primary, scheme.surface)
+                                : scheme.text,
                       )),
                   const SizedBox(height: 4),
                   Container(
@@ -266,7 +300,13 @@ class _ApptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final col = _typeColor;
-    return Container(
+    return Semantics(
+      container: true,
+      label: '${appt.title}. ${appt.subtitle}. '
+          '${appt.dayLabel} at ${appt.time}, ${appt.duration}'
+          '${appt.confirmed ? '' : ', pending confirmation'}',
+      excludeSemantics: true,
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: scheme.surface,
@@ -282,7 +322,7 @@ class _ApptCard extends StatelessWidget {
               color: col.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Center(child: Text(_typeIcon, style: const TextStyle(fontSize: 22))),
+            child: Center(child: CGlyph(_typeIcon, style: const TextStyle(fontSize: 22))),
           ),
           const SizedBox(width: 14),
           // Details
@@ -296,12 +336,14 @@ class _ApptCard extends StatelessWidget {
                 Text(appt.subtitle,
                     style: TextStyle(fontSize: 13, color: scheme.sub)),
                 const SizedBox(height: 6),
-                Row(
+                // Wrap, not Row: three chips side by side ran 92px past the
+                // card edge at 200% text scale (SC 1.4.4).
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     CChip(label: appt.time, color: col),
-                    const SizedBox(width: 6),
                     CChip(label: appt.duration, color: scheme.sub),
-                    const SizedBox(width: 6),
                     if (!appt.confirmed)
                       CChip(label: 'Pending', color: const Color(0xFFF59E0B)),
                   ],
@@ -310,6 +352,7 @@ class _ApptCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

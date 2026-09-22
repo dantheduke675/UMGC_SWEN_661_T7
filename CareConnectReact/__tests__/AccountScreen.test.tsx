@@ -66,4 +66,28 @@ describe('AccountScreen', () => {
     await fireEvent.press(screen.getByText('Sign out'));
     expect(onSignOut).toHaveBeenCalledTimes(1);
   });
+
+  describe('accessibility', () => {
+    it('exposes the care-team message button under a per-contact accessible name', async () => {
+      await renderScreen();
+      expect(
+        screen.getByRole('button', { name: `Message ${contacts[0].name}` }),
+      ).toBeOnTheScreen();
+    });
+
+    it('reflects the isDark prop as the appearance switch\'s checked state', async () => {
+      await renderScreen({ isDark: true });
+      expect(screen.getByRole('switch', { name: 'Dark mode' })).toBeChecked();
+    });
+
+    it('reflects light mode as the appearance switch\'s unchecked state', async () => {
+      await renderScreen({ isDark: false });
+      expect(screen.getByRole('switch', { name: 'Dark mode' })).not.toBeChecked();
+    });
+
+    it('exposes Sign out as a named button', async () => {
+      await renderScreen();
+      expect(screen.getByRole('button', { name: 'Sign out' })).toBeOnTheScreen();
+    });
+  });
 });
