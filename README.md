@@ -481,7 +481,16 @@ In order to test through the maestro flows make sure an emulator is currently ru
 maestro test .maestro
 ```
 
-An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maaestro test flows that run through the react application. There are 8 maestro flows which recreate 8 user flows through the react application. 
+An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maestro test flows that run through the react application. There are 8 maestro flows which recreate 8 user flows through the react application as seen below:
+
+1. Sign in → Today — password login shows the dashboard + all tabs.
+2. Create account + Face ID — sign up, opt into Face ID, land on Today.
+3. Face ID sign-in — alternate login path, same Today landing.
+4. Tab navigation — every bottom tab opens its screen.
+5. Message quick reply — open a thread, send a canned reply, go back.
+6. Calling — call from a thread, connects, then end call.
+7. Theme + sign out — toggle dark mode, sign out to Landing.
+8. Take/undo medication — mark a dose taken, undo it.
 
 ## Screen Reader Testing
 
@@ -620,4 +629,4 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 - Ensured access to Github for future development purposes
 - Reviewed codebase to ensure full familiarity in advance of future code changes and additional requirements
 
-### AI Disclosure: The code in this project was written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
+### AI Disclosure: The code and parts of the README files in this project were written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
