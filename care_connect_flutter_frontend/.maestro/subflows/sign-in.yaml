@@ -1,0 +1,41 @@
+appId: com.example.care_connect_flutter_frontend
+name: Sign in (subflow)
+---
+# Shared entry point for the other flows. Not a flow in its own right: it is
+# excluded from the workspace glob because it lives outside flows/.
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible: "CareConnect"
+    timeout: 20000
+- assertVisible: "Create account"
+
+# "Sign in" on the landing screen is the secondary button.
+- tapOn: "Sign in"
+
+# The email and password fields are real, labelled inputs. They used to be
+# Text inside a Container — a picture of a form, which announced as loose
+# prose with no role and could not be focused. If they regress to that, these
+# names stop being elements in the tree (WCAG 2.1 SC 1.3.1, 3.3.2, 4.1.2).
+- extendedWaitUntil:
+    visible: "Email address"
+    timeout: 10000
+- assertVisible: "Password"
+- assertVisible: "We will never share this."
+
+# The sign-in screen says "Sign in" twice — once as the level-1 heading and
+# once as the submit button. Index 1 is the button; if that ever stops being
+# true the flow fails loudly rather than tapping the heading and hanging.
+- tapOn:
+    text: "Sign in"
+    index: 1
+
+# The greeting is a level-1 heading carrying `semanticsLabel`, so the waving
+# hand stays out of the announcement (SC 1.1.1).
+- extendedWaitUntil:
+    visible: ".*Good morning, Maddy.*"
+    timeout: 10000
+- assertNotVisible: "👋"
+
+- takeScreenshot: 00-signed-in

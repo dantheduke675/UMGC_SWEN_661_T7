@@ -1,0 +1,28 @@
+# Flow: after signing in, every bottom tab loads its own screen.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- tapOn: "Sign in"
+- tapOn:
+    text: "Sign in"
+    index: 1
+- assertVisible: ".*Good morning.*"
+
+- tapOn: "Medications"
+- assertVisible: "Medications"
+
+- tapOn: "Messages"
+- assertVisible: ".*conversations.*"
+
+- tapOn: "Schedule"
+- assertVisible: "Schedule"
+
+- tapOn: "Symptoms"
+- assertVisible: "Recent logs"
+
+- tapOn: "Account"
+- assertVisible: "Care team"
+- assertVisible: "Preferences"
+
+- tapOn: "Today"
+- assertVisible: ".*Good morning.*"

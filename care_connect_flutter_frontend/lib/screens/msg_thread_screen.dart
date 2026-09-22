@@ -47,6 +47,7 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
       threadById(widget.threadId).messages.add(ChatMessage(from: 'me', text: trimmed, time: 'Now'));
     });
     _controller.clear();
+    announceStatus(context, 'Message sent');
     // Scroll to bottom after frame
     final scrollController = context.read<ScrollController>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -138,30 +139,41 @@ class _ThreadHeader extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   foregroundColor: scheme.primary,
                 ),
-                child: const Text('←', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                child: const Text('←',
+                    semanticsLabel: 'Back to messages',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
               ),
             ),
             const SizedBox(width: 4),
             CAvatarBadge(initials: contact.initials, color: Color(contact.color), size: 42),
             const SizedBox(width: 10),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(contact.name,
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.text)),
-                  Text(contact.role,
-                      style: TextStyle(fontSize: 12, color: scheme.sub)),
-                ],
+              child: Semantics(
+                header: true,
+                headingLevel: 1,
+                container: true,
+                label: 'Conversation with ${contact.name}, ${contact.role}',
+                excludeSemantics: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(contact.name,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: scheme.text)),
+                    Text(contact.role,
+                        style: TextStyle(fontSize: 12, color: scheme.sub)),
+                  ],
+                ),
               ),
             ),
-            // Call button
-            GestureDetector(
+            // Call button — was announced only as "telephone receiver".
+            CTappable(
+              label: 'Call ${contact.name}',
+              borderRadius: BorderRadius.circular(24),
               onTap: onCall,
               child: Container(
                 width: 48, height: 48,
                 decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle),
-                child: const Center(child: Text('📞', style: TextStyle(fontSize: 20))),
+                child: const Center(child: CGlyph('📞', style: TextStyle(fontSize: 20))),
               ),
             ),
           ],
@@ -184,7 +196,14 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Semantics(
+      container: true,
+      // Sender and time are conveyed visually by which side the bubble sits
+      // on and by small grey text; say both out loud (SC 1.3.1).
+      label: '${_isMe ? 'You' : contact.name} said: ${message.text}. '
+          '${message.time}',
+      excludeSemantics: true,
+      child: Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: _isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -236,6 +255,7 @@ class _Bubble extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -251,8 +271,11 @@ class _QuickReplies extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = MediaQuery.textScalerOf(context).scale(1.0);
     return Container(
-      height: 52,
+      // Was a fixed 52, which left the chips 35px tall — under the 48px
+      // minimum — and clipped them once text scaled up.
+      height: (68 * scale).clamp(68.0, 140.0),
       decoration: BoxDecoration(
         color: scheme.bg,
         border: Border(top: BorderSide(color: scheme.border)),
@@ -262,14 +285,17 @@ class _QuickReplies extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: replies.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => GestureDetector(
+        itemBuilder: (_, i) => CTappable(
+          label: 'Send quick reply: ${replies[i]}',
+          borderRadius: BorderRadius.circular(12),
           onTap: () => onTap(replies[i]),
           child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               color: scheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: scheme.border),
+              border: Border.all(color: scheme.controlBorder),
             ),
             child: Center(
               child: Text(replies[i],
@@ -315,6 +341,10 @@ class _InputRow extends StatelessWidget {
                   onSubmitted: (_) => onSend(),
                   style: TextStyle(fontSize: 15, color: scheme.text),
                   decoration: InputDecoration(
+                    // `hintText` alone vanishes as soon as the field has
+                    // content, leaving it unnamed (SC 3.3.2, SC 4.1.2).
+                    labelText: 'Message',
+                    floatingLabelBehavior: FloatingLabelBehavior.never,
                     hintText: 'Type a message…',
                     hintStyle: TextStyle(color: scheme.muted, fontSize: 15),
                     border: InputBorder.none,
@@ -324,14 +354,16 @@ class _InputRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            // Send button
-            GestureDetector(
+            // Send button — was announced only as "upwards arrow".
+            CTappable(
+              label: 'Send message',
+              borderRadius: BorderRadius.circular(24),
               onTap: onSend,
               child: Container(
                 width: 48, height: 48,
                 decoration: BoxDecoration(color: scheme.primary, shape: BoxShape.circle),
                 child: const Center(
-                  child: Text('↑',
+                  child: CGlyph('↑',
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
                 ),
               ),

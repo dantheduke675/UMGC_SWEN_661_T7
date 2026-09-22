@@ -22,8 +22,7 @@ class MessagesScreen extends StatelessWidget {
         // Header
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
-          child: Text('Messages',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.text)),
+          child: CScreenTitle('Messages', scheme: scheme),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
@@ -61,11 +60,24 @@ class _ThreadRow extends StatelessWidget {
     required this.scheme, required this.onTap,
   });
 
+  /// Ends [text] with exactly one terminator, so the spoken label reads as a
+  /// sentence instead of running "…I need.. 2:34 PM" together.
+  static String _sentence(String text) {
+    final t = text.trim();
+    if (t.isEmpty) return '';
+    return RegExp(r'[.!?]$').hasMatch(t) ? t : '$t.';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return CTappable(
+      // The row is one control; announce who it is from, their role, whether
+      // it is unread, and a preview — in that order (SC 1.3.1, SC 4.1.2).
+      label: '${thread.unread ? 'Unread. ' : ''}${contact.name}, '
+          '${contact.role}. ${_sentence(lastMessage.text)} ${lastMessage.time}',
+      hint: 'Opens conversation',
+      borderRadius: BorderRadius.zero,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
@@ -102,16 +114,22 @@ class _ThreadRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // The name and timestamp used to sit in a spaceBetween Row
+                  // with no flex, so a scaled-up name pushed the timestamp
+                  // off-screen — 185px of overflow at 200% (SC 1.4.4).
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        contact.name,
-                        style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700,
-                          color: thread.unread ? scheme.text : scheme.text.withValues(alpha: 0.85),
+                      Expanded(
+                        child: Text(
+                          contact.name,
+                          style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700,
+                            color: thread.unread ? scheme.text : scheme.text.withValues(alpha: 0.85),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(lastMessage.time,
                           style: TextStyle(fontSize: 12, color: scheme.sub)),
                     ],

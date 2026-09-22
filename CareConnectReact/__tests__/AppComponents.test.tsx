@@ -147,3 +147,41 @@ describe('LinearProgressBar', () => {
     expect(screen.root).toBeTruthy();
   });
 });
+
+describe('accessibility', () => {
+  it('exposes CAvatarBadge under a caller-provided accessible name', async () => {
+    await render(<CAvatarBadge initials="AJ" color="#6366F1" label="Aunt Joyce" />);
+    expect(screen.getByRole('image', { name: 'Aunt Joyce' })).toBeOnTheScreen();
+  });
+
+  it('exposes SectionLabel as a header', async () => {
+    await render(<SectionLabel text="Next appointment" scheme={dark} />);
+    expect(screen.getByRole('header', { name: 'Next appointment' })).toBeOnTheScreen();
+  });
+
+  it('announces UndoToast as an alert with a named Undo button', async () => {
+    await render(<UndoToast message="Marked as taken" onUndo={jest.fn()} onDismiss={jest.fn()} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Marked as taken', { exact: false });
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeOnTheScreen();
+  });
+
+  it('exposes UndoHistoryButton as a named button', async () => {
+    await render(<UndoHistoryButton count={3} scheme={dark} onPress={jest.fn()} />);
+    expect(screen.getByRole('button', { name: /3 recent actions/ })).toBeOnTheScreen();
+  });
+
+  it('exposes the UndoHistoryPanel close and per-entry undo controls by name', async () => {
+    const entries = [{ id: 1, message: 'Marked as missed' }];
+    await render(
+      <UndoHistoryPanel visible entries={entries} scheme={dark} onUndo={jest.fn()} onClose={jest.fn()} />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Close' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: /Undo: Marked as missed/ })).toBeOnTheScreen();
+  });
+
+  it('reports LinearProgressBar as a progressbar with the matching accessibility value', async () => {
+    await render(<LinearProgressBar value={0.5} />);
+    expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ min: 0, max: 100, now: 50 });
+  });
+});

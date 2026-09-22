@@ -1,0 +1,98 @@
+appId: com.example.care_connect_flutter_frontend
+name: Screen reader names
+tags:
+  - accessibility
+---
+# ── Accessibility flow ───────────────────────────────────────────────────────
+# The one flow here that is not a user journey. It walks the app asserting
+# that what reaches Android's accessibility tree is a name a person could act
+# on, and that what should never reach it — the emoji the app draws as icons —
+# does not.
+#
+# This is worth running separately from the Dart suite because it checks a
+# different tree. test/accessibility/semantics_test.dart inspects Flutter's
+# own semantics objects inside the framework; everything below has already
+# crossed the engine boundary into AccessibilityNodeInfo, which is the tree
+# TalkBack reads out loud. A label can be correct in the first and absent
+# from the second.
+#
+# Every `assertNotVisible` on an emoji is a WCAG 2.1 SC 1.1.1 check: an emoji
+# left in the tree is announced by its Unicode name, so the call button read
+# out as "telephone receiver" and the tab bar as "house with garden, Today".
+
+- runFlow: ../subflows/sign-in.yaml
+
+# ── The navigation bar ───────────────────────────────────────────────────────
+# Six emoji, six names. The hints give position in the bar, which is how a
+# screen reader user knows how far along they are.
+- assertVisible: "Today, Tab 1 of 6"
+- assertVisible: "Meds, Tab 2 of 6"
+- assertVisible: "Messages, Tab 3 of 6"
+- assertVisible: "Schedule, Tab 4 of 6"
+- assertVisible: "Symptoms, Tab 5 of 6"
+- assertVisible: "Account, Tab 6 of 6"
+
+- assertNotVisible: "🏠"
+- assertNotVisible: "💊"
+- assertNotVisible: "💬"
+- assertNotVisible: "📅"
+- assertNotVisible: "📊"
+- assertNotVisible: "👤"
+
+# ── The accessibility bar ────────────────────────────────────────────────────
+- assertVisible: "Scroll up"
+- assertVisible: "Scroll down"
+- assertNotVisible: "↑"
+- assertNotVisible: "↓"
+
+# Voice input is not implemented. Announcing it as an enabled button told
+# screen reader users a control existed that did nothing; it is disabled and
+# says so (SC 4.1.2).
+- assertVisible: "Voice input, Not available yet"
+- assertNotVisible: "🎤"
+
+- takeScreenshot: 05-today-tree
+
+# ── Today ────────────────────────────────────────────────────────────────────
+# The dose buttons all read "I took this" on screen; each one names its own
+# dose to the screen reader.
+- assertVisible: ".*Today's medications: 2 of 9 taken, 22 percent complete.*"
+- scrollUntilVisible:
+    element:
+      text: "Mark Ropivacaine at 8:00 PM as taken"
+    direction: DOWN
+    timeout: 20000
+# A second dose, further down the list: seven buttons read "I took this",
+# and each one is reachable only by the dose it names.
+- scrollUntilVisible:
+    element:
+      text: "Mark Metformin at 8:00 PM as taken"
+    direction: DOWN
+    timeout: 20000
+
+# ── Symptoms ─────────────────────────────────────────────────────────────────
+- tapOn: "Symptoms, Tab 5 of 6"
+- extendedWaitUntil:
+    visible: ".*Recent logs.*"
+    timeout: 10000
+
+# Log entries are announced as one sentence, with the severity spelled out
+# rather than left as a "2/5" pill and a row of coloured bars.
+- assertVisible: ".*Pain, severity 2 of 5, Today.*"
+- assertNotVisible: "😣"
+
+# ── Account ──────────────────────────────────────────────────────────────────
+- tapOn: "Account, Tab 6 of 6"
+- extendedWaitUntil:
+    visible: ".*Care team.*"
+    timeout: 10000
+
+# The theme control is a switch, not a button: it carries an on/off state.
+- assertVisible: "Dark mode"
+- scrollUntilVisible:
+    element:
+      text: "Sign out"
+    direction: DOWN
+    timeout: 20000
+
+- takeScreenshot: 05-account-tree

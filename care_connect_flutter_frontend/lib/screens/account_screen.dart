@@ -19,8 +19,7 @@ class AccountScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       children: [
         // ── Header ─────────────────────────────────────────────────────────
-        Text('Account',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: scheme.text)),
+        CScreenTitle('Account', scheme: scheme),
         const SizedBox(height: 20),
 
         // ── Profile card ────────────────────────────────────────────────────
@@ -28,8 +27,7 @@ class AccountScreen extends StatelessWidget {
         const SizedBox(height: 20),
 
         // ── Care team ───────────────────────────────────────────────────────
-        Text('Care team',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text)),
+        CSectionHeader('Care team', scheme: scheme),
         const SizedBox(height: 10),
         ...contacts.map((c) => Padding(
           padding: const EdgeInsets.only(bottom: 10),
@@ -39,8 +37,7 @@ class AccountScreen extends StatelessWidget {
         const SizedBox(height: 20),
 
         // ── Preferences ─────────────────────────────────────────────────────
-        Text('Preferences',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text)),
+        CSectionHeader('Preferences', scheme: scheme),
         const SizedBox(height: 10),
         _PrefTile(
           icon: notifier.isDark ? '🌙' : '☀️',
@@ -73,8 +70,7 @@ class AccountScreen extends StatelessWidget {
         const SizedBox(height: 20),
 
         // ── App info ─────────────────────────────────────────────────────────
-        Text('App info',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.text)),
+        CSectionHeader('App info', scheme: scheme),
         const SizedBox(height: 10),
         _PrefTile(icon: 'ℹ️', label: 'Version', value: '1.0.0', scheme: scheme),
         const SizedBox(height: 8),
@@ -82,18 +78,23 @@ class AccountScreen extends StatelessWidget {
         const SizedBox(height: 20),
 
         // ── Sign out ──────────────────────────────────────────────────────────
-        GestureDetector(
+        CTappable(
+          label: 'Sign out',
+          borderRadius: BorderRadius.circular(16),
           onTap: () => context.go('/landing'),
           child: Container(
             width: double.infinity, height: 56,
             decoration: BoxDecoration(
               color: const Color(0xFFC53030).withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFC53030).withValues(alpha: 0.25), width: 2),
+              border: Border.all(
+                  color: readableOn(const Color(0xFFC53030), scheme.bg, minRatio: 3.0),
+                  width: 2),
             ),
-            child: const Center(
+            child: Center(
               child: Text('Sign out',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFC53030))),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700,
+                      color: readableOnTint(const Color(0xFFC53030), scheme.bg, 0.08))),
             ),
           ),
         ),
@@ -127,8 +128,10 @@ class _ProfileCard extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Text(patient.initials,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+              child: ExcludeSemantics(
+                child: Text(patient.initials,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -146,8 +149,10 @@ class _ProfileCard extends StatelessWidget {
                     color: const Color(0xFF2F7A6B).withValues(alpha: 0.13),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text('Care recipient',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2F7A6B))),
+                  child: Text('Care recipient',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+                          color: readableOnTint(
+                              const Color(0xFF2F7A6B), scheme.surface, 0.13))),
                 ),
                 const SizedBox(height: 6),
                 Text(patient.email,
@@ -184,18 +189,27 @@ class _CareTeamTile extends StatelessWidget {
           CAvatarBadge(initials: contact.initials, color: Color(contact.color), size: 44),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(contact.name,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: scheme.text)),
-                const SizedBox(height: 2),
-                Text(contact.role,
-                    style: TextStyle(fontSize: 12, color: scheme.sub)),
-              ],
+            child: Semantics(
+              container: true,
+              label: '${contact.name}, ${contact.role}',
+              excludeSemantics: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(contact.name,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: scheme.text)),
+                  const SizedBox(height: 2),
+                  Text(contact.role,
+                      style: TextStyle(fontSize: 12, color: scheme.sub)),
+                ],
+              ),
             ),
           ),
-          GestureDetector(
+          CTappable(
+            // Three identical speech-bubble buttons on the screen; name the
+            // person each one writes to (SC 4.1.2).
+            label: 'Message ${contact.name}',
+            borderRadius: BorderRadius.circular(12),
             onTap: onMessage,
             child: Container(
               width: 40, height: 40,
@@ -203,9 +217,8 @@ class _CareTeamTile extends StatelessWidget {
                 color: scheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Center(
-                child: Text('💬',
-                    style: const TextStyle(fontSize: 18)),
+              child: const Center(
+                child: CGlyph('💬', style: TextStyle(fontSize: 18)),
               ),
             ),
           ),
@@ -238,16 +251,23 @@ class _PrefTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 20)),
+          CGlyph(icon, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: 14),
           Expanded(
-            child: Text(label,
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.text)),
+            child: Semantics(
+              container: true,
+              label: value.isEmpty ? label : '$label: $value',
+              excludeSemantics: true,
+              child: Text(label,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: scheme.text)),
+            ),
           ),
           if (trailing != null)
             trailing!
           else if (value.isNotEmpty)
-            Text(value, style: TextStyle(fontSize: 13, color: scheme.sub)),
+            ExcludeSemantics(
+              child: Text(value, style: TextStyle(fontSize: 13, color: scheme.sub)),
+            ),
         ],
       ),
     );
@@ -263,12 +283,15 @@ class _ThemeSwitch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return CTappable(
+      label: 'Dark mode',
+      toggled: notifier.isDark,
+      borderRadius: BorderRadius.circular(14),
       onTap: notifier.toggle,
       child: Container(
         width: 52, height: 28,
         decoration: BoxDecoration(
-          color: notifier.isDark ? scheme.primary : scheme.border,
+          color: notifier.isDark ? scheme.primary : scheme.controlBorder,
           borderRadius: BorderRadius.circular(14),
         ),
         child: AnimatedAlign(
@@ -279,7 +302,7 @@ class _ThemeSwitch extends StatelessWidget {
             width: 22, height: 22,
             margin: const EdgeInsets.symmetric(horizontal: 3),
             decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-            child: Center(child: Text(notifier.isDark ? '🌙' : '☀️', style: const TextStyle(fontSize: 10))),
+            child: Center(child: CGlyph(notifier.isDark ? '🌙' : '☀️', style: const TextStyle(fontSize: 10))),
           ),
         ),
       ),

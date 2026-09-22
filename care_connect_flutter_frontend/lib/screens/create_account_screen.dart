@@ -20,18 +20,29 @@ class CreateAccountScreen extends StatelessWidget {
     final topSection = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AuthBtn(label: '← Back', variant: 'text', lg: isTablet, onPressed: () => context.go('/landing')),
+        AuthBtn(
+          label: '← Back',
+          semanticLabel: 'Back to welcome screen',
+          variant: 'text',
+          lg: isTablet,
+          onPressed: () => context.go('/landing'),
+        ),
         const SizedBox(height: 12),
-        Text(
-          'Create your account',
-          style: TextStyle(fontSize: isTablet ? 30 : 24, fontWeight: FontWeight.w800, color: scheme.text),
+        Semantics(
+          header: true,
+          headingLevel: 1,
+          child: Text(
+            'Create your account',
+            style: TextStyle(fontSize: isTablet ? 30 : 24, fontWeight: FontWeight.w800, color: scheme.text),
+          ),
         ),
         const SizedBox(height: 24),
         AuthField(label: 'Full name', value: 'Maddy Chen', filled: true, lg: isTablet),
         const SizedBox(height: 16),
-        AuthField(label: 'Email address', value: 'maddy@example.com', filled: true, lg: isTablet),
+        AuthField(label: 'Email address', value: 'maddy@example.com', filled: true,
+            keyboardType: TextInputType.emailAddress, lg: isTablet),
         const SizedBox(height: 16),
-        AuthField(label: 'Password', value: '••••••••••', helper: 'At least 8 characters.', lg: isTablet),
+        AuthField(label: 'Password', value: '••••••••••', helper: 'At least 8 characters.', obscure: true, lg: isTablet),
         const SizedBox(height: 24),
         Text(
           'I AM A…',

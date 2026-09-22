@@ -1,0 +1,28 @@
+Line coverage — CareConnect (Flutter)
+Generated 2026-09-21T22:09Z from coverage/lcov.info
+Regenerate: flutter test --coverage && dart run tool/coverage_summary.dart
+
+  covered  lines  file
+  --------------------------------------------------------------------
+   93.85%  122/130    lib/main.dart
+   98.68%  299/303    lib/widgets.dart
+   98.69%  151/153    lib/screens/msg_thread_screen.dart
+   98.80%  164/166    lib/screens/symptoms_screen.dart
+   98.95%  189/191    lib/screens/medications_screen.dart
+   99.32%  146/147    lib/screens/calling_screen.dart
+   99.37%  157/158    lib/screens/today_screen.dart
+  100.00%  51/51      lib/theme.dart
+  100.00%  13/13      lib/action_history.dart
+  100.00%  123/123    lib/screens/schedule_screen.dart
+  100.00%  23/23      lib/data.dart
+  100.00%  137/137    lib/screens/account_screen.dart
+  100.00%  29/29      lib/screens/biometrics_screen.dart
+  100.00%  32/32      lib/screens/create_account_screen.dart
+  100.00%  37/37      lib/screens/landing_screen.dart
+  100.00%  63/63      lib/screens/messages_screen.dart
+  100.00%  28/28      lib/screens/sign_in_bio_screen.dart
+  100.00%  31/31      lib/screens/sign_in_pass_screen.dart
+  --------------------------------------------------------------------
+   98.90%  1795/1815  TOTAL (18 files)
+
+Required: 75%  —  PASS by 23.90 points

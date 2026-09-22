@@ -1,0 +1,74 @@
+appId: com.example.care_connect_flutter_frontend
+name: Confirm a missed dose
+tags:
+  - critical
+  - medications
+---
+# ── Critical flow 2 of 4 ─────────────────────────────────────────────────────
+# Marking a dose missed notifies the caregiver, so it asks first. The
+# confirmation used to be a plain Container laid over the screen inside a
+# Stack: never announced as a dialog, the whole screen behind it still
+# exposed to screen readers, and pointers passing straight through the dim
+# layer to the navigation bar. It is a real dialog route now.
+#
+# This flow checks the three things that changed — the dialog names itself,
+# the screen behind it is gone from the tree, and cancelling really cancels
+# (WCAG 2.1 SC 2.4.3, SC 4.1.2).
+
+- runFlow: ../subflows/sign-in.yaml
+
+- tapOn: "Meds, Tab 2 of 6"
+
+- extendedWaitUntil:
+    visible: ".*9 doses today.*"
+    timeout: 10000
+
+# The announced name carries the hint too, which is what warns a screen
+# reader user that this button opens a confirmation rather than acting.
+- scrollUntilVisible:
+    element:
+      text: "Mark Loratadip / Carbiopa at 7:00 AM as missed, Asks you to confirm"
+    direction: DOWN
+    timeout: 20000
+
+- tapOn: "Mark Loratadip / Carbiopa at 7:00 AM as missed, Asks you to confirm"
+
+# `namesRoute` is what makes a screen reader say "dialog" on open.
+- extendedWaitUntil:
+    visible: "Confirm missed dose"
+    timeout: 10000
+
+# The prompt names the dose out loud; on screen it only says "this dose".
+- assertVisible: ".*Mark Loratadip / Carbiopa at 7:00 AM as missed\\?.*"
+- assertVisible: "Yes, I missed this dose"
+- assertVisible: "Cancel — go back"
+
+# `scopesRoute` should have taken the screen behind the dialog out of the
+# tree entirely — not merely covered it with a dim layer.
+- assertNotVisible: ".*9 doses today, .*"
+
+- takeScreenshot: 02-confirm-dialog
+
+# ── Cancelling changes nothing ───────────────────────────────────────────────
+- tapOn: "Cancel — go back"
+- assertNotVisible: "Yes, I missed this dose"
+- extendedWaitUntil:
+    visible: ".*9 doses today, 2 taken, 0 missed.*"
+    timeout: 10000
+
+# ── Confirming records it ────────────────────────────────────────────────────
+# The other half of the pair: a dialog that never worked would pass the
+# assertion above just as well.
+- scrollUntilVisible:
+    element:
+      text: "Mark Loratadip / Carbiopa at 7:00 AM as missed, Asks you to confirm"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Mark Loratadip / Carbiopa at 7:00 AM as missed, Asks you to confirm"
+- tapOn: "Yes, I missed this dose"
+
+- extendedWaitUntil:
+    visible: ".*9 doses today, 2 taken, 1 missed.*"
+    timeout: 10000
+
+- takeScreenshot: 02-dose-missed
