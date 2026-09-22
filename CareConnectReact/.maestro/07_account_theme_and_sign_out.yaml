@@ -1,0 +1,20 @@
+# Flow: toggle appearance from the Account tab, then sign out back to Landing.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- tapOn: "Sign in"
+- tapOn:
+    text: "Sign in"
+    index: 1
+- tapOn: "Account"
+- assertVisible: "Care team"
+- assertVisible: "Preferences"
+- tapOn: "Dark mode"
+- assertVisible: "Care team"
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
+- tapOn: "Sign out"
+- assertVisible: "CareConnect"
+- assertVisible: "Create account"
+- assertVisible: "Sign in"

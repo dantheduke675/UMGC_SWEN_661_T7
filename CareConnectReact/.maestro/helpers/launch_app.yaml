@@ -1,0 +1,8 @@
+# Shared helper: cold-launch the app straight into the CareConnect landing
+# screen. Kept as a single helper so every flow launches the same way.
+appId: com.dgmartin.CareConnectReact
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "CareConnect"
+    timeout: 15000

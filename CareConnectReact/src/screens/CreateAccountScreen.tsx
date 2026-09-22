@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   StatusBar,
 } from 'react-native';
-import { dark, light } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import {
   AuthBtn,
   AuthField,
@@ -29,8 +29,7 @@ interface Props {
 }
 
 export default function CreateAccountScreen({ navigation }: Props) {
-  const [isDark, setIsDark] = useState(true);
-  const scheme = isDark ? dark : light;
+  const { isDark, scheme, toggleTheme } = useTheme();
 
   const [name,     setName]     = useState('Maddy Chen');
   const [email,    setEmail]    = useState('maddy@example.com');
@@ -61,6 +60,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
         {/* Back */}
         <AuthBtn
           label="← Back"
+          accessibilityLabel="Back"
           scheme={scheme}
           variant="text"
           large={isTablet}
@@ -74,6 +74,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
             styles.heading,
             { fontSize: isTablet ? 30 : 24, color: scheme.text },
           ]}
+          accessibilityRole="header"
         >
           Create your account
         </Text>
@@ -122,6 +123,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
               color: scheme.sub,
             },
           ]}
+          accessibilityRole="header"
         >
           I AM A…
         </Text>
@@ -145,7 +147,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
         />
       </ScrollView>
 
-      <ThemeToggleBtn isDark={isDark} onToggle={() => setIsDark(d => !d)} />
+      <ThemeToggleBtn isDark={isDark} onToggle={toggleTheme} />
     </SafeAreaView>
   );
 }

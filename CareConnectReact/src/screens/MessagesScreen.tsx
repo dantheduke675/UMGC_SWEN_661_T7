@@ -36,11 +36,17 @@ function ThreadRow({
   scheme:      ColorScheme;
   onTap:       () => void;
 }) {
+  const a11yLabel = `${contact.name}, ${contact.role}${thread.unread ? ', unread' : ''}. ${lastMessage.text}, ${lastMessage.time}`;
+
   return (
     <TouchableOpacity
       onPress={onTap}
       activeOpacity={0.7}
       style={[styles.row, { borderBottomColor: scheme.border }]}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      accessibilityHint="Opens this conversation"
     >
       {/* Avatar with unread indicator */}
       <View style={styles.avatarWrapper}>
@@ -126,7 +132,7 @@ export default function MessagesScreen({ scheme = dark, onOpenThread }: Props) {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.heading, { color: scheme.text }]}>Messages</Text>
+        <Text style={[styles.heading, { color: scheme.text }]} accessibilityRole="header">Messages</Text>
         <Text style={[styles.subheading, { color: scheme.sub }]}>
           {threads.length} conversations
         </Text>

@@ -68,4 +68,50 @@ describe('SymptomsScreen', () => {
 
     expect(screen.queryByText('What are you feeling?')).toBeNull();
   });
+
+  describe('accessibility', () => {
+    it('reports the "Log a symptom" toggle as collapsed, then expanded', async () => {
+      await renderScreen();
+      const toggle = screen.getByRole('button', { name: 'Log a symptom' });
+      expect(toggle).toBeCollapsed();
+
+      await fireEvent.press(toggle);
+      expect(toggle).toBeExpanded();
+    });
+
+    it('marks a symptom chip as selected once tapped', async () => {
+      await renderScreen();
+      await fireEvent.press(screen.getByText('Log a symptom'));
+
+      const chip = screen.getByRole('button', { name: 'Breathing' });
+      expect(chip).not.toBeSelected();
+
+      await fireEvent.press(chip);
+      expect(chip).toBeSelected();
+    });
+
+    it('exposes the severity picker as a radio group with one selected option', async () => {
+      await renderScreen();
+      await fireEvent.press(screen.getByText('Log a symptom'));
+
+      // Default severity is 3.
+      expect(screen.getByRole('radio', { name: 'Severity 3 of 5' })).toBeSelected();
+      expect(screen.getByRole('radio', { name: 'Severity 5 of 5' })).not.toBeSelected();
+
+      await fireEvent.press(screen.getByRole('radio', { name: 'Severity 5 of 5' }));
+      expect(screen.getByRole('radio', { name: 'Severity 5 of 5' })).toBeSelected();
+      expect(screen.getByRole('radio', { name: 'Severity 3 of 5' })).not.toBeSelected();
+    });
+
+    it('disables the submit button until a symptom is selected', async () => {
+      await renderScreen();
+      await fireEvent.press(screen.getByText('Log a symptom'));
+
+      const submit = screen.getByRole('button', { name: 'Log symptom' });
+      expect(submit).toBeDisabled();
+
+      await fireEvent.press(screen.getByText('Breathing'));
+      expect(submit).toBeEnabled();
+    });
+  });
 });

@@ -44,4 +44,29 @@ describe('MessagesScreen', () => {
 
     expect(onOpenThread).toHaveBeenCalledWith(secondThread.id);
   });
+
+  describe('accessibility', () => {
+    it('exposes each thread row as a single named button summarizing sender, role, and preview', async () => {
+      await renderScreen();
+
+      const thread = threads[0];
+      const contact = contactById(thread.contactId);
+      const lastMessage = thread.messages[thread.messages.length - 1];
+
+      const row = screen.getByRole('button', { name: new RegExp(`^${contact.name}, ${contact.role}`) });
+      expect(row).toHaveAccessibleName(new RegExp(lastMessage.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    });
+
+    it('includes "unread" in the accessible name of an unread thread', async () => {
+      await renderScreen();
+
+      const unreadThread = threads.find(t => t.unread);
+      if (!unreadThread) return; // no unread thread in the fixture data — nothing to assert
+      const contact = contactById(unreadThread.contactId);
+
+      expect(
+        screen.getByRole('button', { name: new RegExp(`^${contact.name}, ${contact.role}, unread`) }),
+      ).toBeOnTheScreen();
+    });
+  });
 });

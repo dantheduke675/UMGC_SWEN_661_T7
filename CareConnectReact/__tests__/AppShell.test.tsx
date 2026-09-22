@@ -87,4 +87,38 @@ describe('AppShellNavigator', () => {
     await expect(fireEvent.press(screen.getByText('Scroll down'))).resolves.not.toThrow();
     await expect(fireEvent.press(screen.getByText('Scroll up'))).resolves.not.toThrow();
   });
+
+  describe('accessibility', () => {
+    it('marks the active bottom-nav tab as selected and others as not selected', async () => {
+      await render(
+        <AppShell activeTab="today" scheme={dark} onTabPress={() => {}}>
+          <></>
+        </AppShell>,
+      );
+
+      expect(screen.getByRole('tab', { name: 'Today' })).toBeSelected();
+      expect(screen.getByRole('tab', { name: 'Medications' })).not.toBeSelected();
+    });
+
+    it('moves the selected tab state when a different tab is pressed', async () => {
+      await render(<AppShellNavigator />);
+
+      await fireEvent.press(screen.getByRole('tab', { name: 'Messages' }));
+
+      expect(screen.getByRole('tab', { name: 'Messages' })).toBeSelected();
+      expect(screen.getByRole('tab', { name: 'Today' })).not.toBeSelected();
+    });
+
+    it('exposes the AccessBar scroll and voice controls as named buttons', async () => {
+      await render(
+        <AppShell activeTab="today" scheme={dark} onTabPress={() => {}}>
+          <></>
+        </AppShell>,
+      );
+
+      expect(screen.getByRole('button', { name: 'Scroll up' })).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: 'Scroll down' })).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: 'Voice input' })).toBeOnTheScreen();
+    });
+  });
 });

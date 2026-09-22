@@ -5,7 +5,7 @@
  * On success (auto after 2 s in demo) → Today screen.
  * Mirrors Flutter's SignInBioScreen.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,8 @@ import {
   Easing,
 } from 'react-native';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
-import { dark, light } from '../constants/theme';
+import { dark } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { AuthLogo, AuthSpinner, AuthBtn, ThemeToggleBtn } from '../components/AuthComponents';
 
 interface Props {
@@ -76,7 +77,7 @@ function ScanRing({ scheme }: { scheme: typeof dark }) {
     <View style={styles.scanRingWrapper}>
       <Animated.View style={ringStyle(pulse1)} />
       <Animated.View style={ringStyle(pulse2)} />
-      {/* Centre face icon */}
+      {/* Centre face icon — decorative; status is announced via the spinner/success text below */}
       <View
         style={[
           styles.scanRingCenter,
@@ -90,19 +91,37 @@ function ScanRing({ scheme }: { scheme: typeof dark }) {
 }
 
 export default function FaceIDScreen({ navigation }: Props) {
-  const [isDark, setIsDark] = useState(true);
-  const scheme = isDark ? dark : light;
+  const { isDark, scheme, toggleTheme } = useTheme();
 
-  // Simulate Face ID completing after 2 s
+  // Simulate Face ID completing after 2 s. Someone with a tremor may need
+  // longer than usual to land a tap on "Use my password instead" — if that
+  // tap lands between the two chained timeouts below, the screen must not
+  // go on to auto-navigate to Today a moment later. Cleanup on unmount
+  // alone isn't reliable here: a stack navigator may keep this screen
+  // mounted (not torn down) while a pop transition/animation finishes, so
+  // both timers are also tracked in refs and cancelled explicitly the
+  // instant the password-fallback button is pressed.
   const [scanning, setScanning] = useState(true);
+  const scanTimerRef     = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
   useEffect(() => {
-    const t = setTimeout(() => {
+    scanTimerRef.current = setTimeout(() => {
       setScanning(false);
-      setTimeout(() => {
+      navigateTimerRef.current = setTimeout(() => {
         (navigation.replace ?? navigation.navigate)('Today');
       }, 600);
     }, 2000);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(scanTimerRef.current);
+      clearTimeout(navigateTimerRef.current);
+    };
+  }, [navigation]);
+
+  const usePasswordInstead = useCallback(() => {
+    clearTimeout(scanTimerRef.current);
+    clearTimeout(navigateTimerRef.current);
+    navigation.navigate('SignIn');
   }, [navigation]);
 
   const { width } = useWindowDimensions();
@@ -136,6 +155,7 @@ export default function FaceIDScreen({ navigation }: Props) {
               styles.heading,
               { fontSize: isTablet ? 36 : 28, color: scheme.text },
             ]}
+            accessibilityRole="header"
           >
             Welcome back, Maddy
           </Text>
@@ -167,8 +187,9 @@ export default function FaceIDScreen({ navigation }: Props) {
             <Text
               style={[
                 styles.successLabel,
-                { fontSize: isTablet ? 22 : 18, color: scheme.primary },
+                { fontSize: isTablet ? 22 : 18, color: scheme.primaryText },
               ]}
+              accessibilityLiveRegion="polite"
             >
               ✓  Face recognised
             </Text>
@@ -194,11 +215,11 @@ export default function FaceIDScreen({ navigation }: Props) {
           scheme={scheme}
           variant="secondary"
           large={isTablet}
-          onPress={() => navigation.navigate('SignIn')}
+          onPress={usePasswordInstead}
         />
       </ScrollView>
 
-      <ThemeToggleBtn isDark={isDark} onToggle={() => setIsDark(d => !d)} />
+      <ThemeToggleBtn isDark={isDark} onToggle={toggleTheme} />
     </SafeAreaView>
   );
 }

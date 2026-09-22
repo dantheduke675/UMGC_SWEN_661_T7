@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { ColorScheme, dark } from '../constants/theme';
+import { ColorScheme, dark, accessibleAccentText } from '../constants/theme';
 import { buildSlots, patient, MedSlot } from '../constants/data';
 import {
   SectionLabel,
@@ -64,7 +64,9 @@ function AppointmentCard({ scheme }: { scheme: ColorScheme }) {
         { backgroundColor: scheme.surface, borderColor: scheme.border },
       ]}
     >
-      <View style={[styles.apptIcon, { backgroundColor: '#6366F121' }]}>
+      <View
+        style={[styles.apptIcon, { backgroundColor: '#6366F121' }]}
+      >
         <Text style={{ fontSize: 22 }}>🏥</Text>
       </View>
       <View style={styles.apptText}>
@@ -75,8 +77,10 @@ function AppointmentCard({ scheme }: { scheme: ColorScheme }) {
           Today at 2:30 PM · 45 min
         </Text>
       </View>
-      <View style={styles.apptTimeBadge}>
-        <Text style={styles.apptTimeText}>2:30 PM</Text>
+      <View
+        style={styles.apptTimeBadge}
+      >
+        <Text style={[styles.apptTimeText, { color: accessibleAccentText('#F59E0B', scheme) }]}>2:30 PM</Text>
       </View>
     </View>
   );
@@ -119,8 +123,10 @@ function MedCard({
           </Text>
         </View>
         {isTaken && (
-          <View style={[styles.takenBadge, { backgroundColor: scheme.primary + '1F' }]}>
-            <Text style={[styles.takenBadgeText, { color: scheme.primary }]}>✓ Taken</Text>
+          <View
+            style={[styles.takenBadge, { backgroundColor: scheme.primary + '1F' }]}
+          >
+            <Text style={[styles.takenBadgeText, { color: scheme.primaryText }]}>✓ Taken</Text>
           </View>
         )}
       </View>
@@ -139,11 +145,16 @@ function MedCard({
               : scheme.primary,
           },
         ]}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={`${slot.med.name}, ${slot.med.dose}, ${slot.time}`}
+        accessibilityHint={isTaken ? undefined : 'Marks this medication as taken'}
+        accessibilityState={{ disabled: isTaken }}
       >
         <Text
           style={[
             styles.takeBtnText,
-            { color: isTaken ? scheme.primary : '#FFFFFF' },
+            { color: isTaken ? scheme.primaryText : '#FFFFFF' },
           ]}
         >
           {isTaken ? '✓ Taken' : 'I took this'}
@@ -210,10 +221,13 @@ export default function TodayScreen({ scheme = dark }: Props) {
         scrollEventThrottle={16}
       >
         {/* Date + greeting */}
-        <Text style={[styles.dateLabel, { color: scheme.primary }]}>
+        <Text style={[styles.dateLabel, { color: scheme.primaryText }]}>
           {formatDate(now).toUpperCase()}
         </Text>
-        <Text style={[styles.greeting, { color: scheme.text }]}>
+        <Text
+          style={[styles.greeting, { color: scheme.text }]}
+          accessibilityRole="header"
+        >
           Good morning, {patient.name} 👋
         </Text>
         <View style={{ height: 12 }} />

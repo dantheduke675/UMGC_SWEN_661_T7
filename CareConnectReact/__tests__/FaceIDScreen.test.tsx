@@ -3,12 +3,16 @@
  * auto-navigation to Today after success.
  */
 import React from 'react';
+import { Dimensions } from 'react-native';
 import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import FaceIDScreen from '../src/screens/FaceIDScreen';
 
 function makeNav() {
   return { navigate: jest.fn() };
 }
+
+const PHONE_WINDOW  = { window: { width: 375, height: 812, scale: 3, fontScale: 1 } };
+const TABLET_WINDOW = { window: { width: 1024, height: 1366, scale: 2, fontScale: 1 } };
 
 describe('FaceIDScreen', () => {
   beforeEach(() => {
@@ -68,5 +72,43 @@ describe('FaceIDScreen', () => {
 
     await fireEvent.press(screen.getByText('Use my password instead'));
     expect(navigation.navigate).toHaveBeenCalledWith('SignIn');
+  });
+
+  describe('on a tablet-sized viewport', () => {
+    afterEach(async () => {
+      await act(async () => {
+        Dimensions.set(PHONE_WINDOW);
+      });
+    });
+
+    it('still shows the scanning state and offers the password fallback', async () => {
+      Dimensions.set(TABLET_WINDOW);
+      const navigation = makeNav();
+      await render(<FaceIDScreen navigation={navigation} />);
+
+      expect(screen.getByText('Looking for your face…')).toBeTruthy();
+      await fireEvent.press(screen.getByText('Use my password instead'));
+      expect(navigation.navigate).toHaveBeenCalledWith('SignIn');
+    });
+
+    it('keeps the password-fallback button at or above the 44x44 WCAG target size (tremor/motor accessibility)', async () => {
+      Dimensions.set(TABLET_WINDOW);
+      await render(<FaceIDScreen navigation={makeNav()} />);
+
+      expect(screen.getByRole('button', { name: 'Use my password instead' })).toHaveStyle({
+        minHeight: 44,
+      });
+    });
+
+    it('still shows the success state after the scan completes', async () => {
+      Dimensions.set(TABLET_WINDOW);
+      await render(<FaceIDScreen navigation={makeNav()} />);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      expect(screen.getByText('✓  Face recognised')).toBeTruthy();
+    });
   });
 });

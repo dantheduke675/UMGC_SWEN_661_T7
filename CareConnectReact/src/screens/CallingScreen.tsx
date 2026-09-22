@@ -60,7 +60,7 @@ function ConnectingDots() {
     return () => clearInterval(t);
   }, []);
   return (
-    <Text style={styles.connectingText}>
+    <Text style={styles.connectingText} accessibilityLabel="Connecting">
       {'Connecting' + '.'.repeat(dots)}
     </Text>
   );
@@ -80,7 +80,15 @@ function CtrlBtn({
   onTap:  () => void;
 }) {
   return (
-    <TouchableOpacity onPress={onTap} activeOpacity={0.8} style={styles.ctrlWrap}>
+    <TouchableOpacity
+      onPress={onTap}
+      activeOpacity={0.8}
+      style={styles.ctrlWrap}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+    >
       <View
         style={[
           styles.ctrlCircle,
@@ -104,7 +112,15 @@ function CtrlBtn({
 
 function EndBtn({ onTap }: { onTap: () => void }) {
   return (
-    <TouchableOpacity onPress={onTap} activeOpacity={0.85} style={styles.ctrlWrap}>
+    <TouchableOpacity
+      onPress={onTap}
+      activeOpacity={0.85}
+      style={styles.ctrlWrap}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel="End call"
+      accessibilityHint="Ends the current call"
+    >
       <View style={styles.endCircle}>
         <Text style={{ fontSize: 28 }}>📵</Text>
       </View>
@@ -175,10 +191,18 @@ export default function CallingScreen({ contactId, onEnd }: Props) {
       <SafeAreaView style={styles.safe}>
         {/* Top bar */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={onEnd} style={styles.backBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={onEnd}
+            style={styles.backBtn}
+            activeOpacity={0.7}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="End call"
+            accessibilityHint="Ends the call and returns to messages"
+          >
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.topLabel}>
+          <Text style={styles.topLabel} accessibilityLiveRegion="polite">
             {connected ? 'On call' : 'Calling…'}
           </Text>
           <View style={{ width: 48 }} />
@@ -186,8 +210,10 @@ export default function CallingScreen({ contactId, onEnd }: Props) {
 
         <View style={{ height: height * 0.06 }} />
 
-        {/* Avatar + pulse rings */}
-        <View style={styles.avatarContainer}>
+        {/* Avatar + pulse rings — decorative; name/role are announced as text below */}
+        <View
+          style={styles.avatarContainer}
+        >
           {/* Pulse rings */}
           <PulseRing anim={pulseAnim} phaseOffset={0}   />
           <PulseRing anim={pulseAnim} phaseOffset={0.4} />

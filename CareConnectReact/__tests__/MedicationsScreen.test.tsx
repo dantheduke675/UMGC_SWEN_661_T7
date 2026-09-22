@@ -59,6 +59,28 @@ describe('MedicationsScreen', () => {
     expect(screen.queryByText('Marked as missed')).toBeNull();
   });
 
+  describe('accessibility', () => {
+    it('names a med card\'s take button after the medication and disables it once taken', async () => {
+      await renderScreen();
+
+      const takeBtn = screen.getAllByRole('button', { name: /, I took this$/ })[0];
+      expect(takeBtn).toBeEnabled();
+
+      await fireEvent.press(takeBtn);
+      expect(takeBtn).toBeDisabled();
+      expect(takeBtn).toHaveAccessibleName(/, Taken$/);
+    });
+
+    it('announces the missed-confirmation dialog as an alert with named actions', async () => {
+      await renderScreen();
+      await fireEvent.press(screen.getAllByText('I missed this')[0]);
+
+      expect(screen.getByRole('alert')).toHaveTextContent(/Mark this dose as missed\?/);
+      expect(screen.getByRole('button', { name: 'Yes, I missed this dose' })).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeOnTheScreen();
+    });
+  });
+
   describe('undo history', () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -89,6 +111,11 @@ describe('MedicationsScreen', () => {
       // Undo the older "missed" entry (bottom of the stack) — the newer
       // "taken" action should remain applied.
       await fireEvent.press(screen.getAllByText('Undo')[1]);
+
+      // The history panel is a true modal (marks the rest of the screen
+      // inert for assistive tech), so close it before reading background
+      // content, matching what a screen reader user would actually see.
+      await fireEvent.press(screen.getByLabelText('Close'));
 
       expect(screen.getAllByText('3').length).toBeGreaterThan(0); // Taken stat still 3
       expect(screen.getAllByText('0').length).toBeGreaterThan(0); // Missed stat back to 0

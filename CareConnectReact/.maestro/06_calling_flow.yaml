@@ -1,0 +1,20 @@
+# Flow: start a call from a message thread, wait for it to connect, then end it.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- tapOn: "Sign in"
+- tapOn:
+    text: "Sign in"
+    index: 1
+- tapOn: "Messages"
+- tapOn: ".*Aunt Joyce.*"
+- assertVisible: "Type a message…"
+- tapOn: "Call Aunt Joyce"
+- assertVisible: "Aunt Joyce"
+- extendedWaitUntil:
+    visible: "On call"
+    timeout: 8000
+- assertVisible: "Mute"
+- assertVisible: "Earpiece"
+- tapOn: "End call"
+- assertVisible: ".*conversations.*"

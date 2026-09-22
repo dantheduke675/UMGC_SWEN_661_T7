@@ -1,0 +1,24 @@
+# Flow: creating an account as a care recipient, opting into Face ID, and
+# landing on Today once the simulated scan completes.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- tapOn: "Create account"
+- assertVisible: "Create your account"
+- tapOn: "Full name"
+- eraseText
+- inputText: "Maddy Chen"
+- tapOn: "Email address"
+- eraseText
+- inputText: "maddy@example.com"
+- tapOn: "Password"
+- inputText: "SuperSecret1"
+- hideKeyboard
+- assertVisible: "I AM A…"
+- tapOn: "Care recipient"
+- assertVisible: "Sign in with your face?"
+- tapOn: "Yes, use Face ID"
+- extendedWaitUntil:
+    visible: ".*Good morning.*"
+    timeout: 8000
+- assertVisible: "Today's medications"

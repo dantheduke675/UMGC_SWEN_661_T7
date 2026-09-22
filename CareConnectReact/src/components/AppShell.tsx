@@ -24,8 +24,9 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ColorScheme, dark, light } from '../constants/theme';
+import { ColorScheme } from '../constants/theme';
 import { ScrollProvider, useScrollContext } from '../context/ScrollContext';
+import { useTheme } from '../context/ThemeContext';
 import { ThemeToggleBtn } from './AuthComponents';
 import TodayScreen       from '../screens/TodayScreen';
 import MedicationsScreen from '../screens/MedicationsScreen';
@@ -66,6 +67,8 @@ function AccessBar({ scheme }: { scheme: ColorScheme }) {
         styles.accessBar,
         { backgroundColor: scheme.surface, borderTopColor: scheme.border },
       ]}
+      accessible
+      accessibilityRole="toolbar"
     >
       {/* Scroll up */}
       <AccessBtn
@@ -81,6 +84,10 @@ function AccessBar({ scheme }: { scheme: ColorScheme }) {
         style={[styles.voiceBtn, { backgroundColor: scheme.primary }]}
         activeOpacity={0.8}
         onPress={() => { /* voice input hook */ }}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel="Voice input"
+        accessibilityHint="Starts voice input"
       >
         <Text style={styles.voiceIcon}>🎤</Text>
         <Text style={styles.voiceLabel}>Voice</Text>
@@ -118,8 +125,15 @@ function AccessBtn({
       ]}
       onPress={onPress}
       activeOpacity={0.75}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
-      <Text style={[styles.accessBtnIcon, { color: scheme.sub }]}>{icon}</Text>
+      <Text
+        style={[styles.accessBtnIcon, { color: scheme.sub }]}
+      >
+        {icon}
+      </Text>
       <Text style={[styles.accessBtnLabel, { color: scheme.sub }]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -142,6 +156,8 @@ function BottomNav({
         styles.bottomNav,
         { backgroundColor: scheme.surface, borderTopColor: scheme.border },
       ]}
+      accessible
+      accessibilityRole="tablist"
     >
       {NAV_ITEMS.map(item => {
         const active = item.key === activeTab;
@@ -151,6 +167,10 @@ function BottomNav({
             style={styles.navItem}
             onPress={() => onTabPress(item.key)}
             activeOpacity={0.7}
+            accessible
+            accessibilityRole="tab"
+            accessibilityLabel={item.label}
+            accessibilityState={{ selected: active }}
           >
             {/* Active top stripe */}
             <View style={styles.navStripeRow}>
@@ -160,11 +180,15 @@ function BottomNav({
                 />
               )}
             </View>
-            <Text style={styles.navIcon}>{item.icon}</Text>
+            <Text
+              style={styles.navIcon}
+            >
+              {item.icon}
+            </Text>
             <Text
               style={[
                 styles.navLabel,
-                { color: active ? scheme.primary : scheme.sub },
+                { color: active ? scheme.primaryText : scheme.sub },
               ]}
             >
               {item.label}
@@ -257,8 +281,7 @@ interface AppShellNavigatorProps {
 }
 
 export default function AppShellNavigator({ navigation }: AppShellNavigatorProps) {
-  const [isDark, setIsDark] = useState(true);
-  const scheme = isDark ? dark : light;
+  const { isDark, scheme, toggleTheme } = useTheme();
 
   const [view, setView] = useState<ViewState>({ type: 'tab', tab: 'today' });
 
@@ -307,7 +330,7 @@ export default function AppShellNavigator({ navigation }: AppShellNavigatorProps
           <AccountScreen
             scheme={scheme}
             isDark={isDark}
-            onToggleTheme={() => setIsDark(d => !d)}
+            onToggleTheme={toggleTheme}
             onSignOut={() => {
               navigation?.reset({ index: 0, routes: [{ name: 'Landing' }] });
             }}
@@ -324,7 +347,7 @@ export default function AppShellNavigator({ navigation }: AppShellNavigatorProps
       isFullScreen={isFullScreen}
       onTabPress={tab => setView({ type: 'tab', tab })}
       isDark={isDark}
-      onToggleTheme={() => setIsDark(d => !d)}
+      onToggleTheme={toggleTheme}
     >
       {renderScreen()}
     </AppShell>

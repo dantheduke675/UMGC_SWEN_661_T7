@@ -35,6 +35,7 @@ export function AuthLogo({ scheme, large = false, small = false }: AuthLogoProps
         styles.logoContainer,
         { width: size, height: size, borderRadius: radius, backgroundColor: scheme.primary },
       ]}
+      // Decorative — the app name is always rendered as visible text next to it.
     >
       <Text style={{ fontSize: emoji }}>💊</Text>
     </View>
@@ -52,6 +53,10 @@ interface AuthBtnProps {
   large?: boolean;
   onPress?: () => void;
   disabled?: boolean;
+  accessibilityHint?: string;
+  /** Override for the spoken label — use when `label` contains a glyph
+   *  (e.g. "← Back") that should not be read literally. */
+  accessibilityLabel?: string;
 }
 
 export function AuthBtn({
@@ -61,17 +66,28 @@ export function AuthBtn({
   large = false,
   onPress,
   disabled = false,
+  accessibilityHint,
+  accessibilityLabel,
 }: AuthBtnProps) {
   const h  = large ? 80 : 64;
   const fs = large ? 22 : 18;
 
+  const a11yProps = {
+    accessible: true,
+    accessibilityRole: 'button' as const,
+    accessibilityLabel: accessibilityLabel ?? label,
+    accessibilityHint,
+    accessibilityState: { disabled },
+  };
+
   if (variant === 'text') {
     return (
       <TouchableOpacity
-        style={[styles.btnBase, { height: h }]}
+        style={[styles.btnBase, { height: h, minHeight: 44 }]}
         onPress={onPress}
         disabled={disabled}
         activeOpacity={0.7}
+        {...a11yProps}
       >
         <Text style={[styles.btnText, { fontSize: fs, color: scheme.link }]}>{label}</Text>
       </TouchableOpacity>
@@ -86,6 +102,7 @@ export function AuthBtn({
           styles.btnSecondary,
           {
             height: h,
+            minHeight: 44,
             backgroundColor: scheme.surface,
             borderColor: scheme.border,
           },
@@ -93,6 +110,7 @@ export function AuthBtn({
         onPress={onPress}
         disabled={disabled}
         activeOpacity={0.75}
+        {...a11yProps}
       >
         <Text style={[styles.btnText, { fontSize: fs, color: scheme.text }]}>{label}</Text>
       </TouchableOpacity>
@@ -104,11 +122,12 @@ export function AuthBtn({
       style={[
         styles.btnBase,
         styles.btnPrimary,
-        { height: h, backgroundColor: scheme.primary, opacity: disabled ? 0.5 : 1 },
+        { height: h, minHeight: 44, backgroundColor: scheme.primary, opacity: disabled ? 0.5 : 1 },
       ]}
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.8}
+      {...a11yProps}
     >
       <Text style={[styles.btnText, { fontSize: fs, color: tokens.white }]}>{label}</Text>
     </TouchableOpacity>
@@ -177,6 +196,9 @@ export function AuthField({
           placeholderTextColor={scheme.muted}
           autoCapitalize="none"
           autoCorrect={false}
+          accessible
+          accessibilityLabel={label}
+          accessibilityHint={helper}
         />
       </View>
       {helper ? (
@@ -199,16 +221,21 @@ interface AuthRoleTileProps {
 
 export function AuthRoleTile({ role, scheme, large = false, onPress }: AuthRoleTileProps) {
   const isCaregiver = role === 'caregiver';
-  const bg          = isCaregiver ? tokens.caregiverPurple : '#2F7A6B';
+  const bg          = isCaregiver ? tokens.caregiverPurple : scheme.primary;
   const label       = isCaregiver ? '👤  Caregiver' : '🙂  Care recipient';
+  const spokenLabel = isCaregiver ? 'Caregiver' : 'Care recipient';
   const h           = large ? 80 : 88;
   const fs          = large ? 22 : 18;
 
   return (
     <TouchableOpacity
-      style={[styles.roleTile, { height: h, backgroundColor: bg }]}
+      style={[styles.roleTile, { height: h, minHeight: 44, backgroundColor: bg }]}
       onPress={onPress}
       activeOpacity={0.82}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={spokenLabel}
+      accessibilityHint={`Selects ${spokenLabel} as your account type`}
     >
       <Text style={[styles.roleTileText, { fontSize: fs }]}>{label}</Text>
     </TouchableOpacity>
@@ -247,6 +274,10 @@ export function AuthStatusRing({ scheme, scanning = false }: AuthStatusRingProps
           transform: [{ scale: pulse }],
         },
       ]}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={scanning ? 'Scanning your face' : 'Face ID ready'}
+      accessibilityLiveRegion="polite"
     >
       <Text style={styles.statusRingEmoji}>👤</Text>
     </Animated.View>
@@ -281,8 +312,16 @@ export function AuthSpinner({ label, scheme, large = false }: AuthSpinnerProps) 
   const fs = large ? 22 : 18;
 
   return (
-    <View style={styles.spinnerRow}>
-      <Animated.View style={{ transform: [{ rotate: spin }] }}>
+    <View
+      style={styles.spinnerRow}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityLiveRegion="polite"
+    >
+      <Animated.View
+        style={{ transform: [{ rotate: spin }] }}
+      >
         <View style={[styles.spinnerRing, { borderColor: scheme.primary }]}>
           <View style={[styles.spinnerGap, { backgroundColor: scheme.surface2 }]} />
         </View>
@@ -309,6 +348,11 @@ export function ThemeToggleBtn({ isDark, onToggle }: ThemeToggleBtnProps) {
       ]}
       onPress={onToggle}
       activeOpacity={0.75}
+      accessible
+      accessibilityRole="switch"
+      accessibilityLabel="Dark mode"
+      accessibilityState={{ checked: isDark }}
+      accessibilityHint={`Double tap to switch to ${isDark ? 'light' : 'dark'} mode`}
     >
       <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
     </TouchableOpacity>

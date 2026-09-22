@@ -74,4 +74,25 @@ describe('ScheduleScreen', () => {
     };
     expect(screen.getByText(expectedTitles[visibleOffset])).toBeTruthy();
   });
+
+  describe('accessibility', () => {
+    it('marks today\'s day cell as selected by default', async () => {
+      await renderScreen();
+      expect(screen.getByRole('button', { name: /today/i })).toBeSelected();
+    });
+
+    it('moves the selected state to whichever day cell is pressed', async () => {
+      await renderScreen();
+
+      const todayCell = screen.getByRole('button', { name: /today/i });
+      const otherCells = screen
+        .getAllByRole('button')
+        .filter(cell => cell !== todayCell);
+
+      await fireEvent.press(otherCells[0]);
+
+      expect(todayCell).not.toBeSelected();
+      expect(otherCells[0]).toBeSelected();
+    });
+  });
 });
