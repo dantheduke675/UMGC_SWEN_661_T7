@@ -481,7 +481,7 @@ In order to test through the maestro flows make sure an emulator is currently ru
 maestro test .maestro
 ```
 
-An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maaestro test flows that run through the react application.
+An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maaestro test flows that run through the react application. There are 8 maestro flows which recreate 8 user flows through the react application. 
 
 ## Screen Reader Testing
 
