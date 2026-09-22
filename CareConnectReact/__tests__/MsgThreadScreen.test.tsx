@@ -98,4 +98,34 @@ describe('MsgThreadScreen', () => {
     // The quick reply chip and the newly-sent bubble both show the same text.
     expect(screen.getAllByText('Thank you!').length).toBeGreaterThanOrEqual(2);
   });
+
+  describe('accessibility', () => {
+    it('exposes the header back and call controls as named buttons', async () => {
+      const contact = contactById(threadById(1).contactId);
+      await render(<MsgThreadScreen threadId={1} scheme={dark} />);
+
+      expect(screen.getByRole('button', { name: 'Back' })).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: `Call ${contact.name}` })).toBeOnTheScreen();
+    });
+
+    it('exposes the message input under an accessible name', async () => {
+      await render(<MsgThreadScreen threadId={1} scheme={dark} />);
+      expect(screen.getByLabelText('Message')).toHaveAccessibleName('Message');
+    });
+
+    it('disables the send button while the input is empty and enables it once text is typed', async () => {
+      await render(<MsgThreadScreen threadId={1} scheme={dark} />);
+
+      const sendBtn = screen.getByRole('button', { name: 'Send message' });
+      expect(sendBtn).toBeDisabled();
+
+      await fireEvent.changeText(screen.getByLabelText('Message'), 'Hi there');
+      expect(sendBtn).toBeEnabled();
+    });
+
+    it('exposes each quick reply as a named button', async () => {
+      await render(<MsgThreadScreen threadId={2} scheme={dark} />);
+      expect(screen.getByRole('button', { name: 'Thank you!' })).toBeOnTheScreen();
+    });
+  });
 });

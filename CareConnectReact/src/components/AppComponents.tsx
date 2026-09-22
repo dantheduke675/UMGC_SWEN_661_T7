@@ -14,7 +14,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
-import { ColorScheme } from '../constants/theme';
+import { ColorScheme, accessibleFillForWhiteText } from '../constants/theme';
 
 // ── CAvatarBadge ──────────────────────────────────────────────────────────────
 
@@ -22,15 +22,26 @@ interface AvatarProps {
   initials: string;
   color:    string;
   size?:    number;
+  /** Provide when the avatar is not already paired with visible name text
+   *  nearby, so screen readers announce who it represents. */
+  label?:   string;
 }
 
-export function CAvatarBadge({ initials, color, size = 40 }: AvatarProps) {
+export function CAvatarBadge({ initials, color, size = 40, label }: AvatarProps) {
   return (
     <View
       style={[
         styles.avatar,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: color },
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: accessibleFillForWhiteText(color),
+        },
       ]}
+      accessible={!!label}
+      accessibilityRole={label ? 'image' : undefined}
+      accessibilityLabel={label}
     >
       <Text style={[styles.avatarText, { fontSize: size * 0.36 }]}>{initials}</Text>
     </View>
@@ -72,9 +83,22 @@ export function UndoToast({ message, onUndo, onDismiss }: ToastProps) {
   }, [opacity]);
 
   return (
-    <Animated.View style={[styles.toast, { opacity }]}>
+    <Animated.View
+      style={[styles.toast, { opacity }]}
+      accessible
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+    >
       <Text style={styles.toastText}>{message}</Text>
-      <TouchableOpacity style={styles.toastBtn} onPress={onUndo} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={[styles.toastBtn, { minHeight: 44, minWidth: 44 }]}
+        onPress={onUndo}
+        activeOpacity={0.8}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel="Undo"
+        accessibilityHint={`Undoes: ${message}`}
+      >
         <Text style={styles.toastBtnText}>Undo</Text>
       </TouchableOpacity>
     </Animated.View>
@@ -94,14 +118,20 @@ interface UndoHistoryButtonProps {
 export function UndoHistoryButton({ count, scheme, onPress }: UndoHistoryButtonProps) {
   if (count === 0) return null;
 
+  const label = `${count} recent ${count === 1 ? 'action' : 'actions'}, undo history`;
+
   return (
     <TouchableOpacity
       style={[
         styles.historyTrigger,
-        { backgroundColor: scheme.surface2, borderColor: scheme.border },
+        { backgroundColor: scheme.surface2, borderColor: scheme.border, minHeight: 44 },
       ]}
       onPress={onPress}
       activeOpacity={0.75}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint="Opens the list of recent undoable actions"
     >
       <Text style={{ fontSize: 14 }}>↺</Text>
       <Text style={[styles.historyTriggerText, { color: scheme.text }]}>
@@ -140,11 +170,19 @@ export function UndoHistoryPanel({
   const isWide = width >= 700;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      accessibilityViewIsModal
+    >
       <TouchableOpacity
         style={styles.historyBackdrop}
         activeOpacity={1}
         onPress={onClose}
+        accessible
+        accessibilityRole="button"
         accessibilityLabel="Close undo history"
       />
       <View
@@ -159,11 +197,20 @@ export function UndoHistoryPanel({
           ]}
         >
           <View style={styles.historyHeader}>
-            <Text style={[styles.historyTitle, { color: scheme.text }]}>Undo history</Text>
+            <Text
+              style={[styles.historyTitle, { color: scheme.text }]}
+              accessibilityRole="header"
+            >
+              Undo history
+            </Text>
             <TouchableOpacity
               onPress={onClose}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              style={styles.historyCloseHit}
+              accessible
+              accessibilityRole="button"
               accessibilityLabel="Close"
+              accessibilityHint="Closes the undo history panel"
             >
               <Text style={[styles.historyCloseBtn, { color: scheme.sub }]}>✕</Text>
             </TouchableOpacity>
@@ -181,9 +228,12 @@ export function UndoHistoryPanel({
                     {entry.message}
                   </Text>
                   <TouchableOpacity
-                    style={[styles.historyUndoBtn, { backgroundColor: scheme.primary }]}
+                    style={[styles.historyUndoBtn, { backgroundColor: scheme.primary, minHeight: 44, minWidth: 44 }]}
                     onPress={() => onUndo(entry.id)}
                     activeOpacity={0.8}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={`Undo: ${entry.message}`}
                   >
                     <Text style={styles.historyUndoBtnText}>Undo</Text>
                   </TouchableOpacity>
@@ -206,7 +256,12 @@ interface SectionLabelProps {
 
 export function SectionLabel({ text, scheme }: SectionLabelProps) {
   return (
-    <Text style={[styles.sectionLabel, { color: scheme.text }]}>{text}</Text>
+    <Text
+      style={[styles.sectionLabel, { color: scheme.text }]}
+      accessibilityRole="header"
+    >
+      {text}
+    </Text>
   );
 }
 
@@ -228,7 +283,12 @@ export function LinearProgressBar({ value }: ProgressBarProps) {
   }, [value, width]);
 
   return (
-    <View style={styles.progressTrack}>
+    <View
+      style={styles.progressTrack}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}
+    >
       <Animated.View
         style={[
           styles.progressFill,
@@ -368,6 +428,12 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize:   17,
     fontWeight: '800',
+  },
+  historyCloseHit: {
+    minWidth:       44,
+    minHeight:      44,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
   historyCloseBtn: {
     fontSize:   18,

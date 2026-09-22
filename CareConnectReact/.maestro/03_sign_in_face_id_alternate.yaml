@@ -1,0 +1,18 @@
+# Flow: from the password sign-in screen, switch to Face ID and confirm the
+# simulated scan still lands on Today.
+#
+# Note: the password-fallback race documented in FaceIDScreen.tsx (tapping
+# "Use my password instead" before the ~2.6s auto-navigation fires) is a
+# sub-second timing scenario that real UI-automation latency can't reliably
+# exercise — that's covered by __tests__/FaceIDNavigation.test.tsx with fake
+# timers instead. This flow sticks to the deterministic happy path.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- tapOn: "Sign in"
+- assertVisible: "Use Face ID instead"
+- tapOn: "Use Face ID instead"
+- extendedWaitUntil:
+    visible: ".*Good morning.*"
+    timeout: 8000
+- assertVisible: "Today's medications"

@@ -490,6 +490,8 @@ npx jest -t "<test name>"
 
 All tests live in `__tests__/`, with one file per screen, component, hook, and data module.
 
+### Note 1. These tests include accessibility and integration tests for the React CareConnect application.
+
 ## Linting
 
 Linting is enforced with [ESLint](https://eslint.org/) using Expo's shared config. Check the whole project with:
@@ -523,6 +525,53 @@ npm test -- --coverage
 ```
 
 Then open `coverage/lcov-report/index.html` in a browser. Unlike the Flutter report this needs no extra tooling — Jest writes the HTML itself. As of 2026-09-14 the suite is 19 files / 117 tests, all passing, and overall line coverage is 92.4% (461 of 499 lines).
+
+## Maestro
+
+In order to test through the maestro flows make sure an emulator is currently running the application then run  
+
+```
+maestro test .maestro
+```
+
+An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maestro test flows that run through the react application. There are 8 maestro flows which recreate 8 user flows through the react application as seen below:
+
+1. Sign in → Today — password login shows the dashboard + all tabs.
+2. Create account + Face ID — sign up, opt into Face ID, land on Today.
+3. Face ID sign-in — alternate login path, same Today landing.
+4. Tab navigation — every bottom tab opens its screen.
+5. Message quick reply — open a thread, send a canned reply, go back.
+6. Calling — call from a thread, connects, then end call.
+7. Theme + sign out — toggle dark mode, sign out to Landing.
+8. Take/undo medication — mark a dose taken, undo it.
+
+## Screen Reader Testing
+
+TalkBack was used as a screen reader as well for the React CareConnect Version of the application an emulator of an android phone was used to run the application and Talkback was enabled using
+
+```
+adb shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
+adb shell settings put secure accessibility_enabled 1
+adb shell settings put secure touch_exploration_enabled 1
+```
+
+The application was then ran through manually using the screen reader to ensure accuracy and each Item that was interactable was able to be read by the screen reader.
+
+## Accessibility 
+
+Accessibility is a major focus of this application in many ways with this version of CareConnect itself being catered specifically towards people experiencing a parkinsonian tremor. Examples of how the application is accessible include:
+
+- The ability to sign in with a biometric marker
+- The ability to change the view of the screen using light/dark mode
+- The ability to easily undo immediate actions
+- The ability to easily undo any action in any order
+- The larger button size making it easier for our user demographic to select
+- The larger text making things easier to see
+- The adaptable layouts making the application available and usable on most devices and configurations
+- The adaptive UI elements making the application available and usable on most devices and configurations
+- The scroll buttons allowing the user to scroll up and down when they can.
+- The voice command feature allowing the user to navigate and select UI elements with their voice (planned in the UI does not exist currently as there's no backend)
+- Carefully labeled so the application is screen reader accessible
 
 ## Troubleshooting
 
@@ -611,7 +660,12 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 
 ## Daniel
 
--
+- Worked on the Read Me
+- Added Accessibility testing and other forms of testing to the React Application
+- Tested the react application using the Talkback screen reader
+- Created and worked on the Test Coverage as well as the Accessibility/Screen Reader document
+- Added End to End testing for the React Application
+- Enhanced apects of the code to meet WCAG 2.1 Level AA Compliance
 
 ## Justin
 
@@ -623,6 +677,9 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 
 ## Ian
 
--
+- Wrote Accessibility Report using VPAT (2.5Ver)
+- Noted additional requirements for WCAG 2.1 Level AA Compliance required for future weeks; not all requirements are met at current week
+- Ensured access to Github for future development purposes
+- Reviewed codebase to ensure full familiarity in advance of future code changes and additional requirements
 
-### AI Disclosure: The code in this project was written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
+### AI Disclosure: The code and parts of the README files in this project were written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code and files have been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.

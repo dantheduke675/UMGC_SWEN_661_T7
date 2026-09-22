@@ -5,7 +5,7 @@
  * "No, use my password" → SignInScreen
  * Mirrors Flutter's BiometricsScreen ("Sign in with your face?").
  */
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
   useWindowDimensions,
   StatusBar,
 } from 'react-native';
-import { dark, light } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import {
   AuthLogo,
   AuthStatusRing,
@@ -31,8 +31,7 @@ interface Props {
 }
 
 export default function BiometricsIntroScreen({ navigation }: Props) {
-  const [isDark, setIsDark] = useState(true);
-  const scheme = isDark ? dark : light;
+  const { isDark, scheme, toggleTheme } = useTheme();
 
   const { width } = useWindowDimensions();
   const isTablet = width >= 700;
@@ -65,6 +64,7 @@ export default function BiometricsIntroScreen({ navigation }: Props) {
               styles.heading,
               { fontSize: isTablet ? 36 : 28, color: scheme.text },
             ]}
+            accessibilityRole="header"
           >
             Sign in with your face?
           </Text>
@@ -114,7 +114,7 @@ export default function BiometricsIntroScreen({ navigation }: Props) {
         />
       </ScrollView>
 
-      <ThemeToggleBtn isDark={isDark} onToggle={() => setIsDark(d => !d)} />
+      <ThemeToggleBtn isDark={isDark} onToggle={toggleTheme} />
     </SafeAreaView>
   );
 }

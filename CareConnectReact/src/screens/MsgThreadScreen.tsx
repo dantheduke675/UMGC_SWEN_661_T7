@@ -58,8 +58,16 @@ function ThreadHeader({
           onPress={onBack}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          accessibilityHint="Returns to the messages list"
         >
-          <Text style={[styles.backArrow, { color: scheme.primary }]}>←</Text>
+          <Text
+            style={[styles.backArrow, { color: scheme.primaryText }]}
+          >
+            ←
+          </Text>
         </TouchableOpacity>
 
         {/* Avatar */}
@@ -76,8 +84,16 @@ function ThreadHeader({
           style={[styles.callBtn, { backgroundColor: scheme.primary }]}
           onPress={onCall}
           activeOpacity={0.8}
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={`Call ${contact.name}`}
+          accessibilityHint="Starts a voice call"
         >
-          <Text style={{ fontSize: 20 }}>📞</Text>
+          <Text
+            style={{ fontSize: 20 }}
+          >
+            📞
+          </Text>
         </TouchableOpacity>
       </SafeAreaView>
     </View>
@@ -179,6 +195,10 @@ function QuickReplies({
             style={[styles.quickReply, { backgroundColor: scheme.surface, borderColor: scheme.border }]}
             onPress={() => onTap(reply)}
             activeOpacity={0.75}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={reply}
+            accessibilityHint="Sends this as a quick reply"
           >
             <Text style={[styles.quickReplyText, { color: scheme.sub }]}>{reply}</Text>
           </TouchableOpacity>
@@ -216,14 +236,25 @@ function InputRow({
           placeholderTextColor={scheme.muted}
           returnKeyType="send"
           multiline={false}
+          accessible
+          accessibilityLabel="Message"
+          accessibilityHint="Type a message, then use the send button"
         />
       </View>
       <TouchableOpacity
         style={[styles.sendBtn, { backgroundColor: scheme.primary }]}
         onPress={onSend}
         activeOpacity={0.8}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel="Send message"
+        accessibilityState={{ disabled: value.trim().length === 0 }}
       >
-        <Text style={styles.sendBtnText}>↑</Text>
+        <Text
+          style={styles.sendBtnText}
+        >
+          ↑
+        </Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -385,7 +416,7 @@ const styles = StyleSheet.create({
 
   // Quick replies
   quickRepliesBar: {
-    height:          52,
+    height:          60,
     borderTopWidth:  1,
   },
   quickRepliesContent: {
@@ -398,7 +429,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius:      12,
     borderWidth:       1,
-    height:            36,
+    height:            44,
     alignItems:        'center',
     justifyContent:    'center',
   },

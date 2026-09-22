@@ -98,9 +98,34 @@ describe('TodayScreen', () => {
       // Undo the older (bottom-of-stack) entry, not the most recent one.
       await fireEvent.press(screen.getAllByText('Undo')[1]);
 
+      // The history panel is a true modal (marks the rest of the screen
+      // inert for assistive tech), so close it before reading background
+      // content, matching what a screen reader user would actually see.
+      await fireEvent.press(screen.getByLabelText('Close'));
+
       // Only one of the two new "taken" actions was undone.
       expect(screen.getByText(`3 of ${total} taken`)).toBeTruthy();
       expect(screen.getByText('1 recent action · Undo history')).toBeTruthy();
+    });
+  });
+
+  describe('accessibility', () => {
+    it('reports the medication progress bar\'s accessibility value', async () => {
+      await renderScreen();
+      const total = buildSlots().length;
+      const now = Math.round((2 / total) * 100);
+
+      expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ min: 0, max: 100, now });
+    });
+
+    it('disables a med card\'s take button once it has been marked taken', async () => {
+      await renderScreen();
+
+      const takeBtn = screen.getAllByRole('button', { name: /,/, disabled: false })[0];
+      expect(takeBtn).toBeEnabled();
+
+      await fireEvent.press(takeBtn);
+      expect(takeBtn).toBeDisabled();
     });
   });
 });
