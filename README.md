@@ -241,14 +241,20 @@ TalkBack reads — so a control with no accessible name is a control the flows
 cannot tap.
 
 Maestro is a separate CLI, not part of Flutter — install it from
-[maestro.dev](https://maestro.mobile.dev/getting-started/installation) first. Then, with a device or emulator
-running:
+[maestro.dev](https://maestro.mobile.dev/getting-started/installation) first. Then, from
+`care_connect_flutter_frontend/` with a device or emulator running:
 
 ```
 flutter build apk --debug --dart-define=E2E_SEMANTICS=true
-adb install -r build/app/outputs/flutter-apk/app-debug.apk
+flutter install -d <device-id> --use-application-binary=build/app/outputs/flutter-apk/app-debug.apk
 maestro test .maestro --debug-output .maestro/artifacts
 ```
+
+`flutter devices` lists device IDs. The middle line is `flutter install` and
+not `adb install -r` because `adb` is not a command on a machine whose `PATH`
+nobody has edited — see [If `adb` or `maestro` is not
+found](#if-adb-or-maestro-is-not-found) below, which is the first thing to
+check when either of these lines fails.
 
 | Flow                          | Covers                                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -270,6 +276,53 @@ Two things to know before running them:
 `--debug-output` collects screenshots, the command log and a per-step
 hierarchy dump into one directory; that output is git-ignored and
 regenerable. See `care_connect_flutter_frontend/.maestro/README.md` for detail.
+
+### If `adb` or `maestro` is not found
+
+Neither tool puts itself on `PATH` on Windows, so both fail with
+`The term '...' is not recognized` until you do it yourself.
+
+**`adb`** ships with the Android SDK, which installs it under `platform-tools`
+without touching `PATH`. The commands above route around this by installing
+through `flutter`, which already located the SDK in order to build — one fewer
+thing to configure, at the cost of needing `-d <device-id>` because `flutter`
+also offers Chrome, Edge and Windows as targets. (`flutter install` also
+uninstalls before installing, clearing app data; `adb install -r` preserves it.
+A clean start is what these flows want.) To call `adb` directly instead — the
+[Screen-reader testing](#screen-reader-testing) commands and
+`tool/talkback_walk.sh` both do, by bare name — put it on `PATH` for the
+session:
+
+```powershell
+# Windows PowerShell
+$env:Path = "$env:LOCALAPPDATA\Android\Sdk\platform-tools;$env:Path"
+```
+
+```bash
+# macOS
+export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
+# Linux
+export PATH="$HOME/Android/Sdk/platform-tools:$PATH"
+```
+
+**`maestro`** has no such workaround — the flows need the real CLI. Its
+installer unpacks to `~/.maestro/bin` and appends that to your shell profile on
+macOS and Linux, but the Windows archive edits nothing: `maestro` is
+`%USERPROFILE%\.maestro\bin\maestro.bat` and stays invisible until you add it.
+
+```powershell
+# this session only
+$env:Path = "$env:USERPROFILE\.maestro\bin;$env:Path"
+
+# or for every new session (appends to the user PATH and nothing else —
+# `setx PATH` would flatten the machine PATH into it and truncate at 1024 chars)
+[Environment]::SetEnvironmentVariable("Path",
+  [Environment]::GetEnvironmentVariable("Path", "User") + ";$env:USERPROFILE\.maestro\bin",
+  "User")
+```
+
+`tool/talkback_walk.sh` resolves Maestro on its own — `~/.maestro/bin/maestro`,
+overridable with `MAESTRO=` — so that script needs only the `adb` line.
 
 ## Test Coverage Report
 
