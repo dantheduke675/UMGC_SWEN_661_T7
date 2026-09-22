@@ -437,6 +437,8 @@ npx jest -t "<test name>"
 
 All tests live in `__tests__/`, with one file per screen, component, hook, and data module.
 
+### Note 1. These tests include accessibility and integration tests for the React CareConnect application.
+
 ## Linting
 
 Linting is enforced with [ESLint](https://eslint.org/) using Expo's shared config. Check the whole project with:
@@ -479,7 +481,19 @@ In order to test through the maestro flows make sure an emulator is currently ru
 maestro test .maestro
 ```
 
-An emulator is always require with Maestro and you must either use an emulator or a physical device running the application
+An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maaestro test flows that run through the react application.
+
+## Screen Reader Testing
+
+TalkBack was used as a screen reader as well for the React CareConnect Version of the application an emulator of an android phone was used to run the application and Talkback was enabled using
+
+```
+adb shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
+adb shell settings put secure accessibility_enabled 1
+adb shell settings put secure touch_exploration_enabled 1
+```
+
+The application was then ran through manually using the screen reader to ensure accuracy and each Item that was interactable was able to be read by the screen reader.
 
 ## Accessibility 
 
@@ -584,7 +598,12 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 
 ## Daniel
 
--
+- Worked on the Read Me
+- Added Accessibility testing and other forms of testing to the React Application
+- Tested the react application using the Talkback screen reader
+- Created and worked on the Test Coverage as well as the Accessibility/Screen Reader document
+- Added End to End testing for the React Application
+- Enhanced apects of the code to meet WCAG 2.1 Level AA Compliance
 
 ## Justin
 
