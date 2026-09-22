@@ -481,7 +481,7 @@ In order to test through the maestro flows make sure an emulator is currently ru
 maestro test .maestro
 ```
 
-An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maaestro test flows that run through the react application.
+An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maaestro test flows that run through the react application. There are 8 maestro flows which recreate 8 user flows through the react application. 
 
 ## Screen Reader Testing
 
@@ -615,6 +615,9 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 
 ## Ian
 
--
+- Wrote Accessibility Report using VPAT (2.5Ver)
+- Noted additional requirements for WCAG 2.1 Level AA Compliance required for future weeks; not all requirements are met at current week
+- Ensured access to Github for future development purposes
+- Reviewed codebase to ensure full familiarity in advance of future code changes and additional requirements
 
 ### AI Disclosure: The code in this project was written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
