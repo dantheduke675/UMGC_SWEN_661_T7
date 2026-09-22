@@ -3,7 +3,7 @@
  * First screen users see. Shows branding, tagline, and two CTA buttons.
  * Navigation: Create account → CreateAccountScreen, Sign in → SignInScreen
  */
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   useWindowDimensions,
   StatusBar,
 } from 'react-native';
-import { dark, light } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { AuthLogo, AuthBtn, ThemeToggleBtn } from '../components/AuthComponents';
 
 // Navigation prop type — replace with your stack navigator's prop type
@@ -23,8 +23,7 @@ interface Props {
 }
 
 export default function LandingScreen({ navigation }: Props) {
-  const [isDark, setIsDark] = useState(true);
-  const scheme = isDark ? dark : light;
+  const { isDark, scheme, toggleTheme } = useTheme();
   const { width } = useWindowDimensions();
   const isTablet = width >= 700;
 
@@ -43,7 +42,10 @@ export default function LandingScreen({ navigation }: Props) {
         <View style={styles.brand}>
           <AuthLogo scheme={scheme} large={isTablet} />
           <View style={{ height: 24 }} />
-          <Text style={[styles.appName, { fontSize: isTablet ? 40 : 32, color: scheme.text }]}>
+          <Text
+            style={[styles.appName, { fontSize: isTablet ? 40 : 32, color: scheme.text }]}
+            accessibilityRole="header"
+          >
             CareConnect
           </Text>
           <View style={{ height: 16 }} />
@@ -77,7 +79,7 @@ export default function LandingScreen({ navigation }: Props) {
         </View>
       </View>
 
-      <ThemeToggleBtn isDark={isDark} onToggle={() => setIsDark(d => !d)} />
+      <ThemeToggleBtn isDark={isDark} onToggle={toggleTheme} />
     </SafeAreaView>
   );
 }

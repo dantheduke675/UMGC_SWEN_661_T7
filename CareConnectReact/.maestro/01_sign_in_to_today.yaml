@@ -1,0 +1,22 @@
+# Flow: password sign-in lands the user on the Today dashboard.
+appId: com.dgmartin.CareConnectReact
+---
+- runFlow: helpers/launch_app.yaml
+- assertVisible: "CareConnect"
+- assertVisible: "Create account"
+- tapOn: "Sign in"
+- assertVisible: "Email address"
+- tapOn: "Password"
+- inputText: "SuperSecret1"
+- hideKeyboard
+- tapOn:
+    text: "Sign in"
+    index: 1
+- assertVisible: ".*Good morning.*"
+- assertVisible: "Today's medications"
+- assertVisible: "Today"
+- assertVisible: "Medications"
+- assertVisible: "Messages"
+- assertVisible: "Schedule"
+- assertVisible: "Symptoms"
+- assertVisible: "Account"

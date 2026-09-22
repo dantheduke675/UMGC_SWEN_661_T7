@@ -96,3 +96,42 @@ describe('ThemeToggleBtn', () => {
     expect(screen.getByText('🌙')).toBeTruthy();
   });
 });
+
+describe('accessibility', () => {
+  it('exposes AuthBtn as a named, enabled button', async () => {
+    await render(<AuthBtn label="Sign in" scheme={dark} onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
+  });
+
+  it('exposes a disabled AuthBtn to assistive tech', async () => {
+    await render(<AuthBtn label="Sign in" scheme={dark} onPress={() => {}} disabled />);
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled();
+  });
+
+  it('lets a glyph AuthBtn label be overridden with a screen-reader-friendly name', async () => {
+    await render(
+      <AuthBtn label="← Back" accessibilityLabel="Back" scheme={dark} onPress={() => {}} />,
+    );
+    expect(screen.getByRole('button', { name: 'Back' })).toBeOnTheScreen();
+  });
+
+  it('exposes AuthField\'s input under its visible label', async () => {
+    await render(<AuthField label="Email address" value="" scheme={dark} />);
+    expect(screen.getByLabelText('Email address')).toHaveAccessibleName('Email address');
+  });
+
+  it('exposes each AuthRoleTile as a named button', async () => {
+    await render(<AuthRoleTile role="recipient" scheme={dark} onPress={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Care recipient' })).toBeOnTheScreen();
+  });
+
+  it('marks the ThemeToggleBtn switch as checked in dark mode', async () => {
+    await render(<ThemeToggleBtn isDark onToggle={() => {}} />);
+    expect(screen.getByRole('switch', { name: 'Dark mode' })).toBeChecked();
+  });
+
+  it('marks the ThemeToggleBtn switch as unchecked in light mode', async () => {
+    await render(<ThemeToggleBtn isDark={false} onToggle={() => {}} />);
+    expect(screen.getByRole('switch', { name: 'Dark mode' })).not.toBeChecked();
+  });
+});

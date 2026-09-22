@@ -112,16 +112,187 @@ or a single file with:
 flutter test <path to file>
 ```
 
+The 606 tests above all run on the host and need no device. They break down as
+282 widget tests, 241 accessibility tests and 83 unit tests. Two further
+layers — integration and end-to-end — need a connected device or emulator and
+are described in their own sections below.
+
+## Accessibility Testing
+
+The Flutter app targets **WCAG 2.1 Level AA**. 241 of the 606 host tests are
+accessibility tests:
+
+```
+flutter test ./test/accessibility
+```
+
+| File                             | What it checks                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `a11y_harness.dart`              | Shared harness — mounts all 13 screens at their real routes, in the real shell                                |
+| `contrast_test.dart`             | SC 1.4.3 — every painted paragraph, both themes, also at 200% text scale                                      |
+| `semantics_test.dart`            | SC 1.1.1, 1.3.1, 4.1.2 — names, roles, headings, tab state, emoji leakage, duplicate names                    |
+| `keyboard_and_targets_test.dart` | SC 2.1.1, 2.4.3, 2.4.7 and the 48×48 target size — focusability, Tab order, focus visibility, modal behaviour |
+| `text_scaling_test.dart`         | SC 1.4.4 — 100/130/150/200% in both themes, and that text actually grows                                      |
+| `status_messages_test.dart`      | SC 4.1.3 — announcements and live regions                                                                     |
+
+One more sits outside that directory: `test/unit/contrast_helpers_test.dart`
+sweeps the contrast helpers SC 1.4.3 rests on across all 256 greys, the full
+hue wheel and every tint strength. It counts toward the 83 unit tests, not the
+241 above.
+
+These assert rather than report: every one fails the build if the app stops
+conforming. Each also carries a control, so a check that silently measured
+nothing would itself fail — a deliberately low-contrast widget must be caught,
+a 20×20 button must fail the target-size guideline, and an emoji-only label
+must be rejected.
+
+Flutter's four built-in `AccessibilityGuideline` checks run per screen as
+well, but are treated as the floor rather than the ceiling: they accept an
+emoji as a label, and their contrast check cannot see text inside a card whose
+contents are merged into one spoken sentence. `contrast_test.dart` therefore
+enumerates text from the render tree, rasterises the frame, and samples the
+colour actually painted around each paragraph.
+
+### Screen-reader testing
+
+A **TalkBack** pass was run on an Android 17 emulator with the screen reader
+switched on, covering **11 screens and 154 reachable nodes with 0 unnamed
+controls**: Landing, Create account, Face ID setup, Face ID sign-in, Sign in,
+Today, Medications, Schedule, Symptoms, Messages and Account. The sign-up
+path — Create account and the two Face ID screens — was added by a second
+pass; the eight screens the first pass had already covered came back
+byte-identical. The transcript is committed at
+`care_connect_flutter_frontend/evidence/talkback-transcript.txt` and is
+reproduced by:
+
+```
+bash tool/talkback_walk.sh
+```
+
+Switch TalkBack on first:
+
+```
+adb shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
+adb shell settings put secure accessibility_enabled 1
+adb shell settings put secure touch_exploration_enabled 1
+```
+
+and off again with `adb shell settings delete secure enabled_accessibility_services`.
+Touch exploration is the part the walk depends on and it does not always come
+up with the service, so confirm `touchExplorationEnabled=true` in
+`adb shell dumpsys accessibility` before trusting a run. The script also wants
+the Maestro CLI — it looks in `~/.maestro/bin/maestro` and takes a `MAESTRO=`
+override — for the one screen described below.
+
+The transcript is captured from the platform accessibility tree — the material
+TalkBack composes speech from — because release builds of TalkBack do not log
+utterance text. It establishes that every control has a name, a role and the
+correct state, and the order they are reached in; it does not establish exact
+wording or pacing. Ten screens are read with `uiautomator dump`. Face ID
+sign-in is read with `maestro hierarchy` off the same tree, because its
+spinner never lets the window go idle and `uiautomator dump` only ever returns
+an idle window; the transcript names the reader under that screen.
+
+The pass found one defect, recorded rather than fixed: on Face ID sign-in the
+indeterminate spinner reaches the tree as a progress node whose entire
+accessible name is `75`, so TalkBack announces a figure that refers to
+nothing. The screen remains usable — the `Looking for your face…` line beside
+it is what carries the meaning — and the fix is either to keep the indicator
+out of semantics or to give it a real label.
+
+**VoiceOver has not been run**: no macOS host or iOS device is available to
+this project. Both are covered in full in
+`care_connect_flutter_frontend/ACCESSIBILITY.md` §8.
+
+## Integration Testing
+
+40 tests that launch the **real application** — the real router, the real app
+shell, the real provider graph — on a device or emulator, at that device's
+real size and with real frame timing:
+
+```
+flutter test integration_test -d <device-id>
+```
+
+Use `flutter devices` to list device IDs.
+
+| File                                | Workflow                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------- |
+| `e2e_harness.dart`                  | Shared — launches the real app, resets seeded state, addresses controls by accessible name  |
+| `medication_flow_test.dart`         | Sign in → take a dose → both screens agree → undo from another tab → the missed-dose dialog |
+| `symptom_flow_test.dart`            | The symptom logger, including that submit stays inert until a symptom is chosen             |
+| `messaging_flow_test.dart`          | Open an unread thread, reply twice, leave and return; the call button                       |
+| `navigation_flow_test.dart`         | All six tabs, exactly-one-selected, positional hints, theme persistence, sign out           |
+| `accessibility_on_device_test.dart` | Guidelines, control names, the slider's increase action, live regions, 100/130/200% scaling |
+
+The host widget tests mount one screen at a time behind stub routes, so a test
+that "navigates" from Today to Medications is really navigating to a stub.
+These navigate to the actual screen through the actual shell, so state that
+fails to survive the trip actually fails. Every interaction is driven by a
+control's accessible name rather than the text drawn on it — the same handle a
+screen reader uses, so a labelling regression fails the test rather than
+quietly shipping.
+
+## End-to-End (E2E) Testing
+
+Five **Maestro** flows drive the installed APK the way a person would. Maestro
+finds elements through Android's `AccessibilityNodeInfo` tree — the same tree
+TalkBack reads — so a control with no accessible name is a control the flows
+cannot tap.
+
+Maestro is a separate CLI, not part of Flutter — install it from
+[maestro.dev](https://maestro.mobile.dev/getting-started/installation) first. Then, with a device or emulator
+running:
+
+```
+flutter build apk --debug --dart-define=E2E_SEMANTICS=true
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+maestro test .maestro --debug-output .maestro/artifacts
+```
+
+| Flow                          | Covers                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `01-record-a-dose`            | Sign in → mark a dose taken on Today → the same dose shows taken on Medications                        |
+| `02-missed-dose-confirmation` | The confirmation dialog: it names itself, hides the screen behind it, and both cancel and confirm work |
+| `03-log-a-symptom`            | The symptom form: expand, choose, grade, submit, and the entry appears                                 |
+| `04-message-a-caregiver`      | Open an unread thread, reply, return, and the unread state has cleared                                 |
+| `05-screen-reader-names`      | Walks the app asserting every control is named and no name is an emoji                                 |
+
+Two things to know before running them:
+
+- **The `E2E_SEMANTICS` flag is required.** Flutter publishes no accessibility
+  tree to Android until something asks for one. A screen reader asks; a UI
+  automation tool does not. Without the flag the whole app is a single blank
+  `FlutterView` to Maestro.
+- **Turn TalkBack off first.** With it on, a single tap only moves
+  accessibility focus, so every flow that taps a control fails.
+
+`--debug-output` collects screenshots, the command log and a per-step
+hierarchy dump into one directory; that output is git-ignored and
+regenerable. See `care_connect_flutter_frontend/.maestro/README.md` for detail.
+
 ## Test Coverage Report
 
-`coverage/` is git-ignored, so there is no hosted report — generate one locally:
+`coverage/` is git-ignored, so the generated report is not committed. The
+per-file summary is, at `care_connect_flutter_frontend/evidence/coverage-summary.txt`.
+Regenerate both with:
 
 ```
 flutter test --coverage
-genhtml coverage/lcov.info -o coverage/html
+dart run tool/coverage_summary.dart --out=evidence/coverage-summary.txt
 ```
 
-Then open `coverage/html/index.html` in a browser (requires `lcov`/`genhtml` installed). As of 2026-09-08, overall line coverage is 96.0% (1,524 of 1,587 lines).
+`tool/coverage_summary.dart` needs no extra tooling and exits non-zero if line
+coverage falls below 75% (`--min=` moves the gate), so the floor is enforced
+rather than merely reported. For a browsable HTML report instead,
+`genhtml coverage/lcov.info -o coverage/html` still works where `lcov` is
+installed; open `coverage/html/index.html` in a browser.
+
+**As of 2026-09-21: 98.90% line coverage (1,795 of 1,815 lines) across 18
+files, with 606 tests passing and `flutter analyze` clean.** 11 of the 18
+files are at 100% and every other file is above 98% except `lib/main.dart`
+at 93.85%, whose uncovered lines are `main()` itself — orientation setup and
+`runApp`, which no host test executes and every `integration_test` run does.
 
 ## Troubleshooting
 
@@ -266,6 +437,8 @@ npx jest -t "<test name>"
 
 All tests live in `__tests__/`, with one file per screen, component, hook, and data module.
 
+### Note 1. These tests include accessibility and integration tests for the React CareConnect application.
+
 ## Linting
 
 Linting is enforced with [ESLint](https://eslint.org/) using Expo's shared config. Check the whole project with:
@@ -292,13 +465,51 @@ Note the trailing `.` in the script — a bare `expo lint` only checks `src/`, `
 npx jest --coverage --forceExit --collectCoverageFrom="src/**/*.{ts,tsx}"
 ```
 
-You can alternatively use 
+You can alternatively use
 
 ```
 npm test -- --coverage
 ```
 
 Then open `coverage/lcov-report/index.html` in a browser. Unlike the Flutter report this needs no extra tooling — Jest writes the HTML itself. As of 2026-09-14 the suite is 19 files / 117 tests, all passing, and overall line coverage is 92.4% (461 of 499 lines).
+
+## Maestro
+
+In order to test through the maestro flows make sure an emulator is currently running the application then run  
+
+```
+maestro test .maestro
+```
+
+An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maaestro test flows that run through the react application.
+
+## Screen Reader Testing
+
+TalkBack was used as a screen reader as well for the React CareConnect Version of the application an emulator of an android phone was used to run the application and Talkback was enabled using
+
+```
+adb shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
+adb shell settings put secure accessibility_enabled 1
+adb shell settings put secure touch_exploration_enabled 1
+```
+
+The application was then ran through manually using the screen reader to ensure accuracy and each Item that was interactable was able to be read by the screen reader.
+
+## Accessibility 
+
+Accessibility is a major focus of this application in many ways with this version of CareConnect itself being catered specifically towards people experiencing a parkinsonian tremor. Examples of how the application is accessible include:
+
+- The ability to sign in with a biometric marker
+- The ability to change the view of the screen using light/dark mode
+- The ability to easily undo immediate actions
+- The ability to easily undo any action in any order
+- The larger button size making it easier for our user demographic to select
+- The larger text making things easier to see
+- The adaptable layouts making the application available and usable on most devices and configurations
+- The adaptive UI elements making the application available and usable on most devices and configurations
+- The scroll buttons allowing the user to scroll up and down when they can.
+- The voice command feature allowing the user to navigate and select UI elements with their voice (planned in the UI does not exist currently as there's no backend)
+- Carefully labeled so the application is screen reader accessible
 
 ## Troubleshooting
 
@@ -316,7 +527,9 @@ If Metro serves stale code after a dependency or config change, restart the bund
 npx expo start --clear
 ```
 
-ESLint's React Compiler rules reject the older `useRef(new Animated.Value(0)).current` idiom with `Cannot access refs during render`. Use React Native's `useAnimatedValue()` hook instead — it is the supported replacement and is already used throughout `src/`.
+ESLint's React Compiler rules reject the older `useRef(new Animated.Value(0)).current` idiom with `Cannot access refs during render`. Use the project's own `useAnimatedValue()` from `src/hooks/useAnimatedValue.ts` instead.
+
+Import it from there and **not** from `react-native`. React Native exports a hook of the same name, but `react-native-web` does not re-export it, so the `react-native` import type-checks, passes the Jest suite, and bundles without complaint — then throws `useAnimatedValue is not a function` the moment the screen renders in a browser. `eslint.config.js` has a `no-restricted-imports` rule that fails the lint if anyone imports it from `react-native` again.
 
 The test output contains `SafeAreaView has been deprecated` warnings from React Native. These are noise from the current component implementation and do not fail the suite.
 
@@ -376,8 +589,32 @@ The test output contains `SafeAreaView has been deprecated` warnings from React 
 - Configured eslint for the project
 
 ## Ashvini
+
 - Designed the Symptoms, Schedule, Account, and Calling screens
 - Worked on the comparison document
 - Tested the app locally.
+
+# Weekly Contributions 09/16-09/22
+
+## Daniel
+
+- Worked on the Read Me
+- Added Accessibility testing and other forms of testing to the React Application
+- Tested the react application using the Talkback screen reader
+- Created and worked on the Test Coverage as well as the Accessibility/Screen Reader document
+- Added End to End testing for the React Application
+- Enhanced apects of the code to meet WCAG 2.1 Level AA Compliance
+
+## Justin
+
+- Worked on the README
+- Added Accessibility testing for the Flutter application
+- Enhanced apects of the code to meet WCAG 2.1 Level AA Compliance
+- Added Integration testing for the Flutter application
+- Added End to End testing for the Flutter application
+
+## Ian
+
+-
 
 ### AI Disclosure: The code in this project was written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code has been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.

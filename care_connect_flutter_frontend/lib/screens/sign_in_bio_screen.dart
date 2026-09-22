@@ -22,10 +22,14 @@ class SignInBioScreen extends StatelessWidget {
       children: [
         AuthLogoSmall(lg: isTablet),
         const SizedBox(height: 24),
-        Text(
-          'Welcome back, Maddy',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: isTablet ? 36 : 28, fontWeight: FontWeight.w800, color: scheme.text),
+        Semantics(
+          header: true,
+          headingLevel: 1,
+          child: Text(
+            'Welcome back, Maddy',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: isTablet ? 36 : 28, fontWeight: FontWeight.w800, color: scheme.text),
+          ),
         ),
         const SizedBox(height: 16),
         Text(

@@ -46,9 +46,12 @@ void main() {
       expect(CTokens.lightSub, const Color(0xFF5A6478));
     });
 
-    test('lightInputBorder matches Figma border token', () {
-      expect(CTokens.lightInputBorder, const Color(0xFFE0E2E6));
-    });
+    // The border and muted tokens are deliberately not asserted here. Their
+    // Figma values were part of the problem — lightInputBorder was #E0E2E6,
+    // which measured 1.17:1 against lightSurface — so what matters about them
+    // now is the ratio they clear, not the swatch they happen to be. That is
+    // asserted exhaustively in test/unit/contrast_helpers_test.dart, over
+    // every surface of both themes.
   });
 
   group('CTokens — brand colours', () {
@@ -216,5 +219,60 @@ void main() {
     test('primary colour matches light scheme primary', () => expect(theme.colorScheme.primary, CScheme.light.primary));
     test('error colour is danger red', () => expect(theme.colorScheme.error, CTokens.danger));
     test('onPrimary is white', () => expect(theme.colorScheme.onPrimary, Colors.white));
+  });
+
+  // CScheme is a value type: ThemeNotifier hands one out on every rebuild, so
+  // widgets that compare the scheme they were given against the scheme they
+  // now hold rely on equality being by value rather than by identity.
+  group('CScheme — value semantics', () {
+    /// Rebuilds [from] field by field, optionally replacing `text`.
+    ///
+    /// Deliberately not `const`: comparing `CScheme.dark` against itself is
+    /// answered by the `identical` short-circuit and would never reach the
+    /// field comparisons this group is here to exercise.
+    CScheme twinOf(CScheme from, {Color? text}) => CScheme(
+          bg: from.bg,
+          surface: from.surface,
+          surface2: from.surface2,
+          border: from.border,
+          inputBorder: from.inputBorder,
+          text: text ?? from.text,
+          sub: from.sub,
+          muted: from.muted,
+          link: from.link,
+          primary: from.primary,
+          controlBorder: from.controlBorder,
+        );
+
+    test('a separate scheme with the same tokens is equal', () {
+      final twin = twinOf(CScheme.dark);
+      expect(identical(twin, CScheme.dark), isFalse);
+      expect(twin, equals(CScheme.dark));
+    });
+
+    test('equal schemes agree on hashCode', () {
+      expect(twinOf(CScheme.dark).hashCode, CScheme.dark.hashCode);
+    });
+
+    test('a scheme equals itself', () {
+      expect(CScheme.dark, equals(CScheme.dark));
+    });
+
+    test('dark and light are not equal', () {
+      expect(CScheme.dark, isNot(equals(CScheme.light)));
+    });
+
+    test('changing a single token breaks equality', () {
+      expect(twinOf(CScheme.dark, text: const Color(0xFF123456)),
+          isNot(equals(CScheme.dark)));
+    });
+
+    test('light is a value type too', () {
+      expect(twinOf(CScheme.light), equals(CScheme.light));
+    });
+
+    test('a scheme is not equal to a non-scheme', () {
+      expect(CScheme.dark, isNot(equals(Object())));
+    });
   });
 }

@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { ColorScheme, dark } from '../constants/theme';
+import { ColorScheme, dark, accessibleAccentText } from '../constants/theme';
 import { CChip } from '../components/AppComponents';
 import { useScrollContext } from '../context/ScrollContext';
 
@@ -77,6 +77,9 @@ function WeekStrip({
         const isToday = offset === 0;
         const hasDot = APPTS.some(a => a.dayOffset === offset);
 
+        const fullLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        const a11yLabel = `${fullLabel}${isToday ? ', today' : ''}${hasDot ? ', has appointments' : ''}`;
+
         return (
           <TouchableOpacity
             key={i}
@@ -94,6 +97,10 @@ function WeekStrip({
                 borderWidth: isSel ? 0 : 2,
               },
             ]}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={a11yLabel}
+            accessibilityState={{ selected: isSel }}
           >
             <Text style={[styles.dayLetter, { color: isSel ? '#FFFFFF' : scheme.sub }]}>
               {DAY_LETTERS[i]}
@@ -105,7 +112,7 @@ function WeekStrip({
                   color: isSel
                     ? '#FFFFFF'
                     : isToday
-                    ? scheme.primary
+                    ? scheme.primaryText
                     : scheme.text,
                 },
               ]}
@@ -136,6 +143,9 @@ function WeekStrip({
 function ApptCard({ appt, scheme }: { appt: Appt; scheme: ColorScheme }) {
   const meta  = TYPE_META[appt.type] ?? { color: '#6366F1', icon: '📅' };
   const col   = meta.color;
+  const textCol = accessibleAccentText(col, scheme);
+
+  const a11yLabel = `${appt.title}, ${appt.subtitle}, ${appt.time}, ${appt.duration}${appt.confirmed ? '' : ', pending confirmation'}`;
 
   return (
     <View
@@ -143,6 +153,8 @@ function ApptCard({ appt, scheme }: { appt: Appt; scheme: ColorScheme }) {
         styles.apptCard,
         { backgroundColor: scheme.surface, borderColor: scheme.border },
       ]}
+      accessible
+      accessibilityLabel={a11yLabel}
     >
       <View style={[styles.apptIcon, { backgroundColor: col + '21' }]}>
         <Text style={{ fontSize: 22 }}>{meta.icon}</Text>
@@ -151,13 +163,13 @@ function ApptCard({ appt, scheme }: { appt: Appt; scheme: ColorScheme }) {
         <Text style={[styles.apptTitle, { color: scheme.text }]}>{appt.title}</Text>
         <Text style={[styles.apptSub, { color: scheme.sub }]}>{appt.subtitle}</Text>
         <View style={styles.chipRow}>
-          <CChip label={appt.time}     color={col} />
+          <CChip label={appt.time}     color={textCol} />
           <View style={{ width: 6 }} />
           <CChip label={appt.duration} color={scheme.sub} />
           {!appt.confirmed && (
             <>
               <View style={{ width: 6 }} />
-              <CChip label="Pending" color="#F59E0B" />
+              <CChip label="Pending" color={accessibleAccentText('#F59E0B', scheme)} />
             </>
           )}
         </View>
@@ -207,7 +219,7 @@ export default function ScheduleScreen({ scheme = dark }: Props) {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.heading, { color: scheme.text }]}>Schedule</Text>
+        <Text style={[styles.heading, { color: scheme.text }]} accessibilityRole="header">Schedule</Text>
         <Text style={[styles.subheading, { color: scheme.sub }]}>
           {APPTS.length} appointments this week
         </Text>
@@ -223,13 +235,17 @@ export default function ScheduleScreen({ scheme = dark }: Props) {
       <View style={{ height: 20 }} />
 
       {/* Day label */}
-      <Text style={[styles.dayHeading, { color: scheme.text }]}>{dayLabel()}</Text>
+      <Text style={[styles.dayHeading, { color: scheme.text }]} accessibilityRole="header">{dayLabel()}</Text>
       <View style={{ height: 10 }} />
 
       {/* Appointments or empty state */}
       {filtered.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={{ fontSize: 40 }}>🗓️</Text>
+          <Text
+            style={{ fontSize: 40 }}
+          >
+            🗓️
+          </Text>
           <View style={{ height: 12 }} />
           <Text style={[styles.emptyTitle, { color: scheme.text }]}>No appointments</Text>
           <Text style={[styles.emptySub, { color: scheme.sub }]}>Enjoy your free day.</Text>
@@ -264,6 +280,7 @@ const styles = StyleSheet.create({
   },
   dayCell: {
     width:          52,
+    minHeight:      44,
     borderRadius:   16,
     alignItems:     'center',
     paddingVertical: 8,

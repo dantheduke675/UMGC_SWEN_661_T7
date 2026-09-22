@@ -78,6 +78,8 @@ function MedCard({
     isMissed ? tokens.danger  :
     scheme.border;
 
+  const statusLabel = isTaken ? 'taken' : isMissed ? 'missed' : 'not yet taken';
+
   return (
     <View
       style={[
@@ -91,16 +93,22 @@ function MedCard({
       <View style={styles.medBody}>
         {/* Header row */}
         <View style={styles.medHeader}>
-          <View style={[styles.medIconBox, { backgroundColor: scheme.surface2 }]}>
+          <View
+            style={[styles.medIconBox, { backgroundColor: scheme.surface2 }]}
+          >
             <Text style={{ fontSize: 22 }}>💊</Text>
           </View>
           <View style={styles.medInfo}>
             <View style={styles.medNameRow}>
-              <Text style={[styles.medName, { color: scheme.text }]} numberOfLines={1}>
+              <Text
+                style={[styles.medName, { color: scheme.text }]}
+                numberOfLines={1}
+                accessibilityLabel={`${slot.med.name}, ${statusLabel}`}
+              >
                 {slot.med.name}
               </Text>
               <View style={{ width: 8 }} />
-              <CChip label={slot.med.category} color={scheme.primary} />
+              <CChip label={slot.med.category} color={scheme.primaryText} />
             </View>
             <Text style={[styles.medDose, { color: scheme.sub }]}>
               {slot.med.dose} · {slot.time}
@@ -128,11 +136,16 @@ function MedCard({
             ]}
             onPress={isTaken ? undefined : onTake}
             activeOpacity={isTaken ? 1 : 0.8}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel={`${slot.med.name}, ${isTaken ? 'Taken' : 'I took this'}`}
+            accessibilityHint={isTaken ? undefined : 'Marks this dose as taken'}
+            accessibilityState={{ disabled: isTaken }}
           >
             <Text
               style={[
                 styles.actionBtnText,
-                { color: isTaken ? scheme.primary : '#FFFFFF' },
+                { color: isTaken ? scheme.primaryText : '#FFFFFF' },
               ]}
             >
               {isTaken ? '✓ Taken' : 'I took this'}
@@ -154,9 +167,14 @@ function MedCard({
               ]}
               onPress={onMissed}
               activeOpacity={0.8}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={`${slot.med.name}, ${isMissed ? 'Missed' : 'I missed this'}`}
+              accessibilityHint={isMissed ? undefined : 'Opens a confirmation to mark this dose as missed'}
+              accessibilityState={{ disabled: isMissed }}
             >
               <Text
-                style={[styles.actionBtnText, { color: tokens.danger }]}
+                style={[styles.actionBtnText, { color: scheme.danger }]}
               >
                 {isMissed ? '✗ Missed' : 'I missed this'}
               </Text>
@@ -182,13 +200,21 @@ function ConfirmMissedModal({
   onCancel:  () => void;
 }) {
   return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={onCancel}>
+    <Modal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onRequestClose={onCancel}
+      accessibilityViewIsModal
+    >
       <View style={styles.modalOverlay}>
         <View
           style={[
             styles.modalBox,
             { backgroundColor: scheme.surface, borderColor: scheme.border },
           ]}
+          accessible
+          accessibilityRole="alert"
         >
           <Text style={[styles.modalText, { color: scheme.text }]}>
             Mark this dose as missed?{'\n'}Your caregiver will be notified.
@@ -198,6 +224,9 @@ function ConfirmMissedModal({
             style={[styles.modalBtn, { backgroundColor: tokens.danger }]}
             onPress={onConfirm}
             activeOpacity={0.85}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Yes, I missed this dose"
           >
             <Text style={styles.modalBtnText}>Yes, I missed this dose</Text>
           </TouchableOpacity>
@@ -210,6 +239,10 @@ function ConfirmMissedModal({
             ]}
             onPress={onCancel}
             activeOpacity={0.75}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+            accessibilityHint="Closes this dialog without marking the dose as missed"
           >
             <Text style={[styles.modalBtnText, { color: scheme.text }]}>
               Cancel — go back
@@ -279,7 +312,7 @@ export default function MedicationsScreen({ scheme = dark }: Props) {
         scrollEventThrottle={16}
       >
         {/* Header */}
-        <Text style={[styles.heading, { color: scheme.text }]}>Medications</Text>
+        <Text style={[styles.heading, { color: scheme.text }]} accessibilityRole="header">Medications</Text>
         <Text style={[styles.subheading, { color: scheme.sub }]}>
           {slots.length} doses today
         </Text>
@@ -296,9 +329,9 @@ export default function MedicationsScreen({ scheme = dark }: Props) {
         <View style={styles.statsRow}>
           <StatTile label="Total doses" value={slots.length} color={scheme.sub}    scheme={scheme} />
           <View style={{ width: 10 }} />
-          <StatTile label="Taken"       value={takenCount}   color={scheme.primary} scheme={scheme} />
+          <StatTile label="Taken"       value={takenCount}   color={scheme.primaryText} scheme={scheme} />
           <View style={{ width: 10 }} />
-          <StatTile label="Missed"      value={missedCount}  color={tokens.danger}  scheme={scheme} />
+          <StatTile label="Missed"      value={missedCount}  color={scheme.danger}  scheme={scheme} />
         </View>
         <View style={{ height: 16 }} />
 

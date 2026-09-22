@@ -1,6 +1,7 @@
 // All group() calls MUST be inside main(). Top-level group() calls are a
 // Dart compile error in the test runner.
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:care_connect_flutter_frontend/theme.dart';
@@ -163,10 +164,13 @@ void main() {
       expect(find.text('Min 8 chars'), findsNothing);
     });
 
+    // AuthField used to be a `Text` inside a `Container` — a picture of an
+    // input. It is now a real TextFormField, so a filled value lives in an
+    // EditableText rather than a Text.
     testWidgets('filled value text uses scheme.text colour in dark mode', (tester) async {
       await tester.pumpWidget(wrap(const AuthField(label: 'Name', value: 'Jo', filled: true)));
-      final text = tester.widget<Text>(find.text('Jo'));
-      expect(text.style?.color, CScheme.dark.text);
+      final field = tester.widget<EditableText>(find.text('Jo'));
+      expect(field.style.color, CScheme.dark.text);
     });
 
     testWidgets('unfilled value text uses scheme.muted colour in dark mode', (tester) async {
@@ -177,8 +181,57 @@ void main() {
 
     testWidgets('filled value uses light scheme.text in light mode', (tester) async {
       await tester.pumpWidget(wrap(const AuthField(label: 'X', value: 'val', filled: true), isDark: false));
-      final text = tester.widget<Text>(find.text('val'));
-      expect(text.style?.color, CScheme.light.text);
+      final field = tester.widget<EditableText>(find.text('val'));
+      expect(field.style.color, CScheme.light.text);
+    });
+
+    // ── Accessibility (WCAG 2.1 SC 1.3.1, 3.3.2, 4.1.2) ──────────────────────
+
+    testWidgets('is a real, editable text field — not a styled Text', (tester) async {
+      await tester.pumpWidget(wrap(const AuthField(label: 'Email', value: '')));
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('accepts typed input', (tester) async {
+      await tester.pumpWidget(wrap(const AuthField(label: 'Email', value: '')));
+      await tester.enterText(find.byType(TextField), 'typed@test.com');
+      await tester.pump();
+      expect(find.text('typed@test.com'), findsOneWidget);
+    });
+
+    testWidgets('is keyboard focusable', (tester) async {
+      await tester.pumpWidget(wrap(const AuthField(label: 'Email', value: '')));
+      final node = tester.widget<EditableText>(find.byType(EditableText)).focusNode;
+      expect(node.canRequestFocus, isTrue);
+      node.requestFocus();
+      await tester.pump();
+      expect(node.hasFocus, isTrue);
+    });
+
+    testWidgets('label is exposed to assistive tech as the field name', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(wrap(const AuthField(label: 'Email address', value: '')));
+      expect(
+        tester.getSemantics(find.byType(EditableText)),
+        matchesSemantics(
+          label: 'Email address',
+          isTextField: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasEnabledState: true,
+          hasTapAction: true,
+          hasFocusAction: true,
+          validationResult: SemanticsValidationResult.valid,
+        ),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('obscure field hides its contents', (tester) async {
+      await tester.pumpWidget(wrap(
+        const AuthField(label: 'Password', value: 'hunter2', filled: true, obscure: true),
+      ));
+      expect(tester.widget<EditableText>(find.byType(EditableText)).obscureText, isTrue);
     });
   });
 
@@ -287,11 +340,33 @@ void main() {
       expect(find.text('Pain'), findsOneWidget);
     });
 
-    testWidgets('label text colour matches the given colour', (tester) async {
-      const col = Color(0xFF357C6F);
-      await tester.pumpWidget(wrap(const CChip(label: 'Pain', color: col)));
-      final text = tester.widget<Text>(find.text('Pain'));
-      expect(text.style?.color, col);
+    // The label used to be painted in exactly the chip's own colour, on a 13%
+    // tint of that same colour — as low as 1.77:1 for amber. It is now derived
+    // from the composited tint, so the assertion is the contrast guarantee.
+    testWidgets('label colour clears 4.5:1 against the tinted chip', (tester) async {
+      for (final col in const [
+        Color(0xFF357C6F), Color(0xFFF59E0B), Color(0xFF22C55E),
+        Color(0xFFEF4444), Color(0xFF6366F1), Color(0xFF684BE6),
+      ]) {
+        for (final isDark in const [true, false]) {
+          await tester.pumpWidget(wrap(CChip(label: 'Pain', color: col), isDark: isDark));
+          final surface = isDark ? CScheme.dark.surface : CScheme.light.surface;
+          final labelColor = tester.widget<Text>(find.text('Pain')).style!.color!;
+          final pill = compositeOver(col.withValues(alpha: 0.13), surface);
+          expect(
+            contrastRatio(labelColor, pill),
+            greaterThanOrEqualTo(4.5),
+            reason: 'chip $col in ${isDark ? 'dark' : 'light'} mode',
+          );
+        }
+      }
+    });
+
+    testWidgets('keeps the designed colour when it already passes', (tester) async {
+      // Amber on a dark chip was already 5.67:1, so it must not be shifted.
+      const amber = Color(0xFFF59E0B);
+      await tester.pumpWidget(wrap(const CChip(label: 'Pending', color: amber), isDark: true));
+      expect(tester.widget<Text>(find.text('Pending')).style?.color, amber);
     });
   });
 
@@ -317,13 +392,37 @@ void main() {
       expect(size.height, 64.0);
     });
 
-    testWidgets('background colour matches given colour', (tester) async {
-      const col = Color(0xFF6366F1);
-      await tester.pumpWidget(wrap(const CAvatarBadge(initials: 'AJ', color: col)));
+    // The badge used to paint the contact's colour verbatim with white
+    // initials on top, which measured 2.15:1 on the amber contact. The fill is
+    // now only adjusted when neither white nor near-black can read on it, so
+    // the assertion is the contrast guarantee plus "stay as close to the
+    // given colour as legibility allows".
+    testWidgets('initials stay legible on every contact colour', (tester) async {
+      for (final col in const [
+        Color(0xFF6366F1), // Aunt Joyce — indigo
+        Color(0xFF357C6F), // Dr. Chen — teal
+        Color(0xFFF59E0B), // James Rivera — amber
+      ]) {
+        await tester.pumpWidget(wrap(CAvatarBadge(initials: 'AJ', color: col)));
+        final container = tester.widget<Container>(
+          find.descendant(of: find.byType(CAvatarBadge), matching: find.byType(Container)).first,
+        );
+        final fill = (container.decoration as BoxDecoration).color!;
+        final initials = tester.widget<Text>(find.text('AJ')).style!.color!;
+        expect(contrastRatio(initials, fill), greaterThanOrEqualTo(4.5),
+            reason: 'initials on $col');
+      }
+    });
+
+    testWidgets('keeps the contact colour when a label colour already works',
+        (tester) async {
+      // Amber reads fine with dark initials, so the identity colour survives.
+      const amber = Color(0xFFF59E0B);
+      await tester.pumpWidget(wrap(const CAvatarBadge(initials: 'JR', color: amber)));
       final container = tester.widget<Container>(
         find.descendant(of: find.byType(CAvatarBadge), matching: find.byType(Container)).first,
       );
-      expect((container.decoration as BoxDecoration).color, col);
+      expect((container.decoration as BoxDecoration).color, amber);
     });
   });
 

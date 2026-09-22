@@ -40,7 +40,7 @@ void main() {
 
       // ...and so is the shell chrome (bottom nav + accessibility bar).
       expect(find.text('Today'), findsOneWidget);
-      expect(find.text('Medications'), findsOneWidget);
+      expect(find.text('Meds'), findsOneWidget);
       expect(find.text('Account'), findsOneWidget);
       expect(find.text('Scroll up'), findsOneWidget);
       expect(find.text('Scroll down'), findsOneWidget);

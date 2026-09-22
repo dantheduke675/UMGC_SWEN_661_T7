@@ -75,4 +75,33 @@ describe('CallingScreen', () => {
     await fireEvent.press(screen.getByText('←'));
     expect(onEnd).toHaveBeenCalledTimes(1);
   });
+
+  describe('accessibility', () => {
+    it('exposes the mute button as selected once muted', async () => {
+      await render(<CallingScreen contactId={1} onEnd={() => {}} />);
+
+      const muteBtn = screen.getByRole('button', { name: 'Mute' });
+      expect(muteBtn).not.toBeSelected();
+
+      await fireEvent.press(muteBtn);
+      expect(muteBtn).toBeSelected();
+      expect(muteBtn).toHaveAccessibleName('Unmute');
+    });
+
+    it('exposes the speaker button as selected once switched to speaker', async () => {
+      await render(<CallingScreen contactId={1} onEnd={() => {}} />);
+
+      const speakerBtn = screen.getByRole('button', { name: 'Earpiece' });
+      expect(speakerBtn).not.toBeSelected();
+
+      await fireEvent.press(speakerBtn);
+      expect(speakerBtn).toBeSelected();
+      expect(speakerBtn).toHaveAccessibleName('Speaker');
+    });
+
+    it('exposes End call as a named button in both the header and the control bar', async () => {
+      await render(<CallingScreen contactId={1} onEnd={() => {}} />);
+      expect(screen.getAllByRole('button', { name: 'End call' }).length).toBe(2);
+    });
+  });
 });

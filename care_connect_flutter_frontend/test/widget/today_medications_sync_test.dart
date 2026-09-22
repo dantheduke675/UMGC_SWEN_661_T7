@@ -45,7 +45,7 @@ void main() {
       await tester.pump(const Duration(seconds: 6)); // flush the undo-toast timer
 
       // Switch to Medications: Lisinopril should already show as taken.
-      await tester.tap(find.text('Medications'));
+      await tester.tap(find.text('Meds'));
       await tester.pumpAndSettle();
       expect(find.descendant(
         of: find.ancestor(of: find.text('Lisinopril'), matching: find.byType(Container)).first,
