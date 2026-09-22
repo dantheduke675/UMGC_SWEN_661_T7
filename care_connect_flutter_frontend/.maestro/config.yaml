@@ -1,0 +1,20 @@
+# Maestro workspace configuration.
+#
+# Run everything:      maestro test .maestro --debug-output .maestro/artifacts
+# Run one flow:        maestro test .maestro/flows/01-record-a-dose.yaml
+# Run one tag:         maestro test .maestro --include-tags accessibility
+#
+# --debug-output collects the screenshots, the command log and a dump of the
+# accessibility hierarchy at each step into one directory. Without it Maestro
+# scatters them under ~/.maestro/tests/<timestamp>/.
+flows:
+  - "flows/*.yaml"
+
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - "Record a dose"
+    - "Confirm a missed dose"
+    - "Log a symptom"
+    - "Message a caregiver"
+    - "Screen reader names"

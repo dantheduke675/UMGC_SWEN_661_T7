@@ -1,0 +1,57 @@
+appId: com.example.care_connect_flutter_frontend
+name: Record a dose
+tags:
+  - critical
+  - medications
+---
+# ── Critical flow 1 of 4 ─────────────────────────────────────────────────────
+# The app's primary job: the care recipient records that they took a dose,
+# and both screens that show doses agree about it afterwards.
+#
+# Note what this flow has to tap. On screen the button reads "I took this" —
+# and so do the six others below it. The only thing that tells them apart is
+# the accessible name, which names the medicine and the time. That is what
+# Maestro uses here, because it is what TalkBack would use, and it is the
+# whole reason the names exist (WCAG 2.1 SC 4.1.2).
+
+- runFlow: ../subflows/sign-in.yaml
+
+# The progress card is a live region with a merged label; its inner text is
+# excluded from the tree, so this string is the accessible name, not the
+# drawn one.
+- assertVisible: ".*2 of 9 taken.*"
+
+- scrollUntilVisible:
+    element:
+      text: "Mark Ropivacaine at 8:00 PM as taken"
+    direction: DOWN
+    timeout: 20000
+
+- tapOn: "Mark Ropivacaine at 8:00 PM as taken"
+
+# Same control, reverse action, and a name that says so — a button whose
+# meaning flips but whose name does not would strand a screen reader user.
+- assertVisible: "Undo: mark Ropivacaine at 8:00 PM as not taken"
+
+- scrollUntilVisible:
+    element:
+      text: ".*3 of 9 taken.*"
+    direction: UP
+    timeout: 20000
+
+- takeScreenshot: 01-dose-recorded
+
+# ── The other screen agrees ──────────────────────────────────────────────────
+- tapOn: "Meds, Tab 2 of 6"
+
+- extendedWaitUntil:
+    visible: ".*9 doses today, 3 taken, 0 missed.*"
+    timeout: 10000
+
+- scrollUntilVisible:
+    element:
+      text: "Undo: mark Ropivacaine at 8:00 PM as not taken"
+    direction: DOWN
+    timeout: 20000
+
+- takeScreenshot: 01-medications-in-sync

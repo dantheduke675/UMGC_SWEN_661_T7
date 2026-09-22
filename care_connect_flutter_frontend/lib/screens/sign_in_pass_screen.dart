@@ -24,17 +24,22 @@ class SignInPassScreen extends StatelessWidget {
       children: [
         AuthBtn(
           label: '← Back',
+          semanticLabel: 'Back to welcome screen',
           variant: 'text',
           lg: isTablet,
           onPressed: () => context.go('/landing'),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Sign in',
-          style: TextStyle(
-            fontSize: isTablet ? 36 : 28,
-            fontWeight: FontWeight.w800,
-            color: scheme.text,
+        Semantics(
+          header: true,
+          headingLevel: 1,
+          child: Text(
+            'Sign in',
+            style: TextStyle(
+              fontSize: isTablet ? 36 : 28,
+              fontWeight: FontWeight.w800,
+              color: scheme.text,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -43,6 +48,7 @@ class SignInPassScreen extends StatelessWidget {
           value: patient.email,
           filled: true,
           helper: 'We will never share this.',
+          keyboardType: TextInputType.emailAddress,
           lg: isTablet,
         ),
         const SizedBox(height: 16),
@@ -50,6 +56,7 @@ class SignInPassScreen extends StatelessWidget {
           label: 'Password',
           value: '••••••••',
           helper: 'Your password manager can fill this for you.',
+          obscure: true,
           lg: isTablet,
         ),
         const SizedBox(height: 8),
