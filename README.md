@@ -595,6 +595,8 @@ Import it from there and **not** from `react-native`. React Native exports a hoo
 
 The test output contains `SafeAreaView has been deprecated` warnings from React Native. These are noise from the current component implementation and do not fail the suite.
 
+Maestro can have issues specifically test 6 which uses the call button can have issues when certain emulators put icons over the call button other tests can also have issues when that same settings button goes over the light/dark mode button when those items are moved or are not there the maestro tests work perfectly so adjust that icon from the emulator accordingly. Note that icon is a byproduct of certain emulators and not the android OS itself.
+
 ## Known Issues / Limitations
 
 - No backend/API integration yet — all data is static/in-memory (see `src/constants/data.ts`).
