@@ -317,7 +317,21 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 
 # Electron:
 
-<TODO>
+## Navigation
+
+First when in the home directory navigate to the main flutter front end using the
+
+```
+cd ./CareConnectElectron
+```
+
+## Running the Application
+
+In order to run the application run:
+
+```
+npm start
+```
 
 # React:
 
