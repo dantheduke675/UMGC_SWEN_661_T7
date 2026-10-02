@@ -36,7 +36,14 @@ const I = {
   volume: s => svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/>', s),
   speaker: s => svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>', s),
   micOff: s => svg('<line x1="2" y1="2" x2="22" y2="22"/><path d="M9 9v2a3 3 0 0 0 5.1 2.1"/><path d="M15 9.3V5a3 3 0 0 0-5.9-.6"/><path d="M19 10v1a7 7 0 0 1-1.1 3.8M5 10v1a7 7 0 0 0 12 5"/><line x1="12" y1="18" x2="12" y2="22"/>', s),
-  endCall: s => svg('<path d="M10.7 13.3a16 16 0 0 0 3.4 2.6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8"/><line x1="22" y1="2" x2="2" y2="22"/>', s)
+  endCall: s => svg('<path d="M10.7 13.3a16 16 0 0 0 3.4 2.6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8"/><line x1="22" y1="2" x2="2" y2="22"/>', s),
+  bellOff: s => svg('<path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.7 4.7 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><line x1="2" y1="2" x2="22" y2="22"/>', s),
+  history: s => svg('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>', s),
+  undo: s => svg('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', s),
+  x: s => svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>', s),
+  minus: s => svg('<line x1="5" y1="12" x2="19" y2="12"/>', s),
+  zoom: s => svg('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>', s),
+  crosshair: s => svg('<circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>', s)
 }
 
 // ---------- Helpers ----------
@@ -52,13 +59,36 @@ const store = {
   }
 }
 
+// Toast: a message with an optional Undo for the action it reports. It stays
+// up while the pointer or focus is on it; afterwards the action can still be
+// undone from the action history.
 let toastTimer
-function toast(msg) {
+let toastEntry = null
+function toast(msg, { undo } = {}) {
   const el = $('#toast')
-  el.textContent = msg
+  const hadFocus = el.contains(document.activeElement)
+  toastEntry = undo || null
+  el.innerHTML = `
+    <span class="toast-msg">${esc(msg)}</span>
+    ${undo ? '<button class="toast-undo" data-act="toast-undo">Undo</button>' : ''}
+    <button class="toast-close" data-act="toast-close" aria-label="Dismiss" title="Dismiss">${I.x(18)}</button>`
   el.classList.add('show')
+  if (hadFocus) focusEl(el.querySelector('.toast-undo') || el.querySelector('.toast-close'))
+  armToast()
+}
+function armToast(ms) {
   clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2400)
+  const el = $('#toast')
+  if (el.matches(':hover') || el.contains(document.activeElement)) return
+  toastTimer = setTimeout(hideToast, ms ?? (toastEntry ? 7000 : 4000))
+}
+function hideToast() {
+  clearTimeout(toastTimer)
+  const el = $('#toast')
+  const hadFocus = el.contains(document.activeElement)
+  el.classList.remove('show')
+  toastEntry = null
+  if (hadFocus) restoreAppFocus()
 }
 
 function nowTime() {
@@ -79,12 +109,16 @@ const state = {
   screen: 'landing',
   history: [],
   theme: store.get('theme', 'dark'),
-  largeText: store.get('largeText', false),
   collapsed: store.get('collapsed', false),
   role: 'recipient',
   biometric: true,
   reminders: true,
   shareData: true,
+  notifications: store.get('notifications', true),
+  voice: false,
+  eyeTracking: store.get('eyeTracking', false),
+  mouseLock: store.get('mouseLock', false),
+  panel: null, // open topbar popover: 'notes' | 'history' | null
   meds: [
     { id: 1, name: 'Ropivacaine', tag: 'Pain', dose: '10 mg', time: '8:00 AM', freq: 'Twice daily', status: 'taken' },
     { id: 2, name: 'Ropivacaine', tag: 'Pain', dose: '10 mg', time: '8:00 PM', freq: 'Twice daily', status: null },
@@ -149,14 +183,13 @@ const state = {
     ]
   },
   selDay: 0,
-  call: null,
-  showNotes: false
+  call: null
 }
 
 // ---------- Theme ----------
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme
-  document.documentElement.classList.toggle('large-text', state.largeText)
+  document.documentElement.classList.toggle('mouse-lock', state.mouseLock)
 }
 function toggleTheme() {
   state.theme = state.theme === 'dark' ? 'light' : 'dark'
@@ -165,17 +198,40 @@ function toggleTheme() {
   render()
 }
 
+// ---------- Zoom ----------
+// Uses Electron's page zoom from the preload; falls back to CSS zoom
+const ZOOM_STEPS = [0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]
+const zoomApi = window.careconnect
+function getZoom() {
+  return zoomApi ? zoomApi.getZoom() : parseFloat(document.documentElement.style.zoom) || 1
+}
+function setZoom(factor, announce = true) {
+  if (zoomApi) zoomApi.setZoom(factor)
+  else document.documentElement.style.zoom = factor
+  store.set('zoom', factor)
+  if (!announce) return
+  if (state.screen === 'account') render()
+  toast(`Zoom ${Math.round(factor * 100)}%`)
+}
+function zoomStep(dir) {
+  const cur = getZoom()
+  const next = dir > 0
+    ? ZOOM_STEPS.find(z => z > cur + 0.001)
+    : [...ZOOM_STEPS].reverse().find(z => z < cur - 0.001)
+  if (!next) return toast(`Zoom is already at its ${dir > 0 ? 'maximum' : 'minimum'} (${Math.round(cur * 100)}%)`)
+  setZoom(next)
+}
+
 // ---------- Navigation ----------
 const APP_SCREENS = ['today', 'medications', 'messages', 'schedule', 'symptoms', 'account']
+const SIGNED_IN_SCREENS = [...APP_SCREENS, 'call']
 
 function go(screen, { replace = false } = {}) {
   if (screen === state.screen) return
   if (!replace) state.history.push(state.screen)
   state.screen = screen
-  state.showNotes = false
-  render()
-  const c = $('.content') || $('.auth')
-  if (c) c.scrollTop = 0
+  state.panel = null
+  render({ fresh: true })
 }
 function back(fallback = 'landing') {
   go(state.history.pop() || fallback, { replace: true })
@@ -183,8 +239,112 @@ function back(fallback = 'landing') {
 function signOut() {
   stopCall()
   state.history = []
+  actionLog.length = 0
   go('landing', { replace: true })
   toast('You have been signed out')
+}
+function refreshPage() {
+  state.panel = null
+  render({ fresh: true })
+  toast('Page refreshed')
+}
+
+// ============================================================
+// Action history (undo stack)
+// Every undoable action records how to reverse itself and how to tell
+// whether that is still safe. An entry stops being undoable once it has
+// been undone or once its target was changed again by a later action.
+// ============================================================
+const MAX_HISTORY = 50
+const actionLog = [] // oldest first
+let actionSeq = 0
+let historyIntro = false // animate the history button the first time it appears
+
+function screenLabel() {
+  const n = NAV.find(x => x.id === state.screen)
+  return n ? n.label : 'CareConnect'
+}
+
+function record(label, icon, undo, stillApplies = () => true) {
+  if (!actionLog.length) historyIntro = true
+  const entry = { id: ++actionSeq, label, icon, time: nowTime(), where: screenLabel(), undo, stillApplies, undone: false }
+  actionLog.push(entry)
+  if (actionLog.length > MAX_HISTORY) actionLog.shift()
+  return entry
+}
+
+const canUndo = a => !!a.undo && !a.undone && a.stillApplies()
+
+function undoAction(id) {
+  let entry
+  if (id !== undefined) entry = actionLog.find(a => a.id === id)
+  else entry = (toastEntry && canUndo(toastEntry) ? toastEntry : null) || [...actionLog].reverse().find(canUndo)
+  if (!entry) return toast('Nothing to undo')
+  if (!canUndo(entry)) {
+    render()
+    return toast("That action can't be undone anymore")
+  }
+  entry.undo()
+  entry.undone = true
+  render()
+  toast(`Undone: ${entry.label}`)
+}
+
+// Flip a boolean setting and record it as an undoable action
+function toggleSetting(key, { on, off, icon, persist }) {
+  const prev = state[key]
+  const next = !prev
+  const save = () => { if (persist) store.set(key, state[key]) }
+  state[key] = next
+  save()
+  const label = next ? on : off
+  const entry = record(label, icon, () => { state[key] = prev; save() }, () => state[key] === next)
+  render()
+  toast(label, { undo: entry })
+}
+
+const toggleBiometric = () => toggleSetting('biometric', { on: 'Biometric unlock turned on', off: 'Biometric unlock turned off', icon: '🔒' })
+const toggleNotifications = () => toggleSetting('notifications', { on: 'Notifications turned on', off: 'Notifications turned off', icon: '🔔', persist: true })
+const toggleReminders = () => toggleSetting('reminders', { on: 'Medication reminders turned on', off: 'Medication reminders turned off', icon: '⏰' })
+const toggleShare = () => toggleSetting('shareData', { on: 'Health data shared with your care team', off: 'Health data sharing turned off', icon: '🔗' })
+
+// ---------- Assistive input modes ----------
+function toggleVoice() {
+  state.voice = !state.voice
+  render()
+  toast(state.voice ? 'Voice commands on. Listening… try saying "Show my medications"' : 'Voice commands off')
+}
+function toggleEyeTracking() {
+  state.eyeTracking = !state.eyeTracking
+  store.set('eyeTracking', state.eyeTracking)
+  render()
+  toast(state.eyeTracking ? 'Eye tracking on. Look at a control to move the focus indicator, then press Enter.' : 'Eye tracking off')
+}
+function toggleMouseLock() {
+  state.mouseLock = !state.mouseLock
+  store.set('mouseLock', state.mouseLock)
+  render()
+  toast(state.mouseLock ? 'Mouse lock-on enabled. The focus indicator snaps to the nearest control; click anywhere to press it.' : 'Mouse lock-on disabled')
+}
+
+// ---------- Topbar panels ----------
+function togglePanel(name) {
+  if (state.panel === name) return closePanel()
+  state.panel = name
+  render()
+  focusEl($('.popover [data-undo]') || $('.popover button'))
+}
+function closePanel({ refocus = true } = {}) {
+  const name = state.panel
+  if (!name) return
+  state.panel = null
+  render()
+  if (refocus) focusEl($(`[data-act="${name}"]`))
+}
+function openHistory() {
+  if (!APP_SCREENS.includes(state.screen)) return
+  if (!actionLog.length) return toast('No actions yet. Your action history appears here once you take one.')
+  togglePanel('history')
 }
 
 // ============================================================
@@ -200,7 +360,7 @@ function landing() {
       <p class="tagline">Medication management and care coordination for you and your care team.</p>
       <div class="landing-actions">
         <button class="btn btn-primary btn-lg" data-go="create">Create account</button>
-        <button class="btn btn-outline btn-lg" data-go="signin">Sign in</button>
+        <button class="btn btn-outline btn-lg" data-go="signin" data-autofocus>Sign in</button>
       </div>
       <div class="version">CareConnect Desktop · v1.0.0</div>
     </div>
@@ -216,7 +376,7 @@ function signin() {
       <p class="sub">Welcome back, ${esc(user.first)}.</p>
       <div class="field">
         <label for="si-email">Email address</label>
-        <input class="input" id="si-email" type="email" autocomplete="email" value="${esc(user.email)}">
+        <input class="input" id="si-email" type="email" autocomplete="email" value="${esc(user.email)}" data-autofocus>
         <div class="hint">We will never share this.</div>
       </div>
       <div class="field">
@@ -244,7 +404,7 @@ function create() {
       <p class="sub">Get started with CareConnect in under a minute.</p>
       <div class="field">
         <label for="ca-name">Full name</label>
-        <input class="input" id="ca-name" autocomplete="name" placeholder="Maddy Chen">
+        <input class="input" id="ca-name" autocomplete="name" placeholder="Maddy Chen" data-autofocus>
       </div>
       <div class="field">
         <label for="ca-email">Email address</label>
@@ -282,7 +442,7 @@ function biometrics() {
       <p class="face-sub">Set up Face ID for a faster, password-free sign-in experience on this device.</p>
       <p class="face-note">Your face is never sent anywhere. It stays on this device and is handled by your operating system.</p>
       <div class="face-actions">
-        <button class="btn btn-primary btn-lg" data-act="face-yes">Yes, use Face ID</button>
+        <button class="btn btn-primary btn-lg" data-act="face-yes" data-autofocus>Yes, use Face ID</button>
         <button class="btn btn-outline" style="height:64px" data-act="face-no">No, use my password</button>
       </div>
       <button class="link" data-act="back">← Back</button>
@@ -348,29 +508,105 @@ function shell(title, body) {
       </div>
     </aside>
     <div class="main">
-      <header class="topbar" style="position:relative">
+      <header class="topbar">
         <h1>${title}</h1>
-        <button class="icon-btn" data-act="voice" aria-label="Voice commands" title="Voice commands">${I.mic()}</button>
-        <button class="icon-btn ${state.largeText ? 'on' : ''}" data-act="large" aria-label="Toggle large text" aria-pressed="${state.largeText}" title="Large text">${I.eye()}</button>
-        <button class="icon-btn" data-act="notes" aria-label="Notifications" title="Notifications">${I.bell()}</button>
-        <button class="sos" data-act="sos">SOS</button>
-        ${state.showNotes ? notifications() : ''}
+        ${historyButton()}
+        <button class="icon-btn ${state.voice ? 'on' : ''}" data-act="voice" aria-label="Voice commands" aria-pressed="${state.voice}" title="Voice commands (Ctrl+\\)">${I.mic()}</button>
+        <button class="icon-btn ${state.eyeTracking ? 'on' : ''}" data-act="eye" aria-label="Eye tracking" aria-pressed="${state.eyeTracking}" title="Eye tracking (Ctrl+I)">${I.eye()}</button>
+        <div class="tb-anchor">
+          <button class="icon-btn ${state.panel === 'notes' ? 'on' : ''}" data-act="notes" aria-label="Notifications" aria-expanded="${state.panel === 'notes'}" title="Notifications${state.notifications ? '' : ' (off)'} · Ctrl+N turns on/off">${state.notifications ? I.bell() : I.bellOff()}</button>
+          ${state.panel === 'notes' ? notifications() : ''}
+        </div>
+        <button class="sos" data-act="sos" title="Emergency call (Ctrl+S)">SOS</button>
       </header>
       <main class="content">${body}</main>
     </div>
   </div>`
 }
 
+// Appears once the first action has been taken
+function historyButton() {
+  if (!actionLog.length) return ''
+  const n = actionLog.filter(canUndo).length
+  const intro = historyIntro
+  historyIntro = false
+  return `
+  <div class="tb-anchor">
+    <button class="icon-btn hist-btn ${state.panel === 'history' ? 'on' : ''} ${intro ? 'appear' : ''}" data-act="history" aria-label="Action history" aria-expanded="${state.panel === 'history'}" title="Action history (Ctrl+H)">
+      ${I.history()}${n ? `<span class="hb-count" aria-hidden="true">${n}</span>` : ''}
+    </button>
+    ${state.panel === 'history' ? historyPanel() : ''}
+  </div>`
+}
+
+function panelHead(title) {
+  return `<div class="pop-head"><h4>${title}</h4><button class="pop-close" data-act="close-panel" aria-label="Close ${title.toLowerCase()}">${I.x(18)}</button></div>`
+}
+
+function historyPanel() {
+  const status = a => {
+    if (a.undone) return '<span class="h-status">Undone</span>'
+    if (!a.undo) return '<span class="h-status">Can\'t be undone</span>'
+    if (!a.stillApplies()) return '<span class="h-status">Changed since</span>'
+    return `<button class="h-undo" data-undo="${a.id}" aria-label="Undo: ${esc(a.label)}">${I.undo(16)} Undo</button>`
+  }
+  return `
+  <div class="popover history" role="dialog" aria-label="Action history">
+    ${panelHead('Action history')}
+    <ul class="history-list">
+      ${[...actionLog].reverse().map(a => `
+        <li class="h-item ${a.undone ? 'undone' : ''}">
+          <div class="h-ico emoji" aria-hidden="true">${a.icon}</div>
+          <div class="h-body"><div class="h-label">${esc(a.label)}</div><div class="h-meta">${esc(a.time)} · ${esc(a.where)}</div></div>
+          ${status(a)}
+        </li>`).join('')}
+    </ul>
+    <div class="pop-foot"><kbd>Ctrl</kbd><kbd>U</kbd> undoes the latest action</div>
+  </div>`
+}
+
 function notifications() {
+  if (!state.notifications) {
+    return `
+    <div class="popover" role="dialog" aria-label="Notifications">
+      ${panelHead('Notifications')}
+      <div class="note">Notifications are turned off.</div>
+      <button class="btn btn-primary btn-block pop-btn" data-act="toggle-notifications">Turn on notifications</button>
+    </div>`
+  }
   const next = state.meds.find(m => !m.status)
   return `
   <div class="popover" role="dialog" aria-label="Notifications">
-    <h4>Notifications</h4>
+    ${panelHead('Notifications')}
     ${next ? `<div class="note"><strong>Medication due</strong><div>${esc(next.name)} ${esc(next.dose)} at ${esc(next.time)}</div></div>` : ''}
     <div class="note"><strong>Appointment today</strong><div>Dr. Chen — Follow-up at 2:30 PM</div><div class="t">In 4 hours</div></div>
     <div class="note"><strong>New message</strong><div>Aunt Joyce: Great. Your appointment with Dr. Chen...</div><div class="t">10:30 AM</div></div>
   </div>`
 }
+
+// ---------- Keyboard shortcut hints ----------
+const SHORTCUTS = [
+  ['↑ ↓ ← → / W A S D', 'Move the focus indicator'],
+  ['Enter', 'Press the focused button / sign in'],
+  ['Ctrl +', 'Zoom in'],
+  ['Ctrl -', 'Zoom out'],
+  ['Ctrl 0', 'Reset zoom'],
+  ['Ctrl L', 'Switch light / dark mode'],
+  ['Ctrl \\', 'Voice commands'],
+  ['Ctrl I', 'Eye tracking'],
+  ['Ctrl O', 'Mouse lock-on'],
+  ['Ctrl U', 'Undo the last action'],
+  ['Ctrl H', 'Open action history'],
+  ['Ctrl S', 'Emergency call (SOS)'],
+  ['Ctrl F', 'Biometric unlock on / off'],
+  ['Ctrl R', 'Refresh page'],
+  ['Ctrl N', 'Notifications on / off'],
+  ['Esc', 'Close a dialog or panel']
+]
+// 'Ctrl L' -> Ctrl + L keycaps; ' / ' separates alternatives
+const kbd = combo => `<span class="kbds">${combo.split(' / ')
+  .map(group => group.split(' ').map(k => `<kbd>${esc(k)}</kbd>`).join(''))
+  .join('<span class="or">or</span>')}</span>`
 
 function avatar(id, cls = 'av-sm') {
   return `<div class="avatar ${cls} av-${id}">${id}</div>`
@@ -379,9 +615,9 @@ function avatar(id, cls = 'av-sm') {
 function medCard(m) {
   let actions
   if (m.status === 'taken') {
-    actions = `<div class="status-bar taken">✓ Taken <button class="undo" data-med-undo="${m.id}">Undo</button></div>`
+    actions = `<div class="status-bar taken" tabindex="0" aria-label="${esc(m.name)} ${esc(m.time)}: taken">✓ Taken</div>`
   } else if (m.status === 'missed') {
-    actions = `<div class="status-bar missed">✕ Missed <button class="undo" data-med-undo="${m.id}">Undo</button></div>`
+    actions = `<div class="status-bar missed" tabindex="0" aria-label="${esc(m.name)} ${esc(m.time)}: missed">✕ Missed</div>`
   } else {
     actions = `<div class="med-actions">
       <button class="btn btn-primary" style="box-shadow:none" data-med-take="${m.id}">I took this</button>
@@ -446,7 +682,7 @@ function today() {
             <div class="info"><strong>${esc(p.name)}</strong><div class="role">${esc(p.role)}</div></div>
             <button class="msg-btn emoji" data-chat="${p.id}" aria-label="Message ${esc(p.name)}">💬</button>
           </div>`).join('')}
-        <div class="card tip">
+        <div class="card tip" tabindex="0">
           <div class="eyebrow"><span class="emoji">💡</span> Daily tip</div>
           <p>Taking medications at the same time each day helps maintain consistent blood levels and improves effectiveness.</p>
         </div>
@@ -479,7 +715,7 @@ function symptoms() {
     <div class="logs-title">Recent logs <span class="count-pill">${state.symptoms.length}</span></div>
     <div class="sym-grid">
       ${state.symptoms.length ? state.symptoms.map(s => `
-        <div class="card sym ${sevClass(s.sev)}">
+        <div class="card sym ${sevClass(s.sev)}" tabindex="0">
           <div class="sym-top">
             <div class="sym-ico">${I.pulse()}</div>
             <div class="info"><strong>${esc(s.name)}</strong><div class="when">${esc(s.when)}</div></div>
@@ -494,6 +730,7 @@ function symptoms() {
 function openSymptomModal() {
   let sev = 2
   const root = $('#modal-root')
+  modalReturn = document.activeElement
   root.innerHTML = `
   <div class="overlay" data-close>
     <form class="modal" id="sym-form" role="dialog" aria-modal="true" aria-labelledby="sym-title">
@@ -528,16 +765,31 @@ function openSymptomModal() {
     e.preventDefault()
     const name = $('#sym-name').value.trim()
     if (!name) { const err = $('#sym-err'); err.textContent = 'Please enter a symptom.'; err.hidden = false; return }
-    state.symptoms.unshift({ name, when: 'Today · ' + nowTime(), sev, note: $('#sym-note').value.trim() || 'No notes' })
+    const entry = { name, when: 'Today · ' + nowTime(), sev, note: $('#sym-note').value.trim() || 'No notes' }
+    state.symptoms.unshift(entry)
+    const action = record(`Logged ${name} (severity ${sev}/5)`, '📊',
+      () => state.symptoms.splice(state.symptoms.indexOf(entry), 1),
+      () => state.symptoms.includes(entry))
     closeModal()
     render()
-    toast('Symptom logged and shared with your care team')
+    toast('Symptom logged and shared with your care team', { undo: action })
   })
 }
 
-function closeModal() { $('#modal-root').innerHTML = '' }
+// Focus returns to whatever opened the modal
+let modalReturn = null
+const modalOpen = () => !!$('#modal-root').firstElementChild
+function closeModal() {
+  $('#modal-root').innerHTML = ''
+  const back = modalReturn
+  modalReturn = null
+  if (back && isVisible(back)) focusEl(back)
+  else autoFocus()
+}
 
 function openSosModal() {
+  if (modalOpen()) return
+  modalReturn = document.activeElement
   $('#modal-root').innerHTML = `
   <div class="overlay" data-close>
     <div class="modal sos-modal" role="alertdialog" aria-modal="true" aria-labelledby="sos-title">
@@ -549,6 +801,8 @@ function openSosModal() {
       </div>
     </div>
   </div>`
+  // Emergencies should be fast: Ctrl+S then Enter sends; Esc cancels
+  focusEl($('[data-act="sos-confirm"]'))
 }
 
 // ---------- Call ----------
@@ -566,7 +820,7 @@ function call() {
     <div class="role">${esc(p.role)}</div>
     <div class="timer" id="call-timer">${m}:${s}</div>
     <div class="call-ctrls">
-      <button class="call-ctrl ${c.muted ? 'on' : ''}" data-act="mute" aria-pressed="${c.muted}"><span class="c">${c.muted ? I.micOff(28) : I.mic(28)}</span>${c.muted ? 'Unmute' : 'Mute'}</button>
+      <button class="call-ctrl ${c.muted ? 'on' : ''}" data-act="mute" aria-pressed="${c.muted}" data-autofocus><span class="c">${c.muted ? I.micOff(28) : I.mic(28)}</span>${c.muted ? 'Unmute' : 'Mute'}</button>
       <button class="call-ctrl end" data-act="end-call"><span class="c">${I.endCall(34)}</span>End call</button>
       <button class="call-ctrl ${c.speaker ? 'on' : ''}" data-act="speaker" aria-pressed="${c.speaker}"><span class="c">${c.speaker ? I.volume(28) : I.speaker(28)}</span>${c.speaker ? 'Speaker' : 'Earpiece'}</button>
     </div>
@@ -592,8 +846,18 @@ function stopCall() {
 }
 
 // ---------- Account ----------
+function prefRow(act, icon, title, sub, keys) {
+  return `
+    <button class="row" data-act="${act}">
+      <div class="ico">${icon}</div>
+      <div class="info"><strong>${title}</strong><div class="sub2">${sub}</div></div>
+      ${keys ? kbd(keys) : ''}${I.chevR()}
+    </button>`
+}
+
 function account() {
   const dark = state.theme === 'dark'
+  const zoomPct = Math.round(getZoom() * 100)
   return shell('Account', `
     <div class="acct-grid">
       <section>
@@ -611,6 +875,10 @@ function account() {
               <button class="msg-btn lg" data-chat="${p.id}" aria-label="Message ${esc(p.name)}">${I.message(22)}</button>
             </div>`).join('')}
         </div>
+        <div class="eyebrow">Keyboard shortcuts</div>
+        <div class="card shortcuts" tabindex="0" aria-label="Keyboard shortcuts">
+          ${SHORTCUTS.map(([keys, label]) => `<div class="sc-row"><span class="l">${label}</span>${kbd(keys)}</div>`).join('')}
+        </div>
       </section>
       <section>
         <div class="eyebrow">Preferences</div>
@@ -618,23 +886,27 @@ function account() {
           <div class="row">
             <div class="ico">${dark ? I.moon(22) : I.sun(22)}</div>
             <div class="info"><strong>Appearance</strong><div class="sub2">${dark ? 'Dark mode' : 'Light mode'}</div></div>
+            ${kbd('Ctrl L')}
             <button class="theme-switch ${dark ? 'on' : ''}" role="switch" aria-checked="${dark}" aria-label="Dark mode" data-act="theme"><span class="knob">${dark ? I.moon(16) : I.sun(16)}</span></button>
           </div>
-          <button class="row" data-act="reminders">
-            <div class="ico">${I.bell(22)}</div>
-            <div class="info"><strong>Medication reminders</strong><div class="sub2">${state.reminders ? 'On · 15 min before' : 'Off'}</div></div>
-            ${I.chevR()}
-          </button>
-          <button class="row" data-act="biometric">
-            <div class="ico">${I.lock(22)}</div>
-            <div class="info"><strong>Biometric unlock</strong><div class="sub2">${state.biometric ? 'Enabled' : 'Disabled'}</div></div>
-            ${I.chevR()}
-          </button>
-          <button class="row" data-act="share">
-            <div class="ico">${I.share(22)}</div>
-            <div class="info"><strong>Share health data</strong><div class="sub2">${state.shareData ? 'With care team' : 'Not shared'}</div></div>
-            ${I.chevR()}
-          </button>
+          ${prefRow('toggle-notifications', state.notifications ? I.bell(22) : I.bellOff(22), 'Notifications', state.notifications ? 'On' : 'Off', 'Ctrl N')}
+          ${prefRow('reminders', I.clock(22), 'Medication reminders', state.reminders ? 'On · 15 min before' : 'Off')}
+          ${prefRow('biometric', I.lock(22), 'Biometric unlock', state.biometric ? 'Enabled' : 'Disabled', 'Ctrl F')}
+          ${prefRow('share', I.share(22), 'Share health data', state.shareData ? 'With care team' : 'Not shared')}
+        </div>
+        <div class="eyebrow">Accessibility</div>
+        <div class="card list">
+          <div class="row">
+            <div class="ico">${I.zoom(22)}</div>
+            <div class="info"><strong>Zoom</strong><div class="sub2">${zoomPct}%</div></div>
+            <div class="zoom-ctrl">
+              <button class="zoom-btn" data-act="zoom-out" aria-label="Zoom out" title="Zoom out (Ctrl+-)">${I.minus(18)}</button>
+              <button class="zoom-btn" data-act="zoom-in" aria-label="Zoom in" title="Zoom in (Ctrl++)">${I.plus(18)}</button>
+            </div>
+          </div>
+          ${prefRow('voice', I.mic(22), 'Voice commands', state.voice ? 'Listening' : 'Off', 'Ctrl \\')}
+          ${prefRow('eye', I.eye(22), 'Eye tracking', state.eyeTracking ? 'On' : 'Off', 'Ctrl I')}
+          ${prefRow('mouse-lock', I.crosshair(22), 'Mouse lock-on', state.mouseLock ? 'On · snaps to the nearest control' : 'Off', 'Ctrl O')}
         </div>
         <div class="eyebrow">App information</div>
         <div class="card list">
@@ -678,7 +950,7 @@ function messages() {
           <div class="info"><strong>${esc(p.name)}</strong><div class="role">${esc(p.role)} · ${esc(active.status)}</div></div>
           <button class="btn btn-primary" data-call="${p.id}">${I.phone()} Call</button>
         </div>
-        <div class="thread" id="thread">
+        <div class="thread" id="thread" tabindex="0" aria-label="Conversation with ${esc(p.name)}" data-scroll-region>
           ${active.messages.map(m => `
             <div class="bubble-wrap ${m.me ? 'me' : ''}">
               <div class="bubble">${esc(m.text)}</div>
@@ -701,11 +973,19 @@ function sendMessage(text) {
   if (!text) return
   const c = state.convos.find(x => x.id === state.activeConvo)
   const t = nowTime()
-  c.messages.push({ me: true, text, time: t })
+  const msg = { me: true, text, time: t }
+  const prevTime = c.time
+  c.messages.push(msg)
   c.time = t
   state.draft = ''
+  const preview = text.length > 32 ? text.slice(0, 32) + '…' : text
+  const entry = record(`Sent "${preview}" to ${person(c.id).name}`, '💬', () => {
+    c.messages.splice(c.messages.indexOf(msg), 1)
+    if (c.time === t) c.time = prevTime
+  }, () => c.messages.includes(msg))
   render()
   $('#msg-input')?.focus()
+  toast('Message sent', { undo: entry })
 }
 
 // ---------- Schedule ----------
@@ -727,14 +1007,14 @@ function schedule() {
     <div class="day-title">${state.selDay === 0 ? 'Today' : esc(d.label)} <span class="chip">${list.length} scheduled</span></div>
     <div class="appt-list">
       ${list.length ? list.map(a => `
-        <div class="card appt-card">
+        <div class="card appt-card" tabindex="0">
           <div class="ico">${I.calendar(24)}</div>
           <div>
             <strong>${esc(a.title)}</strong>
             <div class="who">${esc(a.who)}</div>
             <div class="tags"><span class="t time">${I.clock(16)} ${esc(a.time)}</span><span class="t">${esc(a.len)}</span></div>
           </div>
-        </div>`).join('') : '<div class="card empty-day">No appointments scheduled for this day.</div>'}
+        </div>`).join('') : '<div class="card empty-day" tabindex="0">No appointments scheduled for this day.</div>'}
     </div>`)
 }
 
@@ -744,11 +1024,15 @@ function schedule() {
 const SCREENS = { landing, signin, create, biometrics, facescan, facesuccess, today, medications, symptoms, call, account, messages, schedule }
 
 let flowTimer
-function render() {
+// fresh: a new page — start at the top with focus on something in view.
+// Otherwise keep the scroll position and the focused control across the re-render.
+function render({ fresh = false } = {}) {
+  const view = fresh ? null : captureView()
   applyTheme()
   $('#app').innerHTML = SCREENS[state.screen]()
   document.title = 'CareConnect'
 
+  if (view) restoreScroll(view)
   clearTimeout(flowTimer)
   if (state.screen === 'facescan') {
     flowTimer = setTimeout(() => go('facesuccess', { replace: true }), 2200)
@@ -757,16 +1041,271 @@ function render() {
   } else if (state.screen === 'messages') {
     const th = $('#thread'); if (th) th.scrollTop = th.scrollHeight
   }
+
+  // Focus inside a modal or the toast survives the re-render on its own
+  const a = document.activeElement
+  if (!a || a === document.body) {
+    if (!(view && restoreFocus(view))) autoFocus()
+  }
 }
 
 function setMed(id, status) {
   const m = state.meds.find(x => x.id === Number(id))
-  if (m) m.status = status
+  if (!m || m.status === status) return
+  const prev = m.status
+  m.status = status
+  const what = status ? `Marked ${m.name} (${m.time}) as ${status}` : `Cleared ${m.name} (${m.time})`
+  const entry = record(what, '💊', () => { m.status = prev }, () => m.status === status)
   render()
-  if (status === 'taken') toast(`${m.name} marked as taken`)
-  if (status === 'missed') toast(`${m.name} marked as missed. Your care team will be notified.`)
+  toast(status === 'taken' ? 'Marked as taken' : 'Marked as missed. Your care team will be notified.', { undo: entry })
 }
 
+// ============================================================
+// Focus management
+// One focus indicator is always on screen. Arrow keys / WASD move it
+// spatially, the mouse moves it to whatever it hovers, and whichever was
+// used last wins. Pressing Enter activates the focused control.
+// ============================================================
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+const TEXT_TYPES = ['text', 'email', 'password', 'search', 'tel', 'url', 'number']
+const SCROLLERS = ['.content', '.auth', '.call', '.history-list']
+
+const isVisible = el => el.isConnected && el.getClientRects().length > 0 && el.checkVisibility({ visibilityProperty: true })
+const focusables = root => [...root.querySelectorAll(FOCUSABLE)].filter(isVisible)
+const isTextField = el => !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && TEXT_TYPES.includes(el.type)))
+function focusEl(el) {
+  if (el) el.focus({ preventScroll: true })
+  return !!el
+}
+
+// Distance from a point to the nearest edge of a rect (0 when inside)
+function rectDistance(r, x, y) {
+  return Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom))
+}
+function nearestTo(list, x, y, max = Infinity) {
+  let best = null
+  for (const el of list) {
+    const d = rectDistance(el.getBoundingClientRect(), x, y)
+    if (d < max) { max = d; best = el }
+  }
+  return best
+}
+
+// Where focus may go: a modal traps it, an open panel keeps it
+function navRoot(from) {
+  if (modalOpen()) return $('#modal-root')
+  return (from && from.closest && from.closest('.popover')) || document.body
+}
+// Controls covered by an open popover can't be reached behind it
+function candidates(root) {
+  const pop = root === document.body ? $('.popover') : null
+  const pr = pop && pop.getBoundingClientRect()
+  return focusables(root).filter(el => {
+    if (!pr || pop.contains(el)) return true
+    const r = el.getBoundingClientRect()
+    return r.right < pr.left || r.left > pr.right || r.bottom < pr.top || r.top > pr.bottom
+  })
+}
+
+// Identify a control across re-renders by tag, id, data-* and label
+function focusKey(el) {
+  const data = Object.entries(el.dataset).map(([k, v]) => `${k}=${v}`).sort().join('&')
+  return `${el.tagName}#${el.id}|${data}|${el.getAttribute('aria-label') || ''}`
+}
+
+function captureView() {
+  const app = $('#app')
+  const view = { scroll: {} }
+  for (const sel of SCROLLERS) {
+    const el = app.querySelector(sel)
+    if (el) view.scroll[sel] = el.scrollTop
+  }
+  const a = document.activeElement
+  if (a && a !== app && app.contains(a)) {
+    const key = focusKey(a)
+    const r = a.getBoundingClientRect()
+    view.focus = {
+      key,
+      inPanel: !!a.closest('.popover'),
+      index: [...app.querySelectorAll(FOCUSABLE)].filter(x => focusKey(x) === key).indexOf(a),
+      x: r.left + r.width / 2,
+      y: r.top + r.height / 2
+    }
+  }
+  return view
+}
+function restoreScroll(view) {
+  for (const [sel, top] of Object.entries(view.scroll)) {
+    const el = $('#app').querySelector(sel)
+    if (el) el.scrollTop = top
+  }
+}
+// Same control if it still exists, otherwise whatever now sits where it was
+// (staying inside an open panel if focus was in it)
+function restoreFocus(view) {
+  if (!view.focus) return false
+  const all = focusables($('#app'))
+  const same = all.filter(x => focusKey(x) === view.focus.key)
+  const panel = view.focus.inPanel && $('.popover')
+  const near = panel ? focusables(panel) : candidates(document.body).filter(el => $('#app').contains(el))
+  return focusEl(same[view.focus.index] || same[0] || nearestTo(near, view.focus.x, view.focus.y))
+}
+
+// Start on a control that is plainly in view: an explicit [data-autofocus],
+// else the first fully visible control in the page content
+function autoFocus() {
+  const root = navRoot()
+  const explicit = root.querySelector('[data-autofocus]')
+  if (explicit && isVisible(explicit)) return focusEl(explicit)
+  const area = root === document.body ? ($('.content') || $('#app')) : root
+  const a = area.getBoundingClientRect()
+  const inView = el => {
+    const r = el.getBoundingClientRect()
+    return r.top >= Math.max(a.top, 0) && r.bottom <= Math.min(a.bottom, innerHeight)
+  }
+  const list = focusables(area)
+  return focusEl(list.find(inView) || candidates(root).find(inView) || list[0])
+}
+
+let lastAppFocus = null
+function restoreAppFocus() {
+  if (!(lastAppFocus && isVisible(lastAppFocus) && focusEl(lastAppFocus))) autoFocus()
+}
+
+// ---------- Spatial navigation ----------
+const DIRS = { arrowup: 'up', arrowdown: 'down', arrowleft: 'left', arrowright: 'right', w: 'up', s: 'down', a: 'left', d: 'right' }
+
+const rangeGap = (a1, a2, b1, b2) => Math.max(0, Math.max(a1, b1) - Math.min(a2, b2))
+
+function bestCandidate(cur, dir) {
+  const c = cur.getBoundingClientRect()
+  let best = null
+  let bestScore = Infinity
+  for (const el of candidates(navRoot(cur))) {
+    if (el === cur || el.contains(cur) || cur.contains(el)) continue
+    const r = el.getBoundingClientRect()
+    let main, cross, offset
+    if (dir === 'down' || dir === 'up') {
+      main = dir === 'down' ? r.top - c.bottom : c.top - r.bottom
+      cross = rangeGap(r.left, r.right, c.left, c.right)
+      offset = Math.abs((r.left + r.right) - (c.left + c.right)) / 2
+    } else {
+      main = dir === 'right' ? r.left - c.right : c.left - r.right
+      cross = rangeGap(r.top, r.bottom, c.top, c.bottom)
+      offset = Math.abs((r.top + r.bottom) - (c.top + c.bottom)) / 2
+    }
+    if (main < -4) continue // not in that direction
+    // Prefer controls lined up with the current one, then the closest
+    const score = Math.max(main, 0) + cross * 2 + offset * 0.05
+    if (score < bestScore) { bestScore = score; best = el }
+  }
+  return best
+}
+
+function scrollParent(el) {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const oy = getComputedStyle(p).overflowY
+    if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p
+  }
+  return null
+}
+const canScroll = (el, sign) => sign > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0
+const scrollStep = (el, sign) => el.scrollBy({ top: sign * el.clientHeight * 0.6, behavior: 'smooth' })
+
+function moveFocus(dir) {
+  const cur = document.activeElement
+  if (!cur || cur === document.body) return autoFocus()
+  const vertical = dir === 'up' || dir === 'down'
+  const sign = dir === 'up' || dir === 'left' ? -1 : 1
+  // A focused scroll region (the message thread) scrolls before focus leaves it
+  if (vertical && cur.matches('[data-scroll-region]') && canScroll(cur, sign)) return scrollStep(cur, sign)
+  const next = bestCandidate(cur, dir)
+  if (next) {
+    next.focus({ preventScroll: true })
+    next.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+    return
+  }
+  // Nothing further that way: scroll the page if there is more to see
+  if (vertical) {
+    const s = scrollParent(cur) || $('.content')
+    if (s && canScroll(s, sign)) scrollStep(s, sign)
+  }
+}
+
+// Arrow keys keep their text-editing meaning inside fields and only leave a
+// field when the caret can't move further. WASD always types.
+function arrowLeavesField(e, el) {
+  if (!isTextField(el)) return true
+  if (!e.key.startsWith('Arrow')) return false
+  const len = el.value.length
+  if (el.tagName === 'TEXTAREA') {
+    return (e.key === 'ArrowUp' && el.selectionEnd === 0) || (e.key === 'ArrowDown' && el.selectionStart === len)
+  }
+  if (e.key === 'ArrowUp') return true
+  if (e.key === 'ArrowDown') return !el.list // datalist suggestions use Down
+  if (el.selectionStart === null) return false // email fields don't expose the caret
+  return e.key === 'ArrowLeft'
+    ? el.selectionStart === 0 && el.selectionEnd === 0
+    : el.selectionStart === len
+}
+
+// ---------- Mouse ----------
+// Only real pointer movement counts: scrolling or a re-render under a resting
+// pointer must not pull focus away from where the keyboard put it.
+const LOCK_RADIUS = 140
+let lastPointer = { x: NaN, y: NaN }
+let lastTyped = 0
+
+function pointerTarget(e) {
+  const root = navRoot()
+  if (state.mouseLock) return nearestTo(candidates(root), e.clientX, e.clientY, LOCK_RADIUS)
+  const el = e.target.closest && e.target.closest(FOCUSABLE)
+  return el && root.contains(el) && isVisible(el) ? el : null
+}
+
+document.addEventListener('mousemove', e => {
+  if (e.screenX === lastPointer.x && e.screenY === lastPointer.y) return
+  lastPointer = { x: e.screenX, y: e.screenY }
+  const el = pointerTarget(e)
+  if (!el || el === document.activeElement) return
+  // Don't pull focus out of a field the user is typing in
+  if (isTextField(document.activeElement) && Date.now() - lastTyped < 1500) return
+  focusEl(el)
+})
+
+// Mouse lock-on: a click on empty space presses the control the indicator is locked to
+document.addEventListener('click', e => {
+  if (!state.mouseLock || !e.isTrusted || e.target.closest(FOCUSABLE)) return
+  const el = nearestTo(candidates(navRoot()), e.clientX, e.clientY, LOCK_RADIUS)
+  if (!el) return
+  e.preventDefault()
+  e.stopImmediatePropagation()
+  focusEl(el)
+  el.click()
+}, true)
+
+// Clicking empty space would drop focus to <body>; put the indicator back
+document.addEventListener('focusin', e => {
+  if (!$('#toast').contains(e.target)) lastAppFocus = e.target
+})
+document.addEventListener('focusout', () => {
+  setTimeout(() => {
+    if (!document.hasFocus()) return
+    const a = document.activeElement
+    if (!a || a === document.body) restoreAppFocus()
+  })
+})
+
+// The toast pauses while it is pointed at or focused
+const toastEl = $('#toast')
+toastEl.addEventListener('mouseenter', () => clearTimeout(toastTimer))
+toastEl.addEventListener('mouseleave', () => armToast(3000))
+toastEl.addEventListener('focusin', () => clearTimeout(toastTimer))
+toastEl.addEventListener('focusout', e => { if (!toastEl.contains(e.relatedTarget)) armToast(3000) })
+
+// ============================================================
+// Events
+// ============================================================
 document.addEventListener('click', e => {
   const t = e.target.closest('button, [data-close]')
   if (!t) return
@@ -785,7 +1324,7 @@ document.addEventListener('click', e => {
   if (d.role) { state.role = d.role; render(); return }
   if (d.medTake) return setMed(d.medTake, 'taken')
   if (d.medMiss) return setMed(d.medMiss, 'missed')
-  if (d.medUndo) return setMed(d.medUndo, null)
+  if (d.undo) return undoAction(Number(d.undo))
   if (d.chat) {
     state.activeConvo = d.chat
     const c = state.convos.find(x => x.id === d.chat); if (c) c.unread = false
@@ -811,15 +1350,23 @@ document.addEventListener('click', e => {
       store.set('collapsed', state.collapsed)
       return render()
     case 'signout': return signOut()
-    case 'voice': return toast('Listening... try saying "Show my medications"')
-    case 'large':
-      state.largeText = !state.largeText
-      store.set('largeText', state.largeText)
-      render()
-      return toast(state.largeText ? 'Large text on' : 'Large text off')
-    case 'notes': state.showNotes = !state.showNotes; return render()
+    case 'voice': return toggleVoice()
+    case 'eye': return toggleEyeTracking()
+    case 'mouse-lock': return toggleMouseLock()
+    case 'zoom-in': return zoomStep(1)
+    case 'zoom-out': return zoomStep(-1)
+    case 'notes': return togglePanel('notes')
+    case 'history': return togglePanel('history')
+    case 'close-panel': return closePanel()
+    case 'toast-undo': return undoAction(toastEntry ? toastEntry.id : undefined)
+    case 'toast-close': return hideToast()
+    case 'toggle-notifications': return toggleNotifications()
     case 'sos': return openSosModal()
-    case 'sos-confirm': closeModal(); return toast('SOS alert sent to your care team')
+    case 'sos-confirm':
+      closeModal()
+      record('Sent an emergency alert to your care team', '🚨')
+      render()
+      return toast('SOS alert sent to your care team')
     case 'log-symptom': return openSymptomModal()
     case 'mute': state.call.muted = !state.call.muted; return render()
     case 'speaker': state.call.speaker = !state.call.speaker; return render()
@@ -827,24 +1374,17 @@ document.addEventListener('click', e => {
       stopCall()
       toast('Call ended')
       return back('messages')
-    case 'reminders':
-      state.reminders = !state.reminders; render()
-      return toast(`Medication reminders ${state.reminders ? 'on' : 'off'}`)
-    case 'biometric':
-      state.biometric = !state.biometric; render()
-      return toast(`Biometric unlock ${state.biometric ? 'enabled' : 'disabled'}`)
-    case 'share':
-      state.shareData = !state.shareData; render()
-      return toast(state.shareData ? 'Sharing health data with your care team' : 'Health data sharing turned off')
+    case 'reminders': return toggleReminders()
+    case 'biometric': return toggleBiometric()
+    case 'share': return toggleShare()
     case 'privacy': return toast('Your data is encrypted and only shared with your care team.')
   }
 })
 
-// Close notifications when clicking elsewhere
+// Close an open panel when clicking elsewhere
 document.addEventListener('mousedown', e => {
-  if (state.showNotes && !e.target.closest('.popover, [data-act="notes"]')) {
-    state.showNotes = false
-    render()
+  if (state.panel && !e.target.closest('.popover, [data-act="notes"], [data-act="history"]')) {
+    closePanel({ refocus: false })
   }
 })
 
@@ -890,11 +1430,69 @@ document.addEventListener('input', e => {
   }
 })
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if ($('#modal-root').innerHTML) closeModal()
-    else if (state.showNotes) { state.showNotes = false; render() }
+// ---------- Keyboard shortcuts ----------
+// signedIn: needs an account session; shell: needs the top bar;
+// anyModal: also works while a dialog is open
+const CTRL_SHORTCUTS = {
+  l: { run: toggleTheme, anyModal: true },
+  '\\': { run: toggleVoice },
+  i: { run: toggleEyeTracking, anyModal: true },
+  o: { run: toggleMouseLock, anyModal: true },
+  r: { run: refreshPage },
+  u: { run: () => undoAction(), signedIn: true },
+  h: { run: openHistory, shell: true },
+  s: { run: openSosModal, signedIn: true },
+  f: { run: toggleBiometric, signedIn: true },
+  n: { run: toggleNotifications, signedIn: true }
+}
+
+function handleCtrlShortcut(e) {
+  const zoom = e.key === '+' || e.key === '=' || e.code === 'NumpadAdd' ? 1
+    : e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract' ? -1
+      : e.key === '0' || e.code === 'Numpad0' ? 0 : null
+  if (zoom !== null) {
+    e.preventDefault()
+    return zoom ? zoomStep(zoom) : setZoom(1)
   }
+  const key = e.code === 'Backslash' ? '\\' : e.key.toLowerCase()
+  const sc = CTRL_SHORTCUTS[key]
+  if (!sc) return
+  e.preventDefault() // also stops Chromium's own Ctrl+R / Ctrl+F handling
+  if (e.repeat) return
+  if (modalOpen() && !sc.anyModal) return
+  if (sc.signedIn && !SIGNED_IN_SCREENS.includes(state.screen)) return
+  if (sc.shell && !APP_SCREENS.includes(state.screen)) return
+  sc.run()
+}
+
+function trapTab(e) {
+  const list = focusables($('#modal-root'))
+  if (!list.length) return
+  const i = list.indexOf(document.activeElement)
+  const next = e.shiftKey ? (i <= 0 ? list.length - 1 : i - 1) : (i + 1) % list.length
+  e.preventDefault()
+  focusEl(list[next])
+}
+
+document.addEventListener('keydown', e => {
+  const a = document.activeElement
+  if (isTextField(a) && !e.ctrlKey && (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete')) lastTyped = Date.now()
+
+  if (e.key === 'Escape') {
+    if (modalOpen()) closeModal()
+    else if (state.panel) closePanel()
+    else if (toastEl.contains(a)) hideToast()
+    return
+  }
+  if (e.key === 'Tab' && modalOpen()) return trapTab(e)
+  if (e.ctrlKey && !e.altKey && !e.metaKey) return handleCtrlShortcut(e)
+  if (e.ctrlKey || e.altKey || e.metaKey) return
+
+  const dir = DIRS[e.key.toLowerCase()]
+  if (!dir || !arrowLeavesField(e, a)) return
+  e.preventDefault()
+  moveFocus(dir)
 })
 
-render()
+setZoom(store.get('zoom', 1), false)
+render({ fresh: true })
