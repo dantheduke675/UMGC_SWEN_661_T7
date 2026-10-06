@@ -1,0 +1,15 @@
+{
+  "name": "careconnectelectron",
+  "version": "1.0.0",
+  "description": "an Electron version of the CareConnect application!!",
+  "author": "Team 7",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5"
+  }
+}

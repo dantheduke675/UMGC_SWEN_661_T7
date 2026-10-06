@@ -370,7 +370,21 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 
 # Electron:
 
-<TODO>
+## Navigation
+
+First when in the home directory navigate to the main flutter front end using the
+
+```
+cd ./CareConnectElectron
+```
+
+## Running the Application
+
+In order to run the application run:
+
+```
+npm start
+```
 
 # React:
 
@@ -594,6 +608,8 @@ ESLint's React Compiler rules reject the older `useRef(new Animated.Value(0)).cu
 Import it from there and **not** from `react-native`. React Native exports a hook of the same name, but `react-native-web` does not re-export it, so the `react-native` import type-checks, passes the Jest suite, and bundles without complaint — then throws `useAnimatedValue is not a function` the moment the screen renders in a browser. `eslint.config.js` has a `no-restricted-imports` rule that fails the lint if anyone imports it from `react-native` again.
 
 The test output contains `SafeAreaView has been deprecated` warnings from React Native. These are noise from the current component implementation and do not fail the suite.
+
+Maestro can have issues specifically test 6 which uses the call button can have issues when certain emulators put icons over the call button other tests can also have issues when that same settings button goes over the light/dark mode button when those items are moved or are not there the maestro tests work perfectly so adjust that icon from the emulator accordingly. Note that icon is a byproduct of certain emulators and not the android OS itself.
 
 ## Known Issues / Limitations
 
