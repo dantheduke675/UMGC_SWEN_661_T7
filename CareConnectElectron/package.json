@@ -7,9 +7,22 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/main.test.cjs tests/renderer.test.cjs tests/keyboard.test.cjs tests/zoom.test.cjs tests/undo-history.test.cjs tests/high-contrast.test.cjs tests/screen-reader.test.cjs",
+    "test:coverage": "c8 --all --include=main.js --include=src/app.js --exclude=tests/** --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --check-coverage --lines=70 --statements=70 --functions=70 --branches=70 --per-file npm test",
+    "test:jest": "jest",
+    "test:all": "npm test && npm run test:jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "<rootDir>/tests/jest/**/*.test.js"
+    ],
+    "transform": {}
   },
   "devDependencies": {
-    "electron": "^44.4.5"
+    "c8": "^10.1.3",
+    "electron": "^44.4.5",
+    "jest": "^29.7.0",
+    "jsdom": "^26.1.0"
   }
 }
