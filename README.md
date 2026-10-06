@@ -599,7 +599,11 @@ The full report is written to `coverage/`:
 | `coverage/coverage-summary.json` | Machine-readable totals                       |
 
 `coverage/` is ignored by git. The Jest suite is not included in the report,
-because it loads `app.js` into a simulated page rather than importing it.
+because it loads `app.js` into a simulated page rather than importing it. You can alternatively use
+
+```
+npm test -- --coverage
+```
 
 ## Building the Application
 
