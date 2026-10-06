@@ -475,23 +475,43 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 
 ```
 CareConnectElectron/
-├── main.js          main process: creates one BrowserWindow and loads src/index.html
-├── package.json     "start": "electron ." — Electron 44 is the only dependency
-└── src/
-    ├── index.html   page shell, Content-Security-Policy, mount points (#app, #modal-root, #toast)
-    ├── app.js       the entire renderer: data, state, all 13 screens, routing, event handling
-    └── styles.css   light/dark themes and large-text mode
+├── main.js          main process: creates one BrowserWindow, removes the default menu, F12 opens DevTools
+├── preload.js       exposes only getZoom()/setZoom() to the page through contextBridge
+├── package.json     npm scripts (start, test, test:jest, test:all, test:coverage); no runtime
+│                    dependencies; dev dependencies are Electron 44, Jest, jsdom and c8
+├── src/
+│   ├── index.html   page shell, Content-Security-Policy, mount points (#app, #modal-root,
+│   │                #toast) and the #sr-page screen reader announcer
+│   ├── app.js       the entire renderer: data, state, all 13 screens, routing, events,
+│   │                keyboard shortcuts, focus management, zoom and the undo history
+│   └── styles.css   light/dark themes, the focus indicator, single-column layout for
+│                    high zoom, and Windows High Contrast (forced colors) styles
+└── tests/
+    ├── *.test.cjs   Node test runner suites (npm test), sharing harness.cjs
+    └── jest/        Jest suites (npm run test:jest), including business-logic tests
 ```
 
-- **Process model.** The main process only opens the window. The renderer has
-  no access to Node.js or Electron APIs. There is no preload script and no
-  IPC, because nothing needs to cross the boundary.
+- **Process model.** The main process opens the window and removes Electron's
+  default menu (except on macOS) so the menu's Ctrl+R and zoom keys do not
+  override the app's own shortcuts. The renderer has no access to Node.js.
+  The only bridge is `preload.js`, which exposes two zoom functions; there is
+  no IPC.
 - **Screens.** Each screen is a function that returns HTML. The `SCREENS` map
   in `app.js` registers them, and logged-in screens are wrapped by `shell()`,
   which draws the sidebar navigation and top bar.
-- **Navigation.** `go(screen)` pushes onto `state.history` and re-renders.
-  `back()` pops it, and `signOut()` clears it. A single delegated `click`
+- **Navigation.** `go(screen)` pushes onto `state.history`, re-renders, sets
+  the window title and announces the page to screen readers. `back()` pops
+  the history, and `signOut()` clears it. A single delegated `click`
   listener handles every button through `data-*` attributes.
+- **Rendering and focus.** `render()` rebuilds the screen from `state` but
+  keeps the scroll position and the focused control. The focus indicator is
+  always on one control; arrow keys/WASD move it spatially, mouse movement
+  moves it to the hovered control, and Ctrl shortcuts are handled in one
+  `keydown` listener (see the Account screen for the full list).
+- **Undo history.** Every undoable action is recorded in `actionLog` with a
+  function that reverses it. The toast offers Undo right away, Ctrl+U undoes
+  the latest action, and the history button in the top bar (Ctrl+H) lists the
+  last 50 actions so earlier ones can be undone too.
 - **State.** One in-memory `state` object holds the demo data. Only six UI
   preferences persist across restarts, in `localStorage` under a `cc.`
   prefix: theme, sidebar collapsed, zoom, notifications on/off, eye tracking,
@@ -523,7 +543,88 @@ then start the app with:
 npm start
 ```
 
+## Testing the Application
+
+All test commands run from `CareConnectElectron`. Run `npm install` first so
+the test tools (`jsdom`, Jest and `c8`) are installed. The tests do not open
+a window: they load `src/app.js` into a simulated page (jsdom) and drive it
+with clicks and key presses, and they run `main.js` against a fake Electron.
+
+| Command             | What it runs                                                        |
+| ------------------- | ------------------------------------------------------------------- |
+| `npm run test:all`  | Everything: the Node test runner suite, then the Jest suite         |
+| `npm test`          | The Node test runner suite (`tests/*.test.cjs`)                     |
+| `npm run test:jest` | The Jest suite (`tests/jest/*.test.js`)                             |
+
+`npm run test:all` stops before Jest if the first suite fails. To run a
+single file, pass it directly:
+
+```
+node --test tests/keyboard.test.cjs
+npx jest tests/jest/business-logic.test.js
+```
+
+**What the tests cover**
+
+| File                              | Area                                                                                                |
+| --------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `main.test.cjs`                   | Window creation and lifecycle on Windows, Linux and macOS, menu removal, F12, the preload zoom bridge |
+| `renderer.test.cjs`               | Sign-in, create account, Face ID flow, medications, symptoms, messages, calls, schedule, preferences |
+| `keyboard.test.cjs`               | Focus indicator, arrow/WASD navigation, mouse hover and lock-on, every Ctrl shortcut                |
+| `zoom.test.cjs`                   | Zoom steps, limits, reset, saved zoom, the Account zoom buttons                                     |
+| `undo-history.test.cjs`           | Undo toast, Ctrl+U, the action history panel, "Changed since" entries                               |
+| `high-contrast.test.cjs`          | Windows High Contrast (forced colors) styles use system colors for every state                      |
+| `screen-reader.test.cjs`          | Accessible names and roles on every screen, announced errors, page announcements, live regions      |
+| `jest/business-logic.test.js`     | Rules called directly: progress percentages, validation, undo engine, zoom steps, keyboard rules    |
+
+The other files in `tests/jest/` are Jest versions of the Node test runner
+files, so both runners check the same behavior. `tests/harness.cjs` is the
+shared setup both suites use.
+
+## Test Coverage Report
+
+```
+npm run test:coverage
+```
+
+This runs the Node test runner suite under [c8](https://github.com/bcoe/c8)
+and measures `main.js` and `src/app.js`. It prints a summary table and fails
+if any file drops below **70%** of lines, statements, functions or branches.
+The full report is written to `coverage/`:
+
+| File                          | Use                                              |
+| ----------------------------- | ------------------------------------------------ |
+| `coverage/index.html`         | Open in a browser for a line-by-line report      |
+| `coverage/lcov.info`          | For CI tools and editor coverage plugins         |
+| `coverage/coverage-summary.json` | Machine-readable totals                       |
+
+`coverage/` is ignored by git. The Jest suite is not included in the report,
+because it loads `app.js` into a simulated page rather than importing it.
+
 ## Building the Application
+
+The Windows build uses [electron-builder](https://www.electron.build/). It is
+not a project dependency, so run it with `npx` from the **repository root**
+(not from inside `CareConnectElectron`, where npm would add it to
+`package.json`):
+
+```
+npx --yes electron-builder@26 --projectDir ./CareConnectElectron --win nsis portable --x64 --config.productName=CareConnect
+```
+
+The first build downloads Electron and the installer tools, which takes a few
+minutes; later builds take about a minute. The output goes to
+`CareConnectElectron/dist/`:
+
+| Output                         | What it is                                                       |
+| ------------------------------ | ---------------------------------------------------------------- |
+| `CareConnect Setup 1.0.0.exe`  | Installer (about 107 MB). Installs for the current user and adds a Start menu shortcut |
+| `CareConnect 1.0.0.exe`        | Portable app. Runs without installing                            |
+| `win-unpacked/CareConnect.exe` | The unpacked app, useful for a quick check                       |
+
+`dist/` is not ignored by git, so do not commit it. To put the build
+somewhere else, add `--config.directories.output=<folder>`. The version
+number comes from `version` in `package.json`.
 
 ## Security Notes
 
@@ -559,6 +660,46 @@ for the items that apply to a local-only app:
 | ----------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Sign-in accepts any password; Face ID is a timer      | `app.js` submit handler; `facescan` → `facesuccess` timers | A real auth service; Windows Hello / Touch ID through the main process |
 | Sign-in form pre-fills `value="password"`             | `app.js` `signin` screen                                   | Remove the demo value                                                  |
+
+## Known Limitations
+
+- **Demo data only.** Medications, symptoms, messages and appointments are
+  sample data held in memory. Changes are lost on sign-out or restart, and
+  nothing is sent to a care team. The schedule always shows the week of
+  September 28, 2026.
+- **Simulated features.** Sign-in accepts any password, Face ID is a timed
+  animation, and calls, SOS alerts, voice commands and eye tracking only
+  change what is shown on screen. Mouse lock-on and zoom are fully working.
+- **Undo history** keeps the 50 most recent actions for the current session
+  and is cleared on sign-out. An SOS alert cannot be undone.
+- **Keyboard shortcuts** use the Ctrl key on every platform, including macOS
+  (not Cmd). Shortcuts held with Alt (AltGr on some keyboard layouts) are
+  ignored, and Ctrl+\\ needs a layout with a `\` key.
+- **Zoom** ranges from 80% to 200%. At high zoom the layout switches to a
+  single column.
+- **Unsigned builds.** The Windows installer is not code-signed, so Windows
+  SmartScreen warns before it runs. There is no auto-update and no macOS or
+  Linux build command.
+- **Accessibility testing.** Screen reader support was verified against
+  Chromium's accessibility tree, and High Contrast against Chromium's
+  forced-colors emulation, not with every screen reader and Windows theme.
+  The automated tests cannot press Enter to activate a button (the browser
+  does that natively), so that is checked by hand.
+
+## Troubleshooting
+
+| Problem | Fix |
+| ------- | --- |
+| `npm start` fails or Electron will not install | Check `node -v` is 22.12 or newer, then run `npm install` again. |
+| `npm test` says `Cannot find module 'jsdom'` (or `jest`, `c8`) | Run `npm install` in `CareConnectElectron`. |
+| `npm run test:coverage` fails with a coverage error | A file fell below 70%. The table names the file; add tests for the uncovered lines shown in `coverage/index.html`. |
+| The build stops with `Package "electron-builder" is only allowed in "devDependencies"` | `npx` was run inside `CareConnectElectron` and saved electron-builder to `package.json`. Undo that with `git checkout -- package.json package-lock.json`, run `npm prune`, then run the build command from the repository root. |
+| The build stops with `Cannot create symbolic link` | Turn on Windows Developer Mode (Settings → For developers) or run the terminal as administrator, then build again. |
+| Windows shows "Windows protected your PC" when opening the installer | The build is unsigned. Choose **More info → Run anyway**. |
+| Keyboard shortcuts do nothing | Click inside the CareConnect window first. Undo, history, SOS, biometric and notification shortcuts only work after signing in, and most are paused while a dialog is open (press Esc). |
+| Arrow keys do not move the focus indicator while a screen reader is on | NVDA and JAWS use arrow keys to read the page. Use Tab, or switch the screen reader to focus mode (NVDA+Space). |
+| The app opens zoomed in or with old settings | Press Ctrl+0 to reset zoom. To clear every saved preference, press F12, open the Console and run `localStorage.clear(); location.reload()`. |
+| Checking Windows High Contrast | Press Left Alt + Left Shift + Print Screen to turn it on or off. |
 
 # React:
 
