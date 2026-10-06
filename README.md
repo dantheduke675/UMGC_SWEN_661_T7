@@ -1075,7 +1075,11 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 
 ## Daniel
 
--
+- Worked on the README
+- Worked on editing the tests and adding the jest tests
+- Worked on all the application screens
+- Worked on the accessibility feature of the application
+- Worked on the documents and building the application
 
 ## Justin
 
