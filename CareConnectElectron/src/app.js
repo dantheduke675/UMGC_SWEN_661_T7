@@ -68,10 +68,13 @@ function toast(msg, { undo } = {}) {
   const el = $('#toast')
   const hadFocus = el.contains(document.activeElement)
   toastEntry = undo || null
-  el.innerHTML = `
-    <span class="toast-msg">${esc(msg)}</span>
+  // Only fixed markup goes through innerHTML; the message is set as text
+  el.querySelector('.toast-actions').innerHTML = `
     ${undo ? '<button class="toast-undo" data-act="toast-undo">Undo</button>' : ''}
     <button class="toast-close" data-act="toast-close" aria-label="Dismiss" title="Dismiss">${I.x(18)}</button>`
+  // The live region stays in place so screen readers hear each new message
+  el.querySelector('.toast-msg').textContent = msg
+  el.querySelector('.toast-hint').textContent = undo ? ' Press Control U to undo.' : ''
   el.classList.add('show')
   if (hadFocus) focusEl(el.querySelector('.toast-undo') || el.querySelector('.toast-close'))
   armToast()
@@ -91,11 +94,29 @@ function hideToast() {
   if (hadFocus) restoreAppFocus()
 }
 
+// Show a form error: screen readers hear it (role="alert"), and the field it
+// belongs to is marked invalid, described by the message and focused
+function showError(errEl, msg, fieldSel) {
+  if (typeof errEl === 'string') errEl = $(errEl)
+  errEl.textContent = msg
+  errEl.hidden = false
+  document.querySelectorAll(`[aria-describedby="${errEl.id}"]`).forEach(f => {
+    f.removeAttribute('aria-invalid')
+    f.removeAttribute('aria-describedby')
+  })
+  const field = $(fieldSel)
+  field.setAttribute('aria-invalid', 'true')
+  field.setAttribute('aria-describedby', errEl.id)
+  field.focus()
+}
+
 function nowTime() {
   return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
 // ---------- Data ----------
+const DAILY_TIP = 'Taking medications at the same time each day helps maintain consistent blood levels and improves effectiveness.'
+
 const user = { name: 'Madison Hughes', first: 'Maddy', initials: 'MH', role: 'Care recipient', email: 'maddy@example.com' }
 
 const team = [
@@ -232,6 +253,23 @@ function go(screen, { replace = false } = {}) {
   state.screen = screen
   state.panel = null
   render({ fresh: true })
+  announcePage()
+}
+
+// ---------- Screen reader announcements ----------
+const PAGE_NAMES = {
+  landing: 'Welcome', signin: 'Sign in', create: 'Create account', biometrics: 'Set up Face ID',
+  facescan: 'Looking for your face', facesuccess: 'Face recognised, signing you in',
+  today: 'Today', medications: 'Medications', messages: 'Messages', schedule: 'Schedule',
+  symptoms: 'Symptoms', account: 'Account'
+}
+function pageName() {
+  if (state.screen === 'call' && state.call) return `Call with ${person(state.call.id).name}`
+  return PAGE_NAMES[state.screen] || 'CareConnect'
+}
+// The window title names the page, and moving to a page is announced
+function announcePage() {
+  $('#sr-page').textContent = `${pageName()} page`
 }
 function back(fallback = 'landing') {
   go(state.history.pop() || fallback, { replace: true })
@@ -251,9 +289,9 @@ function refreshPage() {
 
 // ============================================================
 // Action history (undo stack)
-// Every undoable action records how to reverse itself and how to tell
-// whether that is still safe. An entry stops being undoable once it has
-// been undone or once its target was changed again by a later action.
+// Every undoable action records how to reverse itself and what it changed
+// (its target). An entry stops being undoable once it has been undone or
+// once a later, still-standing action changed the same target.
 // ============================================================
 const MAX_HISTORY = 50
 const actionLog = [] // oldest first
@@ -265,15 +303,18 @@ function screenLabel() {
   return n ? n.label : 'CareConnect'
 }
 
-function record(label, icon, undo, stillApplies = () => true) {
+function record(label, icon, undo, stillApplies = () => true, target = null) {
   if (!actionLog.length) historyIntro = true
-  const entry = { id: ++actionSeq, label, icon, time: nowTime(), where: screenLabel(), undo, stillApplies, undone: false }
+  const entry = { id: ++actionSeq, label, icon, time: nowTime(), where: screenLabel(), undo, stillApplies, target, undone: false }
   actionLog.push(entry)
   if (actionLog.length > MAX_HISTORY) actionLog.shift()
   return entry
 }
 
-const canUndo = a => !!a.undo && !a.undone && a.stillApplies()
+// False once something later has changed what this entry changed
+const isCurrent = a => a.stillApplies() &&
+  !(a.target && actionLog.some(b => b.id > a.id && b.target === a.target && !b.undone))
+const canUndo = a => !!a.undo && !a.undone && isCurrent(a)
 
 function undoAction(id) {
   let entry
@@ -298,7 +339,7 @@ function toggleSetting(key, { on, off, icon, persist }) {
   state[key] = next
   save()
   const label = next ? on : off
-  const entry = record(label, icon, () => { state[key] = prev; save() }, () => state[key] === next)
+  const entry = record(label, icon, () => { state[key] = prev; save() }, () => state[key] === next, 'setting:' + key)
   render()
   toast(label, { undo: entry })
 }
@@ -383,7 +424,7 @@ function signin() {
         <label for="si-pass">Password</label>
         <input class="input" id="si-pass" type="password" autocomplete="current-password" value="password">
         <div class="hint">Your password manager can fill this for you.</div>
-        <div class="error" id="si-err" hidden></div>
+        <div class="error" id="si-err" role="alert" hidden></div>
       </div>
       <button class="btn btn-primary btn-lg btn-block" type="submit" style="margin-top:18px">Sign in</button>
       <div class="center-links">
@@ -418,13 +459,13 @@ function create() {
       <div class="section-label">I AM A...</div>
       <div class="role-grid" role="radiogroup" aria-label="Account type">
         <button type="button" role="radio" aria-checked="${r === 'recipient'}" class="role-card ${r === 'recipient' ? 'selected' : ''}" data-role="recipient">
-          <span class="emoji">🏥</span><strong>Care recipient</strong><span class="desc">I receive care and track my own health</span>
+          <span class="emoji" aria-hidden="true">🏥</span><strong>Care recipient</strong><span class="desc">I receive care and track my own health</span>
         </button>
         <button type="button" role="radio" aria-checked="${r === 'caregiver'}" class="role-card ${r === 'caregiver' ? 'selected' : ''}" data-role="caregiver">
-          <span class="emoji">🤝</span><strong>Caregiver</strong><span class="desc">I support someone in managing their health</span>
+          <span class="emoji" aria-hidden="true">🤝</span><strong>Caregiver</strong><span class="desc">I support someone in managing their health</span>
         </button>
       </div>
-      <div class="error" id="ca-err" hidden></div>
+      <div class="error" id="ca-err" role="alert" hidden></div>
       <button class="btn btn-primary btn-lg btn-block" type="submit" style="margin-top:30px">Create account</button>
       <div class="center-links" style="margin-top:30px">
         <div>Already have an account? <button type="button" class="link" data-go="signin">Sign in →</button></div>
@@ -488,14 +529,14 @@ function shell(title, body) {
   <div class="shell">
     <aside class="sidebar ${state.collapsed ? 'collapsed' : ''}">
       <div class="sb-head">
-        <div class="avatar">${user.initials}</div>
+        <div class="avatar">${esc(user.initials)}</div>
         <div class="who"><strong>${esc(user.name)}</strong><span class="badge">${esc(user.role)}</span></div>
         <button class="collapse-btn" data-act="collapse" aria-label="${state.collapsed ? 'Expand' : 'Collapse'} sidebar">${I.chevL(16)}</button>
       </div>
       <nav><ul class="nav">
         ${NAV.map(n => `
           <li><button class="${state.screen === n.id ? 'active' : ''}" data-go="${n.id}" title="${n.label}" ${state.screen === n.id ? 'aria-current="page"' : ''}>
-            <span class="emoji" aria-hidden="true">${n.icon}</span><span class="label">${n.label}${n.id === 'messages' && unread ? ` (${unread})` : ''}</span>
+            <span class="emoji" aria-hidden="true">${n.icon}</span><span class="label">${n.label}${n.id === 'messages' && unread ? ` (${unread}<span class="sr-only"> unread</span>)` : ''}</span>
           </button></li>`).join('')}
       </ul></nav>
       <div class="sb-foot">
@@ -532,7 +573,7 @@ function historyButton() {
   historyIntro = false
   return `
   <div class="tb-anchor">
-    <button class="icon-btn hist-btn ${state.panel === 'history' ? 'on' : ''} ${intro ? 'appear' : ''}" data-act="history" aria-label="Action history" aria-expanded="${state.panel === 'history'}" title="Action history (Ctrl+H)">
+    <button class="icon-btn hist-btn ${state.panel === 'history' ? 'on' : ''} ${intro ? 'appear' : ''}" data-act="history" aria-label="Action history${n ? `, ${n} can be undone` : ''}" aria-expanded="${state.panel === 'history'}" title="Action history (Ctrl+H)">
       ${I.history()}${n ? `<span class="hb-count" aria-hidden="true">${n}</span>` : ''}
     </button>
     ${state.panel === 'history' ? historyPanel() : ''}
@@ -547,7 +588,7 @@ function historyPanel() {
   const status = a => {
     if (a.undone) return '<span class="h-status">Undone</span>'
     if (!a.undo) return '<span class="h-status">Can\'t be undone</span>'
-    if (!a.stillApplies()) return '<span class="h-status">Changed since</span>'
+    if (!isCurrent(a)) return '<span class="h-status">Changed since</span>'
     return `<button class="h-undo" data-undo="${a.id}" aria-label="Undo: ${esc(a.label)}">${I.undo(16)} Undo</button>`
   }
   return `
@@ -615,9 +656,9 @@ function avatar(id, cls = 'av-sm') {
 function medCard(m) {
   let actions
   if (m.status === 'taken') {
-    actions = `<div class="status-bar taken" tabindex="0" aria-label="${esc(m.name)} ${esc(m.time)}: taken">✓ Taken</div>`
+    actions = `<div class="status-bar taken" tabindex="0" role="group" aria-label="${esc(m.name)} ${esc(m.time)}: taken">✓ Taken</div>`
   } else if (m.status === 'missed') {
-    actions = `<div class="status-bar missed" tabindex="0" aria-label="${esc(m.name)} ${esc(m.time)}: missed">✕ Missed</div>`
+    actions = `<div class="status-bar missed" tabindex="0" role="group" aria-label="${esc(m.name)} ${esc(m.time)}: missed">✕ Missed</div>`
   } else {
     actions = `<div class="med-actions">
       <button class="btn btn-primary" style="box-shadow:none" data-med-take="${m.id}">I took this</button>
@@ -653,7 +694,7 @@ function today() {
   return shell('Today', `
     <div class="greet">
       <div class="eyebrow green">Monday, September 28</div>
-      <h2>${greeting}, ${esc(user.first)} <span class="emoji">👋</span></h2>
+      <h2>${greeting}, ${esc(user.first)} <span class="emoji" aria-hidden="true">👋</span></h2>
     </div>
     <div class="two-col">
       <section>
@@ -661,7 +702,7 @@ function today() {
           <div class="left">
             <div class="eyebrow">Today's medications</div>
             <div class="count">${c.taken} of ${c.total} taken</div>
-            <div class="progress" role="progressbar" aria-valuenow="${c.pct}" aria-valuemin="0" aria-valuemax="100"><div style="width:${c.pct}%"></div></div>
+            <div class="progress" role="progressbar" aria-label="Medications taken today" aria-valuetext="${c.taken} of ${c.total} taken" aria-valuenow="${c.pct}" aria-valuemin="0" aria-valuemax="100"><div style="width:${c.pct}%"></div></div>
           </div>
           <div class="pct">${c.pct}%</div>
         </div>
@@ -682,9 +723,9 @@ function today() {
             <div class="info"><strong>${esc(p.name)}</strong><div class="role">${esc(p.role)}</div></div>
             <button class="msg-btn emoji" data-chat="${p.id}" aria-label="Message ${esc(p.name)}">💬</button>
           </div>`).join('')}
-        <div class="card tip" tabindex="0">
-          <div class="eyebrow"><span class="emoji">💡</span> Daily tip</div>
-          <p>Taking medications at the same time each day helps maintain consistent blood levels and improves effectiveness.</p>
+        <div class="card tip" tabindex="0" role="group" aria-label="Daily tip: ${esc(DAILY_TIP)}">
+          <div class="eyebrow"><span class="emoji" aria-hidden="true">💡</span> Daily tip</div>
+          <p>${esc(DAILY_TIP)}</p>
         </div>
       </section>
     </div>`)
@@ -715,13 +756,13 @@ function symptoms() {
     <div class="logs-title">Recent logs <span class="count-pill">${state.symptoms.length}</span></div>
     <div class="sym-grid">
       ${state.symptoms.length ? state.symptoms.map(s => `
-        <div class="card sym ${sevClass(s.sev)}" tabindex="0">
+        <div class="card sym ${sevClass(s.sev)}" tabindex="0" role="group" aria-label="${esc(s.name)}, severity ${s.sev} of 5, ${esc(s.when)}. ${esc(s.note)}">
           <div class="sym-top">
             <div class="sym-ico">${I.pulse()}</div>
             <div class="info"><strong>${esc(s.name)}</strong><div class="when">${esc(s.when)}</div></div>
             <span class="sev-pill">${s.sev}/5</span>
           </div>
-          <div class="bars" aria-label="Severity ${s.sev} of 5">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= s.sev ? 'on' : ''}"></span>`).join('')}</div>
+          <div class="bars" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= s.sev ? 'on' : ''}"></span>`).join('')}</div>
           <div class="note">${esc(s.note)}</div>
         </div>`).join('') : '<div class="sym-empty">No symptoms logged yet.</div>'}
     </div>`)
@@ -742,14 +783,14 @@ function openSymptomModal() {
         <datalist id="sym-list"><option>Pain</option><option>Fatigue</option><option>Dizziness</option><option>Nausea</option><option>Headache</option><option>Shortness of breath</option></datalist>
       </div>
       <div class="field">
-        <label>Severity (1 = mild, 5 = severe)</label>
-        <div class="sev-pick">${[1, 2, 3, 4, 5].map(i => `<button type="button" data-sev="${i}" class="${i === sev ? 'sel' : ''}">${i}</button>`).join('')}</div>
+        <label id="sev-label">Severity (1 = mild, 5 = severe)</label>
+        <div class="sev-pick" role="radiogroup" aria-labelledby="sev-label">${[1, 2, 3, 4, 5].map(i => `<button type="button" role="radio" aria-checked="${i === sev}" aria-label="${i} of 5${i === 1 ? ', mild' : i === 5 ? ', severe' : ''}" data-sev="${i}" class="${i === sev ? 'sel' : ''}">${i}</button>`).join('')}</div>
       </div>
       <div class="field">
         <label for="sym-note">Notes</label>
         <textarea class="input" id="sym-note" placeholder="What happened?"></textarea>
       </div>
-      <div class="error" id="sym-err" hidden></div>
+      <div class="error" id="sym-err" role="alert" hidden></div>
       <div class="actions">
         <button type="button" class="btn btn-outline" data-close>Cancel</button>
         <button type="submit" class="btn btn-primary">Save log</button>
@@ -759,12 +800,15 @@ function openSymptomModal() {
   $('#sym-name').focus()
   root.querySelectorAll('[data-sev]').forEach(b => b.addEventListener('click', () => {
     sev = Number(b.dataset.sev)
-    root.querySelectorAll('[data-sev]').forEach(x => x.classList.toggle('sel', x === b))
+    root.querySelectorAll('[data-sev]').forEach(x => {
+      x.classList.toggle('sel', x === b)
+      x.setAttribute('aria-checked', String(x === b))
+    })
   }))
   $('#sym-form').addEventListener('submit', e => {
     e.preventDefault()
     const name = $('#sym-name').value.trim()
-    if (!name) { const err = $('#sym-err'); err.textContent = 'Please enter a symptom.'; err.hidden = false; return }
+    if (!name) return showError('#sym-err', 'Please enter a symptom.', '#sym-name')
     const entry = { name, when: 'Today · ' + nowTime(), sev, note: $('#sym-note').value.trim() || 'No notes' }
     state.symptoms.unshift(entry)
     const action = record(`Logged ${name} (severity ${sev}/5)`, '📊',
@@ -818,7 +862,7 @@ function call() {
     <div class="big-av av-${p.id}">${p.id}</div>
     <h2>${esc(p.name)}</h2>
     <div class="role">${esc(p.role)}</div>
-    <div class="timer" id="call-timer">${m}:${s}</div>
+    <div class="timer" id="call-timer" role="timer" aria-label="Call length">${m}:${s}</div>
     <div class="call-ctrls">
       <button class="call-ctrl ${c.muted ? 'on' : ''}" data-act="mute" aria-pressed="${c.muted}" data-autofocus><span class="c">${c.muted ? I.micOff(28) : I.mic(28)}</span>${c.muted ? 'Unmute' : 'Mute'}</button>
       <button class="call-ctrl end" data-act="end-call"><span class="c">${I.endCall(34)}</span>End call</button>
@@ -863,7 +907,7 @@ function account() {
       <section>
         <div class="eyebrow">Profile</div>
         <div class="card profile">
-          <div class="avatar av-xl">${user.initials}</div>
+          <div class="avatar av-xl">${esc(user.initials)}</div>
           <div><strong>${esc(user.name)}</strong><span class="badge" style="margin-top:12px">${esc(user.role)}</span><div class="email">${esc(user.email)}</div></div>
         </div>
         <div class="eyebrow">Care team</div>
@@ -876,7 +920,7 @@ function account() {
             </div>`).join('')}
         </div>
         <div class="eyebrow">Keyboard shortcuts</div>
-        <div class="card shortcuts" tabindex="0" aria-label="Keyboard shortcuts">
+        <div class="card shortcuts" tabindex="0" role="group" aria-label="Keyboard shortcuts">
           ${SHORTCUTS.map(([keys, label]) => `<div class="sc-row"><span class="l">${label}</span>${kbd(keys)}</div>`).join('')}
         </div>
       </section>
@@ -933,8 +977,9 @@ function messages() {
             const cp = person(c.id)
             const last = c.messages[c.messages.length - 1]
             return `
-            <button class="convo ${c.id === state.activeConvo ? 'active' : ''}" data-convo="${c.id}">
-              <div class="avatar av-${c.id}">${c.id}${c.unread ? '<span class="dot"></span>' : ''}</div>
+            <button class="convo ${c.id === state.activeConvo ? 'active' : ''}" data-convo="${c.id}" ${c.id === state.activeConvo ? 'aria-current="true"' : ''}
+              aria-label="${esc(cp.name)}, ${esc(cp.role)}${c.unread ? ', unread' : ''}, ${esc(c.time)}: ${esc(last.text)}">
+              <div class="avatar av-${c.id}" aria-hidden="true">${c.id}${c.unread ? '<span class="dot"></span>' : ''}</div>
               <div class="body">
                 <div class="line1"><strong>${esc(cp.name)}</strong><span class="time">${esc(c.time)}</span></div>
                 <div class="role">${esc(cp.role)}</div>
@@ -950,7 +995,7 @@ function messages() {
           <div class="info"><strong>${esc(p.name)}</strong><div class="role">${esc(p.role)} · ${esc(active.status)}</div></div>
           <button class="btn btn-primary" data-call="${p.id}">${I.phone()} Call</button>
         </div>
-        <div class="thread" id="thread" tabindex="0" aria-label="Conversation with ${esc(p.name)}" data-scroll-region>
+        <div class="thread" id="thread" tabindex="0" role="log" aria-label="Conversation with ${esc(p.name)}" data-scroll-region>
           ${active.messages.map(m => `
             <div class="bubble-wrap ${m.me ? 'me' : ''}">
               <div class="bubble">${esc(m.text)}</div>
@@ -980,8 +1025,10 @@ function sendMessage(text) {
   state.draft = ''
   const preview = text.length > 32 ? text.slice(0, 32) + '…' : text
   const entry = record(`Sent "${preview}" to ${person(c.id).name}`, '💬', () => {
+    // The conversation shows its newest remaining message's time
     c.messages.splice(c.messages.indexOf(msg), 1)
-    if (c.time === t) c.time = prevTime
+    const last = c.messages[c.messages.length - 1]
+    c.time = last ? last.time : prevTime
   }, () => c.messages.includes(msg))
   render()
   $('#msg-input')?.focus()
@@ -1000,21 +1047,21 @@ function schedule() {
     </div>
     <div class="days" role="tablist">
       ${state.week.map((w, i) => `
-        <button class="day ${i === state.selDay ? 'sel' : ''}" role="tab" aria-selected="${i === state.selDay}" data-day="${i}">
+        <button class="day ${i === state.selDay ? 'sel' : ''}" role="tab" id="day-tab-${i}" aria-controls="day-panel" aria-label="${esc(w.label)}${state.appts[i] ? `, ${state.appts[i].length} scheduled` : ''}" aria-selected="${i === state.selDay}" data-day="${i}">
           <span class="dow">${w.dow}</span><span class="num">${w.num}</span><span class="dot ${state.appts[i] ? 'has' : ''}"></span>
         </button>`).join('')}
     </div>
     <div class="day-title">${state.selDay === 0 ? 'Today' : esc(d.label)} <span class="chip">${list.length} scheduled</span></div>
-    <div class="appt-list">
+    <div class="appt-list" role="tabpanel" id="day-panel" aria-labelledby="day-tab-${state.selDay}">
       ${list.length ? list.map(a => `
-        <div class="card appt-card" tabindex="0">
+        <div class="card appt-card" tabindex="0" role="group" aria-label="${esc(a.title)}, ${esc(a.who)}, ${esc(a.time)}, ${esc(a.len)}">
           <div class="ico">${I.calendar(24)}</div>
           <div>
             <strong>${esc(a.title)}</strong>
             <div class="who">${esc(a.who)}</div>
             <div class="tags"><span class="t time">${I.clock(16)} ${esc(a.time)}</span><span class="t">${esc(a.len)}</span></div>
           </div>
-        </div>`).join('') : '<div class="card empty-day" tabindex="0">No appointments scheduled for this day.</div>'}
+        </div>`).join('') : '<div class="card empty-day" tabindex="0" role="group" aria-label="No appointments scheduled for this day">No appointments scheduled for this day.</div>'}
     </div>`)
 }
 
@@ -1030,7 +1077,7 @@ function render({ fresh = false } = {}) {
   const view = fresh ? null : captureView()
   applyTheme()
   $('#app').innerHTML = SCREENS[state.screen]()
-  document.title = 'CareConnect'
+  document.title = `${pageName()} – CareConnect`
 
   if (view) restoreScroll(view)
   clearTimeout(flowTimer)
@@ -1055,7 +1102,7 @@ function setMed(id, status) {
   const prev = m.status
   m.status = status
   const what = status ? `Marked ${m.name} (${m.time}) as ${status}` : `Cleared ${m.name} (${m.time})`
-  const entry = record(what, '💊', () => { m.status = prev }, () => m.status === status)
+  const entry = record(what, '💊', () => { m.status = prev }, () => m.status === status, 'med:' + m.id)
   render()
   toast(status === 'taken' ? 'Marked as taken' : 'Marked as missed. Your care team will be notified.', { undo: entry })
 }
@@ -1275,7 +1322,8 @@ document.addEventListener('mousemove', e => {
 
 // Mouse lock-on: a click on empty space presses the control the indicator is locked to
 document.addEventListener('click', e => {
-  if (!state.mouseLock || !e.isTrusted || e.target.closest(FOCUSABLE)) return
+  // (the el.click() below targets a control, so it is skipped here too)
+  if (!state.mouseLock || e.target.closest(FOCUSABLE)) return
   const el = nearestTo(candidates(navRoot()), e.clientX, e.clientY, LOCK_RADIUS)
   if (!el) return
   e.preventDefault()
@@ -1395,8 +1443,8 @@ document.addEventListener('submit', e => {
     const email = $('#si-email').value.trim()
     const pass = $('#si-pass').value
     const err = $('#si-err')
-    if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = 'Please enter a valid email address.'; err.hidden = false; return }
-    if (!pass) { err.textContent = 'Please enter your password.'; err.hidden = false; return }
+    if (!/^\S+@\S+\.\S+$/.test(email)) return showError(err, 'Please enter a valid email address.', '#si-email')
+    if (!pass) return showError(err, 'Please enter your password.', '#si-pass')
     state.history = []
     go('today', { replace: true })
   } else if (f.id === 'create-form') {
@@ -1405,11 +1453,9 @@ document.addEventListener('submit', e => {
     const email = $('#ca-email').value.trim()
     const pass = $('#ca-pass').value
     const err = $('#ca-err')
-    let msg = ''
-    if (!name) msg = 'Please enter your full name.'
-    else if (!/^\S+@\S+\.\S+$/.test(email)) msg = 'Please enter a valid email address.'
-    else if (pass.length < 8) msg = 'Password must be at least 8 characters.'
-    if (msg) { err.textContent = msg; err.hidden = false; return }
+    if (!name) return showError(err, 'Please enter your full name.', '#ca-name')
+    if (!/^\S+@\S+\.\S+$/.test(email)) return showError(err, 'Please enter a valid email address.', '#ca-email')
+    if (pass.length < 8) return showError(err, 'Password must be at least 8 characters.', '#ca-pass')
     user.name = name
     user.first = name.split(/\s+/)[0]
     user.initials = name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()

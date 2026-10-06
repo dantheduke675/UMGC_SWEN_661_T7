@@ -492,9 +492,10 @@ CareConnectElectron/
 - **Navigation.** `go(screen)` pushes onto `state.history` and re-renders.
   `back()` pops it, and `signOut()` clears it. A single delegated `click`
   listener handles every button through `data-*` attributes.
-- **State.** One in-memory `state` object holds the demo data. Only three UI
+- **State.** One in-memory `state` object holds the demo data. Only six UI
   preferences persist across restarts, in `localStorage` under a `cc.`
-  prefix: theme, large text, and sidebar collapsed.
+  prefix: theme, sidebar collapsed, zoom, notifications on/off, eye tracking,
+  and mouse lock-on.
 - **The desktop layout** uses a collapsible sidebar instead of the mobile
   bottom tab bar. The window opens at 1440×900, with a minimum size of
   1024×700.
@@ -541,20 +542,22 @@ for the items that apply to a local-only app:
 - **Local content only.** The window loads `src/index.html` with `loadFile`.
   No remote URL is ever loaded, and the app contains no external links.
 - **Escaping user input.** Screens are built as HTML strings, so every
-  user-entered value (symptom notes, messages, name, email) passes through
-  `esc()`, which escapes `& < > " '` before it reaches `innerHTML`. Toasts use
-  `textContent`.
-- **No IPC, no secrets, no logging.** There is no preload script, no
-  `ipcMain` or `ipcRenderer`, no API keys, and no `console.*` calls.
-- **Health data is never written to disk.** Only the three UI preferences
-  above go to `localStorage`.
+  user-entered value (symptom notes, messages, name, initials, email) passes
+  through `esc()`, which escapes `& < > " '` before it reaches `innerHTML`.
+  Toast messages are set with `textContent`.
+- **No IPC, no secrets, no logging.** There is no `ipcMain` or `ipcRenderer`,
+  no API keys, and no `console.*` calls. The one preload script uses
+  `contextBridge` to expose only `getZoom()` and `setZoom()`, and `setZoom`
+  ignores anything that isn't a number from 0.25 to 5.
+- **Health data is never written to disk.** Only the six UI preferences
+  above go to `localStorage`. Medications, symptoms, messages and the undo
+  history stay in memory and are cleared on sign-out or restart.
 
 **Known gaps** (prototype limitations)
 
 | Gap                                                   | Where                                                      | Production fix                                                         |
 | ----------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Sign-in accepts any password; Face ID is a timer      | `app.js` submit handler; `facescan` → `facesuccess` timers | A real auth service; Windows Hello / Touch ID through the main process |
-| `user.initials` is inserted into HTML without `esc()` | `app.js` (avatar in the shell and on the Account screen)   | Wrap it in `esc()` like the other user fields                          |
 | Sign-in form pre-fills `value="password"`             | `app.js` `signin` screen                                   | Remove the demo value                                                  |
 
 # React:

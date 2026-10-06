@@ -1,51 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const { JSDOM } = require('jsdom');
-const sourcePath = path.resolve(__dirname, '../src/app.js');
-
-// Execute the unchanged browser script against a fresh DOM for each case.
-function setup(t, storage = {}) {
-  const dom = new JSDOM(fs.readFileSync(path.resolve(__dirname, '../src/index.html'), 'utf8'), {
-    url: 'https://careconnect.test/', runScripts: 'outside-only'
-  });
-  const w = dom.window;
-  for (const [key, value] of Object.entries(storage)) w.localStorage.setItem('cc.' + key, value);
-  // Keep greetings and displayed timestamps independent of the machine clock.
-  const NativeDate = w.Date;
-  w.Date = class extends NativeDate {
-    constructor(...args) { super(...(args.length ? args : [new NativeDate(2026, 8, 28, 9, 10).getTime()])); }
-    static now() { return new NativeDate(2026, 8, 28, 9, 10).getTime(); }
-  };
-  let time = 0, id = 0;
-  const timers = new Map();
-  w.setTimeout = (fn, delay) => { timers.set(++id, { fn, due: time + delay }); return id; };
-  w.setInterval = (fn, delay) => { timers.set(++id, { fn, due: time + delay, interval: delay }); return id; };
-  w.clearTimeout = w.clearInterval = key => timers.delete(key);
-  const errors = [];
-  w.addEventListener('error', e => { errors.push(e.error); });
-  vm.runInContext(fs.readFileSync(sourcePath, 'utf8'), dom.getInternalVMContext(), { filename: sourcePath });
-  const q = selector => w.document.querySelector(selector);
-  const read = expression => vm.runInContext(expression, dom.getInternalVMContext());
-  const click = selector => { assert.ok(q(selector), `Missing ${selector}`); q(selector).click(); };
-  const input = (selector, value) => { q(selector).value = value; q(selector).dispatchEvent(new w.Event('input', { bubbles: true })); };
-  const submit = selector => q(selector).dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
-  const tick = duration => {
-    const end = time + duration;
-    while (true) {
-      const next = [...timers].filter(([, x]) => x.due <= end).sort((a, b) => a[1].due - b[1].due)[0];
-      if (!next) break;
-      const [key, timer] = next; time = timer.due;
-      if (timer.interval) timer.due += timer.interval; else timers.delete(key);
-      timer.fn();
-    }
-    time = end;
-  };
-  t.after(() => { assert.deepEqual(errors, [], 'No uncaught DOM errors'); timers.clear(); dom.window.close(); });
-  return { w, q, read, click, input, submit, tick, go: screen => read(`go(${JSON.stringify(screen)})`) };
-}
+const { setup } = require('./harness.cjs');
 
 test('landing, navigation, replacement history and back fallback', t => {
   const h = setup(t);
@@ -97,11 +52,13 @@ test('medications taken, missed, undo update cards, counts and progress', t => {
   const h = setup(t); h.go('today');
   assert.equal(h.q('[role="progressbar"]').getAttribute('aria-valuenow'), '22');
   h.click('[data-med-take="2"]'); assert.equal(h.read('state.meds[1].status'), 'taken');
-  assert.equal(h.q('[role="progressbar"]').getAttribute('aria-valuenow'), '33'); assert.match(h.q('#toast').textContent, /marked as taken/);
-  h.click('[data-med-undo="2"]'); assert.equal(h.read('state.meds[1].status'), null);
+  assert.equal(h.q('[role="progressbar"]').getAttribute('aria-valuenow'), '33'); assert.match(h.q('#toast').textContent, /Marked as taken/);
+  assert.equal(h.q('.med.taken .status-bar button'), null, 'Undo is offered by the toast, not the card');
+  h.click('.toast-undo'); assert.equal(h.read('state.meds[1].status'), null);
+  assert.equal(h.q('[role="progressbar"]').getAttribute('aria-valuenow'), '22');
   h.go('medications'); h.click('[data-med-miss="2"]');
-  assert.equal(h.q('.stat.missed .n').textContent, '1'); assert.match(h.q('#toast').textContent, /marked as missed/);
-  h.click('[data-med-undo="2"]'); assert.equal(h.q('.stat.missed .n').textContent, '0');
+  assert.equal(h.q('.stat.missed .n').textContent, '1'); assert.match(h.q('#toast').textContent, /Marked as missed/);
+  h.click('.toast-undo'); assert.equal(h.q('.stat.missed .n').textContent, '0');
 });
 
 test('symptom modal validation, severity, trimming, defaults and escaping', t => {
@@ -126,7 +83,7 @@ test('modal cancel, backdrop, inner click and Escape; SOS confirmation toast', t
   h.click('[data-act="sos"]'); h.click('.overlay'); assert.equal(h.q('#modal-root').innerHTML, '');
   h.click('[data-act="sos"]'); h.w.document.dispatchEvent(new h.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); assert.equal(h.q('#modal-root').innerHTML, '');
   h.click('[data-act="sos"]'); h.click('[data-act="sos-confirm"]'); assert.match(h.q('#toast').textContent, /SOS alert sent/);
-  h.tick(2399); assert.ok(h.q('#toast').classList.contains('show')); h.tick(1); assert.equal(h.q('#toast').classList.contains('show'), false);
+  h.tick(3999); assert.ok(h.q('#toast').classList.contains('show')); h.tick(1); assert.equal(h.q('#toast').classList.contains('show'), false);
 });
 
 test('messages unread switching, draft/submit/quick reply, whitespace and escaped HTML', t => {
@@ -158,25 +115,26 @@ test('schedule selects day zero, populated days and empty days', t => {
   h.click('[data-day="0"]'); assert.match(h.q('.day-title').textContent, /Today/);
 });
 
-test('preferences persist appearance, large text and collapse; account toggles and toast replacement', t => {
+test('preferences persist appearance and collapse; account toggles and toast replacement', t => {
   const h = setup(t); h.click('[data-act="theme"]'); assert.equal(h.w.localStorage.getItem('cc.theme'), '"light"');
   h.go('account'); h.click('[data-act="theme"]'); assert.equal(h.w.document.documentElement.dataset.theme, 'dark');
-  for (const act of ['large', 'collapse']) {
-    h.click(`[data-act="${act}"]`); assert.equal(h.w.localStorage.getItem('cc.' + (act === 'large' ? 'largeText' : 'collapsed')), 'true');
-    h.click(`[data-act="${act}"]`);
-  }
+  h.click('[data-act="collapse"]'); assert.equal(h.w.localStorage.getItem('cc.collapsed'), 'true');
+  h.click('[data-act="collapse"]'); assert.equal(h.w.localStorage.getItem('cc.collapsed'), 'false');
   for (const [act, key] of [['reminders', 'reminders'], ['biometric', 'biometric'], ['share', 'shareData']]) {
     h.click(`[data-act="${act}"]`); assert.equal(h.read(`state.${key}`), false); h.click(`[data-act="${act}"]`); assert.equal(h.read(`state.${key}`), true);
   }
   h.click('[data-act="privacy"]'); assert.match(h.q('#toast').textContent, /encrypted/);
-  h.tick(1000); h.click('[data-act="voice"]'); h.tick(1400); assert.ok(h.q('#toast').classList.contains('show')); h.tick(1000); assert.equal(h.q('#toast').classList.contains('show'), false);
+  h.tick(1000); h.click('[data-act="voice"]'); assert.equal(h.read('state.voice'), true); assert.match(h.q('#toast').textContent, /Voice commands on/);
+  h.tick(3999); assert.ok(h.q('#toast').classList.contains('show')); h.tick(1); assert.equal(h.q('#toast').classList.contains('show'), false);
   h.click('[data-act="signout"]'); assert.equal(h.read('state.screen'), 'landing');
 });
 
 test('stored preferences load, malformed data and storage failures recover', t => {
-  const h = setup(t, { theme: '"light"', largeText: 'true', collapsed: 'true' });
-  assert.equal(h.w.document.documentElement.dataset.theme, 'light'); assert.ok(h.w.document.documentElement.classList.contains('large-text'));
+  const h = setup(t, { theme: '"light"', collapsed: 'true', eyeTracking: 'true', mouseLock: 'true', notifications: 'false' });
+  assert.equal(h.w.document.documentElement.dataset.theme, 'light'); assert.ok(h.w.document.documentElement.classList.contains('mouse-lock'));
   h.go('today'); assert.ok(h.q('.sidebar').classList.contains('collapsed'));
+  assert.equal(h.q('[data-act="eye"]').getAttribute('aria-pressed'), 'true');
+  assert.match(h.q('[data-act="notes"]').title, /\(off\)/);
   h.w.localStorage.setItem('cc.bad', '{broken'); assert.equal(h.read('store.get("bad", "fallback")'), 'fallback');
   Object.defineProperty(h.w, 'localStorage', { get() { throw new Error('unavailable'); } });
   assert.equal(h.read('store.get("theme", "fallback")'), 'fallback'); h.click('[data-act="theme"]'); assert.equal(h.read('state.theme'), 'dark');
@@ -205,4 +163,16 @@ test('time-dependent greetings and a retained draft rendered after navigation', 
   assert.equal(h.q('#msg-input').value, 'keep this draft');
   assert.equal(h.q('.send').disabled, false);
   assert.equal(h.read('esc(' + JSON.stringify("&<>\"'") + ')'), '&amp;&lt;&gt;&quot;&#39;');
+});
+
+test('user-entered text cannot inject markup: initials in avatars and toast messages', t => {
+  const h = setup(t); h.go('create');
+  h.input('#ca-name', '<img src=x onerror=alert(1)> <b'); h.input('#ca-email', 'x@example.com'); h.input('#ca-pass', 'longenough');
+  h.submit('#create-form'); assert.equal(h.read('user.initials'), '<S');
+  h.signIn(); h.go('account');
+  for (const av of [h.q('.sb-head .avatar'), h.q('.profile .avatar')]) {
+    assert.equal(av.textContent, '<S'); assert.equal(av.children.length, 0, 'Rendered as text, not markup');
+  }
+  h.read(`toast('<img src=x onerror=alert(1)>')`);
+  assert.equal(h.q('.toast-msg').textContent, '<img src=x onerror=alert(1)>'); assert.equal(h.q('#toast img'), null);
 });
