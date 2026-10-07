@@ -1091,6 +1091,9 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 
 ## Ian
 
--
+- Worked on the README
+- Worked on Electron screen functionality/navigation tests
+- Provided basic code coverage setup
+- Reviewed newly-added tests to ensure integration with pre-existing screen tests/proper coverage
 
 ### AI Disclosure: The code and parts of the README files in this project were written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code and files have been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
