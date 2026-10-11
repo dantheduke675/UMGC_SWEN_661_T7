@@ -100,13 +100,16 @@ function showError(errEl, msg, fieldSel) {
   if (typeof errEl === 'string') errEl = $(errEl)
   errEl.textContent = msg
   errEl.hidden = false
-  document.querySelectorAll(`[aria-describedby="${errEl.id}"]`).forEach(f => {
+  document.querySelectorAll(`[aria-describedby~="${errEl.id}"]`).forEach(f => {
     f.removeAttribute('aria-invalid')
-    f.removeAttribute('aria-describedby')
+    const rest = f.getAttribute('aria-describedby').split(' ').filter(id => id !== errEl.id).join(' ')
+    if (rest) f.setAttribute('aria-describedby', rest)
+    else f.removeAttribute('aria-describedby')
   })
   const field = $(fieldSel)
   field.setAttribute('aria-invalid', 'true')
-  field.setAttribute('aria-describedby', errEl.id)
+  // The message is read after the field's own hint
+  field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), errEl.id].filter(Boolean).join(' '))
   field.focus()
 }
 
@@ -393,11 +396,11 @@ function openHistory() {
 // ============================================================
 function landing() {
   return `
-  <div class="auth">
-    <button class="theme-fab emoji" data-act="theme" aria-label="Switch to ${state.theme === 'dark' ? 'light' : 'dark'} mode">${state.theme === 'dark' ? '🌞' : '🌙'}</button>
+  <main class="auth">
+    <button class="theme-fab" data-act="theme" aria-label="Switch to ${state.theme === 'dark' ? 'light' : 'dark'} mode">${state.theme === 'dark' ? I.sun(24) : I.moon(24)}</button>
     <div class="auth-col centered">
       <div class="logo-tile emoji" aria-hidden="true">💊</div>
-      <div class="brand">CareConnect</div>
+      <h1 class="brand">CareConnect</h1>
       <p class="tagline">Medication management and care coordination for you and your care team.</p>
       <div class="landing-actions">
         <button class="btn btn-primary btn-lg" data-go="create">Create account</button>
@@ -405,25 +408,25 @@ function landing() {
       </div>
       <div class="version">CareConnect Desktop · v1.0.0</div>
     </div>
-  </div>`
+  </main>`
 }
 
 function signin() {
   return `
-  <div class="auth">
+  <main class="auth">
     <form class="auth-col" id="signin-form" novalidate>
       <button type="button" class="link back-link" data-act="back">← Back</button>
       <h1>Sign in</h1>
       <p class="sub">Welcome back, ${esc(user.first)}.</p>
       <div class="field">
         <label for="si-email">Email address</label>
-        <input class="input" id="si-email" type="email" autocomplete="email" value="${esc(user.email)}" data-autofocus>
-        <div class="hint">We will never share this.</div>
+        <input class="input" id="si-email" type="email" autocomplete="email" value="${esc(user.email)}" aria-required="true" aria-describedby="si-email-hint" data-autofocus>
+        <div class="hint" id="si-email-hint">We will never share this.</div>
       </div>
       <div class="field">
         <label for="si-pass">Password</label>
-        <input class="input" id="si-pass" type="password" autocomplete="current-password" value="password">
-        <div class="hint">Your password manager can fill this for you.</div>
+        <input class="input" id="si-pass" type="password" autocomplete="current-password" value="password" aria-required="true" aria-describedby="si-pass-hint">
+        <div class="hint" id="si-pass-hint">Your password manager can fill this for you.</div>
         <div class="error" id="si-err" role="alert" hidden></div>
       </div>
       <button class="btn btn-primary btn-lg btn-block" type="submit" style="margin-top:18px">Sign in</button>
@@ -432,36 +435,36 @@ function signin() {
         <div>Don't have an account? <button type="button" class="link" data-go="create">Create one →</button></div>
       </div>
     </form>
-  </div>`
+  </main>`
 }
 
 function create() {
   const r = state.role
   return `
-  <div class="auth">
+  <main class="auth">
     <form class="auth-col" id="create-form" novalidate style="padding-top:14px">
       <button type="button" class="link back-link" data-act="back" style="margin-bottom:34px">← Back</button>
       <h1>Create your account</h1>
       <p class="sub">Get started with CareConnect in under a minute.</p>
       <div class="field">
         <label for="ca-name">Full name</label>
-        <input class="input" id="ca-name" autocomplete="name" placeholder="Maddy Chen" data-autofocus>
+        <input class="input" id="ca-name" autocomplete="name" placeholder="Maddy Chen" aria-required="true" data-autofocus>
       </div>
       <div class="field">
         <label for="ca-email">Email address</label>
-        <input class="input" id="ca-email" type="email" autocomplete="email" placeholder="maddy@example.com">
+        <input class="input" id="ca-email" type="email" autocomplete="email" placeholder="maddy@example.com" aria-required="true">
       </div>
       <div class="field">
         <label for="ca-pass">Password</label>
-        <input class="input" id="ca-pass" type="password" autocomplete="new-password" placeholder="••••••••">
-        <div class="hint">At least 8 characters.</div>
+        <input class="input" id="ca-pass" type="password" autocomplete="new-password" placeholder="••••••••" aria-required="true" aria-describedby="ca-pass-hint">
+        <div class="hint" id="ca-pass-hint">At least 8 characters.</div>
       </div>
       <div class="section-label">I AM A...</div>
       <div class="role-grid" role="radiogroup" aria-label="Account type">
-        <button type="button" role="radio" aria-checked="${r === 'recipient'}" class="role-card ${r === 'recipient' ? 'selected' : ''}" data-role="recipient">
+        <button type="button" role="radio" aria-checked="${r === 'recipient'}" tabindex="${r === 'recipient' ? 0 : -1}" class="role-card ${r === 'recipient' ? 'selected' : ''}" data-role="recipient">
           <span class="emoji" aria-hidden="true">🏥</span><strong>Care recipient</strong><span class="desc">I receive care and track my own health</span>
         </button>
-        <button type="button" role="radio" aria-checked="${r === 'caregiver'}" class="role-card ${r === 'caregiver' ? 'selected' : ''}" data-role="caregiver">
+        <button type="button" role="radio" aria-checked="${r === 'caregiver'}" tabindex="${r === 'caregiver' ? 0 : -1}" class="role-card ${r === 'caregiver' ? 'selected' : ''}" data-role="caregiver">
           <span class="emoji" aria-hidden="true">🤝</span><strong>Caregiver</strong><span class="desc">I support someone in managing their health</span>
         </button>
       </div>
@@ -471,15 +474,15 @@ function create() {
         <div>Already have an account? <button type="button" class="link" data-go="signin">Sign in →</button></div>
       </div>
     </form>
-  </div>`
+  </main>`
 }
 
 function biometrics() {
   return `
-  <div class="auth">
+  <main class="auth">
     <div class="auth-col centered" style="padding-top:145px">
       <div class="face-circle emoji" aria-hidden="true">👤</div>
-      <div class="face-title">Sign in with your face?</div>
+      <h1 class="face-title">Sign in with your face?</h1>
       <p class="face-sub">Set up Face ID for a faster, password-free sign-in experience on this device.</p>
       <p class="face-note">Your face is never sent anywhere. It stays on this device and is handled by your operating system.</p>
       <div class="face-actions">
@@ -488,26 +491,26 @@ function biometrics() {
       </div>
       <button class="link" data-act="back">← Back</button>
     </div>
-  </div>`
+  </main>`
 }
 
 function facescan() {
   return `
-  <div class="scan">
+  <main class="scan">
     <button class="link back-top" data-go="signin">← Back to sign in</button>
     <div class="rings"><div class="face-circle emoji" aria-hidden="true">👤</div></div>
-    <h2>Welcome back, ${esc(user.first)}</h2>
+    <h1>Welcome back, ${esc(user.first)}</h1>
     <p>Looking for your face...</p>
-  </div>`
+  </main>`
 }
 
 function facesuccess() {
   return `
-  <div class="scan">
+  <main class="scan">
     <div class="check-circle" aria-hidden="true">✓</div>
-    <h2 class="ok">Face recognised</h2>
+    <h1 class="ok">Face recognised</h1>
     <p>Signing you in...</p>
-  </div>`
+  </main>`
 }
 
 // ============================================================
@@ -527,13 +530,13 @@ function shell(title, body) {
   const unread = state.convos.filter(c => c.unread).length
   return `
   <div class="shell">
-    <aside class="sidebar ${state.collapsed ? 'collapsed' : ''}">
+    <aside class="sidebar ${state.collapsed ? 'collapsed' : ''}" id="sidebar" aria-label="Sidebar">
       <div class="sb-head">
-        <div class="avatar">${esc(user.initials)}</div>
+        <div class="avatar" aria-hidden="true">${esc(user.initials)}</div>
         <div class="who"><strong>${esc(user.name)}</strong><span class="badge">${esc(user.role)}</span></div>
-        <button class="collapse-btn" data-act="collapse" aria-label="${state.collapsed ? 'Expand' : 'Collapse'} sidebar">${I.chevL(16)}</button>
+        <button class="collapse-btn" data-act="collapse" aria-label="Sidebar" aria-expanded="${!state.collapsed}" aria-controls="sidebar" title="${state.collapsed ? 'Expand' : 'Collapse'} sidebar">${I.chevL(16)}</button>
       </div>
-      <nav><ul class="nav">
+      <nav aria-label="Main"><ul class="nav">
         ${NAV.map(n => `
           <li><button class="${state.screen === n.id ? 'active' : ''}" data-go="${n.id}" title="${n.label}" ${state.screen === n.id ? 'aria-current="page"' : ''}>
             <span class="emoji" aria-hidden="true">${n.icon}</span><span class="label">${n.label}${n.id === 'messages' && unread ? ` (${unread}<span class="sr-only"> unread</span>)` : ''}</span>
@@ -552,13 +555,13 @@ function shell(title, body) {
       <header class="topbar">
         <h1>${title}</h1>
         ${historyButton()}
-        <button class="icon-btn ${state.voice ? 'on' : ''}" data-act="voice" aria-label="Voice commands" aria-pressed="${state.voice}" title="Voice commands (Ctrl+\\)">${I.mic()}</button>
-        <button class="icon-btn ${state.eyeTracking ? 'on' : ''}" data-act="eye" aria-label="Eye tracking" aria-pressed="${state.eyeTracking}" title="Eye tracking (Ctrl+I)">${I.eye()}</button>
+        <button class="icon-btn ${state.voice ? 'on' : ''}" data-act="voice" aria-label="Voice commands" aria-pressed="${state.voice}" aria-keyshortcuts="Control+\\" title="Voice commands (Ctrl+\\)">${I.mic()}</button>
+        <button class="icon-btn ${state.eyeTracking ? 'on' : ''}" data-act="eye" aria-label="Eye tracking" aria-pressed="${state.eyeTracking}" aria-keyshortcuts="Control+I" title="Eye tracking (Ctrl+I)">${I.eye()}</button>
         <div class="tb-anchor">
-          <button class="icon-btn ${state.panel === 'notes' ? 'on' : ''}" data-act="notes" aria-label="Notifications" aria-expanded="${state.panel === 'notes'}" title="Notifications${state.notifications ? '' : ' (off)'} · Ctrl+N turns on/off">${state.notifications ? I.bell() : I.bellOff()}</button>
+          <button class="icon-btn ${state.panel === 'notes' ? 'on' : ''}" data-act="notes" aria-label="Notifications" aria-haspopup="dialog" aria-expanded="${state.panel === 'notes'}" title="Notifications${state.notifications ? '' : ' (off)'} · Ctrl+N turns on/off">${state.notifications ? I.bell() : I.bellOff()}</button>
           ${state.panel === 'notes' ? notifications() : ''}
         </div>
-        <button class="sos" data-act="sos" title="Emergency call (Ctrl+S)">SOS</button>
+        <button class="sos" data-act="sos" aria-label="SOS emergency alert" aria-haspopup="dialog" aria-keyshortcuts="Control+S" title="Emergency call (Ctrl+S)">SOS</button>
       </header>
       <main class="content">${body}</main>
     </div>
@@ -573,7 +576,7 @@ function historyButton() {
   historyIntro = false
   return `
   <div class="tb-anchor">
-    <button class="icon-btn hist-btn ${state.panel === 'history' ? 'on' : ''} ${intro ? 'appear' : ''}" data-act="history" aria-label="Action history${n ? `, ${n} can be undone` : ''}" aria-expanded="${state.panel === 'history'}" title="Action history (Ctrl+H)">
+    <button class="icon-btn hist-btn ${state.panel === 'history' ? 'on' : ''} ${intro ? 'appear' : ''}" data-act="history" aria-label="Action history${n ? `, ${n} can be undone` : ''}" aria-haspopup="dialog" aria-expanded="${state.panel === 'history'}" aria-keyshortcuts="Control+H" title="Action history (Ctrl+H)">
       ${I.history()}${n ? `<span class="hb-count" aria-hidden="true">${n}</span>` : ''}
     </button>
     ${state.panel === 'history' ? historyPanel() : ''}
@@ -581,7 +584,7 @@ function historyButton() {
 }
 
 function panelHead(title) {
-  return `<div class="pop-head"><h4>${title}</h4><button class="pop-close" data-act="close-panel" aria-label="Close ${title.toLowerCase()}">${I.x(18)}</button></div>`
+  return `<div class="pop-head"><h2>${title}</h2><button class="pop-close" data-act="close-panel" aria-label="Close ${title.toLowerCase()}">${I.x(18)}</button></div>`
 }
 
 function historyPanel() {
@@ -628,7 +631,9 @@ function notifications() {
 // ---------- Keyboard shortcut hints ----------
 const SHORTCUTS = [
   ['↑ ↓ ← → / W A S D', 'Move the focus indicator'],
-  ['Enter', 'Press the focused button / sign in'],
+  ['Tab / Shift Tab', 'Next / previous control'],
+  ['← →', 'Choose a day, tab or option in a group'],
+  ['Enter / Space', 'Press the focused button / sign in'],
   ['Ctrl +', 'Zoom in'],
   ['Ctrl -', 'Zoom out'],
   ['Ctrl 0', 'Reset zoom'],
@@ -644,13 +649,23 @@ const SHORTCUTS = [
   ['Ctrl N', 'Notifications on / off'],
   ['Esc', 'Close a dialog or panel']
 ]
+// Arrow keys are drawn as icons (in currentColor) and named for screen readers
+const ARROW_KEYS = {
+  '↑': ['Up arrow', '<path d="M12 19V5M5 12l7-7 7 7"/>'],
+  '↓': ['Down arrow', '<path d="M12 5v14M19 12l-7 7-7-7"/>'],
+  '←': ['Left arrow', '<path d="M19 12H5M12 19l-7-7 7-7"/>'],
+  '→': ['Right arrow', '<path d="M5 12h14M12 5l7 7-7 7"/>']
+}
+const keycap = k => ARROW_KEYS[k]
+  ? `<kbd>${svg(ARROW_KEYS[k][1], 14)}<span class="sr-only">${ARROW_KEYS[k][0]}</span></kbd>`
+  : `<kbd>${esc(k)}</kbd>`
 // 'Ctrl L' -> Ctrl + L keycaps; ' / ' separates alternatives
-const kbd = combo => `<span class="kbds">${combo.split(' / ')
-  .map(group => group.split(' ').map(k => `<kbd>${esc(k)}</kbd>`).join(''))
+const kbd = (combo, hidden = false) => `<span class="kbds"${hidden ? ' aria-hidden="true"' : ''}>${combo.split(' / ')
+  .map(group => group.split(' ').map(keycap).join(''))
   .join('<span class="or">or</span>')}</span>`
 
 function avatar(id, cls = 'av-sm') {
-  return `<div class="avatar ${cls} av-${id}">${id}</div>`
+  return `<div class="avatar ${cls} av-${id}" aria-hidden="true">${id}</div>`
 }
 
 function medCard(m) {
@@ -661,8 +676,8 @@ function medCard(m) {
     actions = `<div class="status-bar missed" tabindex="0" role="group" aria-label="${esc(m.name)} ${esc(m.time)}: missed">✕ Missed</div>`
   } else {
     actions = `<div class="med-actions">
-      <button class="btn btn-primary" style="box-shadow:none" data-med-take="${m.id}">I took this</button>
-      <button class="btn btn-danger-outline" data-med-miss="${m.id}">I missed this</button>
+      <button class="btn btn-primary" style="box-shadow:none" data-med-take="${m.id}" aria-label="I took this: ${esc(m.name)} ${esc(m.dose)}, ${esc(m.time)}">I took this</button>
+      <button class="btn btn-danger-outline" data-med-miss="${m.id}" aria-label="I missed this: ${esc(m.name)} ${esc(m.dose)}, ${esc(m.time)}">I missed this</button>
     </div>`
   }
   return `
@@ -721,7 +736,7 @@ function today() {
           <div class="card person">
             ${avatar(p.id)}
             <div class="info"><strong>${esc(p.name)}</strong><div class="role">${esc(p.role)}</div></div>
-            <button class="msg-btn emoji" data-chat="${p.id}" aria-label="Message ${esc(p.name)}">💬</button>
+            <button class="msg-btn" data-chat="${p.id}" aria-label="Message ${esc(p.name)}">${I.message(20)}</button>
           </div>`).join('')}
         <div class="card tip" tabindex="0" role="group" aria-label="Daily tip: ${esc(DAILY_TIP)}">
           <div class="eyebrow"><span class="emoji" aria-hidden="true">💡</span> Daily tip</div>
@@ -774,17 +789,18 @@ function openSymptomModal() {
   modalReturn = document.activeElement
   root.innerHTML = `
   <div class="overlay" data-close>
-    <form class="modal" id="sym-form" role="dialog" aria-modal="true" aria-labelledby="sym-title">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sym-title">
+    <form id="sym-form" novalidate>
       <h2 id="sym-title">Log a symptom</h2>
       <p class="lead">Your care team will be able to see this entry.</p>
       <div class="field">
         <label for="sym-name">Symptom</label>
-        <input class="input" id="sym-name" list="sym-list" placeholder="e.g. Headache" required>
+        <input class="input" id="sym-name" list="sym-list" placeholder="e.g. Headache" required aria-required="true">
         <datalist id="sym-list"><option>Pain</option><option>Fatigue</option><option>Dizziness</option><option>Nausea</option><option>Headache</option><option>Shortness of breath</option></datalist>
       </div>
       <div class="field">
         <label id="sev-label">Severity (1 = mild, 5 = severe)</label>
-        <div class="sev-pick" role="radiogroup" aria-labelledby="sev-label">${[1, 2, 3, 4, 5].map(i => `<button type="button" role="radio" aria-checked="${i === sev}" aria-label="${i} of 5${i === 1 ? ', mild' : i === 5 ? ', severe' : ''}" data-sev="${i}" class="${i === sev ? 'sel' : ''}">${i}</button>`).join('')}</div>
+        <div class="sev-pick" role="radiogroup" aria-labelledby="sev-label">${[1, 2, 3, 4, 5].map(i => `<button type="button" role="radio" aria-checked="${i === sev}" tabindex="${i === sev ? 0 : -1}" aria-label="${i} of 5${i === 1 ? ', mild' : i === 5 ? ', severe' : ''}" data-sev="${i}" class="${i === sev ? 'sel' : ''}">${i}</button>`).join('')}</div>
       </div>
       <div class="field">
         <label for="sym-note">Notes</label>
@@ -796,13 +812,16 @@ function openSymptomModal() {
         <button type="submit" class="btn btn-primary">Save log</button>
       </div>
     </form>
+    </div>
   </div>`
+  setBackgroundInert(true)
   $('#sym-name').focus()
   root.querySelectorAll('[data-sev]').forEach(b => b.addEventListener('click', () => {
     sev = Number(b.dataset.sev)
     root.querySelectorAll('[data-sev]').forEach(x => {
       x.classList.toggle('sel', x === b)
       x.setAttribute('aria-checked', String(x === b))
+      x.tabIndex = x === b ? 0 : -1
     })
   }))
   $('#sym-form').addEventListener('submit', e => {
@@ -823,8 +842,13 @@ function openSymptomModal() {
 // Focus returns to whatever opened the modal
 let modalReturn = null
 const modalOpen = () => !!$('#modal-root').firstElementChild
+// While a dialog is open the page behind it can't be focused or read
+function setBackgroundInert(on) {
+  for (const el of [$('#app'), $('#toast')]) el.toggleAttribute('inert', on)
+}
 function closeModal() {
   $('#modal-root').innerHTML = ''
+  setBackgroundInert(false)
   const back = modalReturn
   modalReturn = null
   if (back && isVisible(back)) focusEl(back)
@@ -845,6 +869,7 @@ function openSosModal() {
       </div>
     </div>
   </div>`
+  setBackgroundInert(true)
   // Emergencies should be fast: Ctrl+S then Enter sends; Esc cancels
   focusEl($('[data-act="sos-confirm"]'))
 }
@@ -856,19 +881,19 @@ function call() {
   const m = Math.floor(c.seconds / 60)
   const s = String(c.seconds % 60).padStart(2, '0')
   return `
-  <div class="call">
-    <button class="back" data-act="end-call" aria-label="Back">${I.arrowL(22)}</button>
+  <main class="call">
+    <button class="back" data-act="end-call" aria-label="End call and go back">${I.arrowL(22)}</button>
     <div class="status">On call</div>
-    <div class="big-av av-${p.id}">${p.id}</div>
-    <h2>${esc(p.name)}</h2>
+    <div class="big-av av-${p.id}" aria-hidden="true">${p.id}</div>
+    <h1>${esc(p.name)}</h1>
     <div class="role">${esc(p.role)}</div>
     <div class="timer" id="call-timer" role="timer" aria-label="Call length">${m}:${s}</div>
     <div class="call-ctrls">
-      <button class="call-ctrl ${c.muted ? 'on' : ''}" data-act="mute" aria-pressed="${c.muted}" data-autofocus><span class="c">${c.muted ? I.micOff(28) : I.mic(28)}</span>${c.muted ? 'Unmute' : 'Mute'}</button>
+      <button class="call-ctrl ${c.muted ? 'on' : ''}" data-act="mute" aria-pressed="${c.muted}" data-autofocus><span class="c">${c.muted ? I.micOff(28) : I.mic(28)}</span>Mute</button>
       <button class="call-ctrl end" data-act="end-call"><span class="c">${I.endCall(34)}</span>End call</button>
-      <button class="call-ctrl ${c.speaker ? 'on' : ''}" data-act="speaker" aria-pressed="${c.speaker}"><span class="c">${c.speaker ? I.volume(28) : I.speaker(28)}</span>${c.speaker ? 'Speaker' : 'Earpiece'}</button>
+      <button class="call-ctrl ${c.speaker ? 'on' : ''}" data-act="speaker" aria-pressed="${c.speaker}"><span class="c">${c.speaker ? I.volume(28) : I.speaker(28)}</span>Speaker</button>
     </div>
-  </div>`
+  </main>`
 }
 
 let callTimer
@@ -890,12 +915,17 @@ function stopCall() {
 }
 
 // ---------- Account ----------
-function prefRow(act, icon, title, sub, keys) {
+// 'Ctrl N' -> 'Control+N' for aria-keyshortcuts
+const ariaKeys = combo => combo.replace(/^Ctrl /, 'Control+')
+
+// checked: the row turns a setting on or off, so it is a switch
+function prefRow(act, icon, title, sub, keys, checked) {
+  const sw = checked === undefined ? '' : ` role="switch" aria-checked="${!!checked}"`
   return `
-    <button class="row" data-act="${act}">
+    <button class="row" data-act="${act}"${sw}${keys ? ` aria-keyshortcuts="${ariaKeys(keys)}"` : ''}>
       <div class="ico">${icon}</div>
       <div class="info"><strong>${title}</strong><div class="sub2">${sub}</div></div>
-      ${keys ? kbd(keys) : ''}${I.chevR()}
+      ${keys ? kbd(keys, true) : ''}${I.chevR()}
     </button>`
 }
 
@@ -905,12 +935,12 @@ function account() {
   return shell('Account', `
     <div class="acct-grid">
       <section>
-        <div class="eyebrow">Profile</div>
+        <h2 class="eyebrow">Profile</h2>
         <div class="card profile">
-          <div class="avatar av-xl">${esc(user.initials)}</div>
+          <div class="avatar av-xl" aria-hidden="true">${esc(user.initials)}</div>
           <div><strong>${esc(user.name)}</strong><span class="badge" style="margin-top:12px">${esc(user.role)}</span><div class="email">${esc(user.email)}</div></div>
         </div>
-        <div class="eyebrow">Care team</div>
+        <h2 class="eyebrow">Care team</h2>
         <div class="acct-team">
           ${team.map(p => `
             <div class="card person">
@@ -919,26 +949,26 @@ function account() {
               <button class="msg-btn lg" data-chat="${p.id}" aria-label="Message ${esc(p.name)}">${I.message(22)}</button>
             </div>`).join('')}
         </div>
-        <div class="eyebrow">Keyboard shortcuts</div>
+        <h2 class="eyebrow">Keyboard shortcuts</h2>
         <div class="card shortcuts" tabindex="0" role="group" aria-label="Keyboard shortcuts">
           ${SHORTCUTS.map(([keys, label]) => `<div class="sc-row"><span class="l">${label}</span>${kbd(keys)}</div>`).join('')}
         </div>
       </section>
       <section>
-        <div class="eyebrow">Preferences</div>
+        <h2 class="eyebrow">Preferences</h2>
         <div class="card list">
           <div class="row">
             <div class="ico">${dark ? I.moon(22) : I.sun(22)}</div>
             <div class="info"><strong>Appearance</strong><div class="sub2">${dark ? 'Dark mode' : 'Light mode'}</div></div>
-            ${kbd('Ctrl L')}
-            <button class="theme-switch ${dark ? 'on' : ''}" role="switch" aria-checked="${dark}" aria-label="Dark mode" data-act="theme"><span class="knob">${dark ? I.moon(16) : I.sun(16)}</span></button>
+            ${kbd('Ctrl L', true)}
+            <button class="theme-switch ${dark ? 'on' : ''}" role="switch" aria-checked="${dark}" aria-label="Dark mode" aria-keyshortcuts="Control+L" data-act="theme"><span class="knob">${dark ? I.moon(16) : I.sun(16)}</span></button>
           </div>
-          ${prefRow('toggle-notifications', state.notifications ? I.bell(22) : I.bellOff(22), 'Notifications', state.notifications ? 'On' : 'Off', 'Ctrl N')}
-          ${prefRow('reminders', I.clock(22), 'Medication reminders', state.reminders ? 'On · 15 min before' : 'Off')}
-          ${prefRow('biometric', I.lock(22), 'Biometric unlock', state.biometric ? 'Enabled' : 'Disabled', 'Ctrl F')}
-          ${prefRow('share', I.share(22), 'Share health data', state.shareData ? 'With care team' : 'Not shared')}
+          ${prefRow('toggle-notifications', state.notifications ? I.bell(22) : I.bellOff(22), 'Notifications', state.notifications ? 'On' : 'Off', 'Ctrl N', state.notifications)}
+          ${prefRow('reminders', I.clock(22), 'Medication reminders', state.reminders ? 'On · 15 min before' : 'Off', '', state.reminders)}
+          ${prefRow('biometric', I.lock(22), 'Biometric unlock', state.biometric ? 'Enabled' : 'Disabled', 'Ctrl F', state.biometric)}
+          ${prefRow('share', I.share(22), 'Share health data', state.shareData ? 'With care team' : 'Not shared', '', state.shareData)}
         </div>
-        <div class="eyebrow">Accessibility</div>
+        <h2 class="eyebrow">Accessibility</h2>
         <div class="card list">
           <div class="row">
             <div class="ico">${I.zoom(22)}</div>
@@ -948,11 +978,11 @@ function account() {
               <button class="zoom-btn" data-act="zoom-in" aria-label="Zoom in" title="Zoom in (Ctrl++)">${I.plus(18)}</button>
             </div>
           </div>
-          ${prefRow('voice', I.mic(22), 'Voice commands', state.voice ? 'Listening' : 'Off', 'Ctrl \\')}
-          ${prefRow('eye', I.eye(22), 'Eye tracking', state.eyeTracking ? 'On' : 'Off', 'Ctrl I')}
-          ${prefRow('mouse-lock', I.crosshair(22), 'Mouse lock-on', state.mouseLock ? 'On · snaps to the nearest control' : 'Off', 'Ctrl O')}
+          ${prefRow('voice', I.mic(22), 'Voice commands', state.voice ? 'Listening' : 'Off', 'Ctrl \\', state.voice)}
+          ${prefRow('eye', I.eye(22), 'Eye tracking', state.eyeTracking ? 'On' : 'Off', 'Ctrl I', state.eyeTracking)}
+          ${prefRow('mouse-lock', I.crosshair(22), 'Mouse lock-on', state.mouseLock ? 'On · snaps to the nearest control' : 'Off', 'Ctrl O', state.mouseLock)}
         </div>
-        <div class="eyebrow">App information</div>
+        <h2 class="eyebrow">App information</h2>
         <div class="card list">
           <div class="row plain">${I.info(22)}<div class="info"><strong>CareConnect version</strong></div><span class="right">1.0.0</span></div>
           <button class="row plain" data-act="privacy">${I.file(22)}<div class="info"><strong>Privacy and data</strong></div><span class="right">Review policy</span></button>
@@ -978,10 +1008,10 @@ function messages() {
             const last = c.messages[c.messages.length - 1]
             return `
             <button class="convo ${c.id === state.activeConvo ? 'active' : ''}" data-convo="${c.id}" ${c.id === state.activeConvo ? 'aria-current="true"' : ''}
-              aria-label="${esc(cp.name)}, ${esc(cp.role)}${c.unread ? ', unread' : ''}, ${esc(c.time)}: ${esc(last.text)}">
-              <div class="avatar av-${c.id}" aria-hidden="true">${c.id}${c.unread ? '<span class="dot"></span>' : ''}</div>
+              aria-label="${c.unread ? 'Unread, ' : ''}${esc(cp.name)}, ${esc(c.time)}, ${esc(cp.role)}: ${esc(last.text)}">
+              <div class="avatar av-${c.id}" aria-hidden="true" data-initials="${c.id}">${c.unread ? '<span class="dot"></span>' : ''}</div>
               <div class="body">
-                <div class="line1"><strong>${esc(cp.name)}</strong><span class="time">${esc(c.time)}</span></div>
+                <div class="line1"><strong>${esc(cp.name)}</strong> <span class="time">${esc(c.time)}</span></div>
                 <div class="role">${esc(cp.role)}</div>
                 <div class="preview">${esc(last.text)}</div>
               </div>
@@ -993,20 +1023,20 @@ function messages() {
         <div class="chat-head">
           ${avatar(p.id)}
           <div class="info"><strong>${esc(p.name)}</strong><div class="role">${esc(p.role)} · ${esc(active.status)}</div></div>
-          <button class="btn btn-primary" data-call="${p.id}">${I.phone()} Call</button>
+          <button class="btn btn-primary" data-call="${p.id}" aria-label="Call ${esc(p.name)}">${I.phone()} Call</button>
         </div>
         <div class="thread" id="thread" tabindex="0" role="log" aria-label="Conversation with ${esc(p.name)}" data-scroll-region>
           ${active.messages.map(m => `
             <div class="bubble-wrap ${m.me ? 'me' : ''}">
-              <div class="bubble">${esc(m.text)}</div>
+              <div class="bubble"><span class="sr-only">${m.me ? 'You' : esc(p.name)}: </span>${esc(m.text)}</div>
               <div class="bubble-time">${esc(m.time)}</div>
             </div>`).join('')}
         </div>
-        <div class="quick">
+        <div class="quick" role="group" aria-label="Quick replies">
           ${['Thank you', 'I took my medications', "I'm feeling well", 'Please call me'].map(q => `<button data-quick="${esc(q)}">${esc(q)}</button>`).join('')}
         </div>
         <form class="composer" id="composer">
-          <input class="input" id="msg-input" placeholder="Type a message" aria-label="Message" autocomplete="off" value="${esc(state.draft)}">
+          <input class="input" id="msg-input" placeholder="Type a message" aria-label="Message ${esc(p.name)}" autocomplete="off" value="${esc(state.draft)}">
           <button class="send" type="submit" aria-label="Send" ${state.draft.trim() ? '' : 'disabled'}>${I.send(22)}</button>
         </form>
       </section>
@@ -1045,10 +1075,10 @@ function schedule() {
       <div class="page-head" style="display:block"><h2>September 2026</h2><p>${total} appointments this week</p></div>
       <div class="view">${I.calendar()} Weekly view</div>
     </div>
-    <div class="days" role="tablist">
+    <div class="days" role="tablist" aria-label="Days this week">
       ${state.week.map((w, i) => `
-        <button class="day ${i === state.selDay ? 'sel' : ''}" role="tab" id="day-tab-${i}" aria-controls="day-panel" aria-label="${esc(w.label)}${state.appts[i] ? `, ${state.appts[i].length} scheduled` : ''}" aria-selected="${i === state.selDay}" data-day="${i}">
-          <span class="dow">${w.dow}</span><span class="num">${w.num}</span><span class="dot ${state.appts[i] ? 'has' : ''}"></span>
+        <button class="day ${i === state.selDay ? 'sel' : ''}" role="tab" id="day-tab-${i}" aria-controls="day-panel" aria-label="${w.dow[0] + w.dow.slice(1).toLowerCase()} ${w.num}${state.appts[i] ? `, ${state.appts[i].length} scheduled` : ''}" aria-selected="${i === state.selDay}" tabindex="${i === state.selDay ? 0 : -1}" data-day="${i}">
+          <span class="dow">${w.dow}</span> <span class="num">${w.num}</span><span class="dot ${state.appts[i] ? 'has' : ''}" aria-hidden="true"></span>
         </button>`).join('')}
     </div>
     <div class="day-title">${state.selDay === 0 ? 'Today' : esc(d.label)} <span class="chip">${list.length} scheduled</span></div>
@@ -1119,6 +1149,8 @@ const SCROLLERS = ['.content', '.auth', '.call', '.history-list']
 
 const isVisible = el => el.isConnected && el.getClientRects().length > 0 && el.checkVisibility({ visibilityProperty: true })
 const focusables = root => [...root.querySelectorAll(FOCUSABLE)].filter(isVisible)
+// What Tab stops on: a tab list or radio group is one stop (its selected option)
+const tabbables = root => focusables(root).filter(el => el.tabIndex >= 0)
 const isTextField = el => !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && TEXT_TYPES.includes(el.type)))
 function focusEl(el) {
   if (el) el.focus({ preventScroll: true })
@@ -1154,10 +1186,11 @@ function candidates(root) {
   })
 }
 
-// Identify a control across re-renders by tag, id, data-* and label
+// Identify a control across re-renders by tag, id and data-*, or by its label
+// when it has no data-* (a label can change with state, e.g. a count in it)
 function focusKey(el) {
   const data = Object.entries(el.dataset).map(([k, v]) => `${k}=${v}`).sort().join('&')
-  return `${el.tagName}#${el.id}|${data}|${el.getAttribute('aria-label') || ''}`
+  return `${el.tagName}#${el.id}|${data}|${data ? '' : el.getAttribute('aria-label') || ''}`
 }
 
 function captureView() {
@@ -1257,7 +1290,9 @@ function scrollParent(el) {
   return null
 }
 const canScroll = (el, sign) => sign > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0
-const scrollStep = (el, sign) => el.scrollBy({ top: sign * el.clientHeight * 0.6, behavior: 'smooth' })
+// Smooth scrolling, unless the user has asked the system for reduced motion
+const scrollBehavior = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+const scrollStep = (el, sign) => el.scrollBy({ top: sign * el.clientHeight * 0.6, behavior: scrollBehavior() })
 
 function moveFocus(dir) {
   const cur = document.activeElement
@@ -1269,12 +1304,12 @@ function moveFocus(dir) {
   const next = bestCandidate(cur, dir)
   if (next) {
     next.focus({ preventScroll: true })
-    next.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+    next.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: scrollBehavior() })
     return
   }
   // Nothing further that way: scroll the page if there is more to see
   if (vertical) {
-    const s = scrollParent(cur) || $('.content')
+    const s = scrollParent(cur) || (cur.closest('.popover') ? $('.popover .history-list') : $('.content'))
     if (s && canScroll(s, sign)) scrollStep(s, sign)
   }
 }
@@ -1333,8 +1368,13 @@ document.addEventListener('click', e => {
 }, true)
 
 // Clicking empty space would drop focus to <body>; put the indicator back
+const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
 document.addEventListener('focusin', e => {
-  if (!$('#toast').contains(e.target)) lastAppFocus = e.target
+  const t = $('#toast')
+  if (t.contains(e.target)) return
+  lastAppFocus = e.target
+  // The toast never covers the control that has focus (Ctrl+U still undoes)
+  if (t.classList.contains('show') && overlaps(t.getBoundingClientRect(), e.target.getBoundingClientRect())) hideToast()
 })
 document.addEventListener('focusout', () => {
   setTimeout(() => {
@@ -1512,12 +1552,42 @@ function handleCtrlShortcut(e) {
 }
 
 function trapTab(e) {
-  const list = focusables($('#modal-root'))
+  const list = tabbables($('#modal-root'))
   if (!list.length) return
   const i = list.indexOf(document.activeElement)
   const next = e.shiftKey ? (i <= 0 ? list.length - 1 : i - 1) : (i + 1) % list.length
   e.preventDefault()
   focusEl(list[next])
+}
+
+// Past the last control Tab comes back to the first (and Shift+Tab the other
+// way), so focus never leaves the page or sticks at either end
+function wrapTab(e) {
+  const list = tabbables(document.body)
+  const i = list.indexOf(document.activeElement)
+  if (!list.length || i !== (e.shiftKey ? 0 : list.length - 1)) return
+  e.preventDefault()
+  list[e.shiftKey ? list.length - 1 : 0].focus()
+}
+
+// Tabbing out of an open panel closes it, so it can't cover the focused control
+function closePanelOnLeave() {
+  const a = document.activeElement
+  if (state.panel && !a?.closest('.tb-anchor')?.querySelector(`[data-act="${state.panel}"]`)) closePanel({ refocus: false })
+}
+
+// Tab lists and radio groups: Left / Right choose the neighbouring option.
+// Past either end the arrow moves focus on as usual.
+function stepInGroup(dir, a) {
+  if (dir !== 'left' && dir !== 'right') return false
+  const group = a?.closest('[role="tablist"], [role="radiogroup"]')
+  if (!group) return false
+  const opts = [...group.querySelectorAll('[role="tab"], [role="radio"]')]
+  const next = opts[opts.indexOf(a) + (dir === 'left' ? -1 : 1)]
+  if (!next) return false
+  focusEl(next)
+  next.click()
+  return true
 }
 
 document.addEventListener('keydown', e => {
@@ -1527,17 +1597,22 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     if (modalOpen()) closeModal()
     else if (state.panel) closePanel()
-    else if (toastEl.contains(a)) hideToast()
+    else if (toastEl.classList.contains('show')) hideToast()
     return
   }
-  if (e.key === 'Tab' && modalOpen()) return trapTab(e)
+  if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    if (modalOpen()) return trapTab(e)
+    wrapTab(e)
+    if (state.panel) setTimeout(closePanelOnLeave)
+    return
+  }
   if (e.ctrlKey && !e.altKey && !e.metaKey) return handleCtrlShortcut(e)
   if (e.ctrlKey || e.altKey || e.metaKey) return
 
   const dir = DIRS[e.key.toLowerCase()]
   if (!dir || !arrowLeavesField(e, a)) return
   e.preventDefault()
-  moveFocus(dir)
+  if (!stepInGroup(dir, a)) moveFocus(dir)
 })
 
 setZoom(store.get('zoom', 1), false)
