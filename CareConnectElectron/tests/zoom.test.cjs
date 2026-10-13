@@ -69,10 +69,10 @@ test('Account page zoom buttons change zoom and show the current level', t => {
   const h = setup(t, {}, { zoomApi: z });
   h.signIn(); h.go('account');
   const label = () => [...h.w.document.querySelectorAll('.row')].find(r => /Zoom/.test(r.textContent)).querySelector('.sub2').textContent;
-  assert.equal(label(), '100%');
-  h.click('[data-act="zoom-in"]'); assert.equal(z.factor, 1.1); assert.equal(label(), '110%');
-  h.click('[data-act="zoom-in"]'); assert.equal(label(), '125%');
-  h.click('[data-act="zoom-out"]'); assert.equal(z.factor, 1.1); assert.equal(label(), '110%');
+  assert.equal(label(), 'Current zoom 100%');
+  h.click('[data-act="zoom-in"]'); assert.equal(z.factor, 1.1); assert.equal(label(), 'Current zoom 110%');
+  h.click('[data-act="zoom-in"]'); assert.equal(label(), 'Current zoom 125%');
+  h.click('[data-act="zoom-out"]'); assert.equal(z.factor, 1.1); assert.equal(label(), 'Current zoom 110%');
 });
 
 test('without the preload bridge, zoom falls back to CSS zoom', t => {

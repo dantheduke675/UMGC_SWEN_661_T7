@@ -204,7 +204,7 @@ describe('notifications', () => {
 describe('messages', () => {
   test('unread count falls as conversations are opened', () => {
     const h = setupApp(); h.signIn();
-    expect(h.q('.nav [data-go="messages"]').textContent).toMatch('Messages (1 unread)'); // "unread" is screen-reader only
+    expect(h.q('.nav [data-go="messages"]').getAttribute('aria-label')).toBe('Messages, 1 unread'); // the screen shows "Messages (1)"
     h.click('[data-chat="AJ"]');
     expect(h.q('.unread-count').textContent).toBe('0 unread conversations');
     h.read(`state.convos[1].unread = true; state.convos[2].unread = true; render()`);

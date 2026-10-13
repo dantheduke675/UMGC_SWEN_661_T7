@@ -26,7 +26,7 @@ test('undo toast matches the design: message, Undo, dismiss', () => {
   h.click('[data-med-take="2"]');
   expect(h.q('.toast-msg').textContent).toBe('Marked as taken');
   expect(h.q('.toast-undo').textContent).toBe('Undo');
-  expect(h.q('.toast-close').getAttribute('aria-label')).toBe('Dismiss');
+  expect(h.q('.toast-close').getAttribute('aria-label')).toBe('Dismiss message');
   h.click('.toast-close'); expect(h.toastShown()).toBe(false);
 });
 
