@@ -420,7 +420,9 @@ describe('keyboard rules', () => {
     const h = setupApp();
     const d = h.w.document.createElement('div');
     d.innerHTML = h.read('kbd')('↑ ↓ / W S');
-    expect([...d.querySelectorAll('kbd')].map(k => k.textContent)).toEqual(['↑', '↓', 'W', 'S']);
+    // Arrow keys are icons, named for screen readers
+    expect([...d.querySelectorAll('kbd')].map(k => k.textContent)).toEqual(['Up arrow', 'Down arrow', 'W', 'S']);
+    expect([...d.querySelectorAll('kbd')].slice(0, 2).every(k => k.querySelector('svg[aria-hidden="true"]') && k.querySelector('.sr-only'))).toBe(true);
     expect(d.querySelectorAll('.or').length).toBe(1);
     d.innerHTML = h.read('kbd')('Ctrl \\');
     expect([...d.querySelectorAll('kbd')].map(k => k.textContent)).toEqual(['Ctrl', '\\']);

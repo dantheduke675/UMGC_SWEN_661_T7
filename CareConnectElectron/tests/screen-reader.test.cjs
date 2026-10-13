@@ -108,6 +108,7 @@ test('sign-in errors are announced, mark the field and move focus to it', t => {
   assert.equal(err.hidden, false); assert.match(err.textContent, /valid email/);
   assert.equal(h.q('#si-email').getAttribute('aria-invalid'), 'true');
   assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint si-err', 'Field is described by its hint and the message');
+  assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint si-err', 'Field is described by its hint, then the message');
   assert.equal(h.focused(), h.q('#si-email'), 'Focus moves to the field to fix');
 
   h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
@@ -211,8 +212,8 @@ test('focusable cards read as named groups', t => {
 test('schedule days are tabs that name the date and count, controlling one panel', t => {
   const h = setup(t); h.signIn(); h.go('schedule');
   const tabs = [...h.w.document.querySelectorAll('[role="tab"]')];
-  assert.equal(accName(tabs[0]), 'Monday, Sep 28, 1 scheduled');
-  assert.equal(accName(tabs[3]), 'Thursday, Oct 1', 'No count on an empty day');
+  assert.equal(accName(tabs[0]), 'Mon 28, 1 scheduled');
+  assert.equal(accName(tabs[3]), 'Thu 1', 'No count on an empty day');
   const panel = h.q('[role="tabpanel"]');
   assert.equal(panel.getAttribute('aria-labelledby'), 'day-tab-0');
   assert.ok(tabs.every(tab => tab.getAttribute('aria-controls') === panel.id));
@@ -228,7 +229,7 @@ test('messages: unread state, the open conversation and the thread are announced
   h.go('messages');
   h.read('state.convos[1].unread = true; render()');
   const sc = h.q('[data-convo="SC"]');
-  assert.equal(accName(sc), 'Dr. Sarah Chen, Physician, unread, Monday: Thank you, Dr. Chen.');
+  assert.equal(accName(sc), 'Unread, Dr. Sarah Chen, Monday, Physician: Thank you, Dr. Chen.');
   assert.equal(h.q('[data-convo="AJ"]').getAttribute('aria-current'), 'true');
   assert.equal(sc.hasAttribute('aria-current'), false);
   assert.equal(h.q('#thread').getAttribute('role'), 'log');
@@ -427,4 +428,148 @@ test('top bar buttons say they open a panel, and what they are when off', t => {
   h.ctrl('n'); h.click('[data-act="notes"]');
   assert.equal(h.q('.popover [role="list"]').getAttribute('aria-label'), '3 notifications');
   assert.equal(h.w.document.querySelectorAll('.popover [role="listitem"]').length, 3);
+});
+
+// ---------- Structure, labels and state ----------
+
+test('every screen has exactly one top-level heading', t => {
+  const h = setup(t);
+  for (const view of ['landing', 'signin', 'create', 'biometrics', 'facescan', 'facesuccess']) {
+    h.read(`state.screen = ${JSON.stringify(view)}; render({ fresh: true })`);
+    assert.equal(h.w.document.querySelectorAll('h1').length, 1, `${view}: one h1`);
+  }
+  h.signIn();
+  for (const view of ['today', 'medications', 'messages', 'schedule', 'symptoms', 'account']) {
+    h.go(view); assert.equal(h.w.document.querySelectorAll('h1').length, 1, `${view}: one h1`);
+  }
+  h.go('messages'); h.click('[data-call="AJ"]');
+  assert.equal(h.q('h1').textContent, 'Aunt Joyce', 'call screen');
+});
+
+test('repeated buttons say what they act on', t => {
+  const h = setup(t); h.signIn();
+  assert.equal(h.q('[data-med-take="2"]').getAttribute('aria-label'), 'I took this: Ropivacaine 10 mg, 8:00 PM');
+  assert.equal(h.q('[data-med-miss="3"]').getAttribute('aria-label'), 'I missed this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM');
+  h.go('messages');
+  assert.equal(h.q('[data-call="AJ"]').getAttribute('aria-label'), 'Call Aunt Joyce');
+  assert.equal(h.q('#msg-input').getAttribute('aria-label'), 'Message Aunt Joyce');
+  assert.equal(h.q('.quick').getAttribute('aria-label'), 'Quick replies');
+  const said = [...h.w.document.querySelectorAll('.bubble .sr-only')].map(s => s.textContent);
+  assert.deepEqual(said, ['Aunt Joyce: ', 'You: ', 'Aunt Joyce: '], 'Each message says who sent it');
+  h.go('schedule'); assert.equal(h.q('[role="tablist"]').getAttribute('aria-label'), 'Days this week');
+});
+
+test('avatars are hidden; the name next to them is read instead', t => {
+  const h = setup(t); h.signIn();
+  for (const view of ['today', 'messages', 'account']) {
+    h.go(view);
+    for (const av of h.w.document.querySelectorAll('.avatar')) assert.equal(av.getAttribute('aria-hidden'), 'true', `${view}: ${av.outerHTML}`);
+  }
+});
+
+test('sidebar toggle reports expanded / collapsed; collapsed links keep their names', t => {
+  const h = setup(t); h.signIn();
+  const btn = () => h.q('[data-act="collapse"]');
+  assert.equal(btn().getAttribute('aria-expanded'), 'true');
+  assert.equal(btn().getAttribute('aria-controls'), 'sidebar');
+  h.click('[data-act="collapse"]');
+  assert.equal(btn().getAttribute('aria-expanded'), 'false');
+  assert.equal(h.q('.nav [data-go="medications"] .label').textContent, 'Medications', 'Label is still in the button');
+  assert.equal(h.q('nav').getAttribute('aria-label'), 'Main');
+});
+
+test('Account on/off rows are switches; shortcuts are exposed with aria-keyshortcuts', t => {
+  const h = setup(t); h.signIn(); h.go('account');
+  const row = act => h.q(`.list [data-act="${act}"]`);
+  for (const act of ['toggle-notifications', 'reminders', 'biometric', 'share', 'voice', 'eye', 'mouse-lock']) {
+    assert.equal(row(act).getAttribute('role'), 'switch', act);
+  }
+  assert.equal(row('biometric').getAttribute('aria-checked'), 'true');
+  h.click('.list [data-act="biometric"]');
+  assert.equal(row('biometric').getAttribute('aria-checked'), 'false', 'State follows the setting');
+  assert.equal(row('biometric').getAttribute('aria-keyshortcuts'), 'Control+F');
+  assert.equal(row('biometric').querySelector('.kbds').getAttribute('aria-hidden'), 'true', 'Keycaps are not read twice');
+  assert.equal(row('privacy').hasAttribute('role'), false, 'Plain actions stay buttons');
+  assert.equal(h.q('.theme-switch').getAttribute('aria-keyshortcuts'), 'Control+L');
+  assert.equal(h.q('.topbar [data-act="sos"]').getAttribute('aria-keyshortcuts'), 'Control+S');
+});
+
+test('call toggles keep one label and report their state with aria-pressed', t => {
+  const h = setup(t); h.signIn(); h.go('messages'); h.click('[data-call="AJ"]');
+  h.click('[data-act="mute"]');
+  assert.match(h.q('[data-act="mute"]').textContent, /^\s*Mute\s*$/);
+  assert.equal(h.q('[data-act="mute"]').getAttribute('aria-pressed'), 'true');
+  h.click('[data-act="speaker"]');
+  assert.match(h.q('[data-act="speaker"]').textContent, /^\s*Speaker\s*$/);
+  assert.equal(h.q('.call .back').getAttribute('aria-label'), 'End call and go back');
+});
+
+test('the page behind a dialog is inert until the dialog closes', t => {
+  const h = setup(t); h.signIn();
+  h.click('[data-act="sos"]');
+  assert.equal(h.q('#app').hasAttribute('inert'), true);
+  assert.equal(h.q('#toast').hasAttribute('inert'), true);
+  h.key('Escape');
+  assert.equal(h.q('#app').hasAttribute('inert'), false);
+  h.go('symptoms'); h.click('[data-act="log-symptom"]');
+  assert.equal(h.q('#app').hasAttribute('inert'), true);
+  assert.equal(h.q('#sym-form').noValidate, true, 'Errors come from the app, not the browser bubble');
+  h.input('#sym-name', 'Cough'); h.submit('#sym-form');
+  assert.equal(h.q('#app').hasAttribute('inert'), false);
+});
+
+test('form fields are marked required and described by their hints', t => {
+  const h = setup(t); h.go('signin');
+  assert.equal(h.q('#si-email').getAttribute('aria-required'), 'true');
+  assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint');
+  h.input('#si-email', 'bad'); h.submit('#signin-form');
+  h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
+  assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint', 'Hint stays once the error moves on');
+  h.go('create');
+  assert.equal(h.q('#ca-pass').getAttribute('aria-describedby'), 'ca-pass-hint');
+});
+
+// ---------- Colour contrast (WCAG 2.1 AA) ----------
+
+const CSS = require('node:fs').readFileSync(require('node:path').resolve(__dirname, '../src/styles.css'), 'utf8');
+function tokens(selector) {
+  const block = CSS.slice(CSS.indexOf(selector + ' {')).match(/\{([^}]*)\}/)[1];
+  return Object.fromEntries([...block.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/gi)].map(m => [m[1], m[2]]));
+}
+const THEMES = { light: tokens('[data-theme="light"]'), dark: tokens('[data-theme="dark"]') };
+function contrast(a, b) {
+  const lum = hex => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test('text colours meet 4.5:1 on every surface they are used on, in both themes', t => {
+  const TEXT = [
+    ['text', 'bg'], ['text', 'surface'], ['text', 'surface-2'],
+    ['text-2', 'bg'], ['text-2', 'surface'], ['text-2', 'surface-2'], ['text-2', 'sidebar'], ['text-2', 'input'],
+    ['text-3', 'bg'], ['text-3', 'surface'], ['text-3', 'surface-2'], ['text-3', 'input'],
+    ['primary-soft-text', 'primary-soft'], ['primary-soft-text', 'bg'], ['primary-soft-text', 'surface'],
+    ['on-primary', 'primary'], ['on-primary', 'primary-hover'], ['on-primary', 'danger-fill'],
+    ['danger', 'bg'], ['danger', 'surface'], ['danger', 'sidebar'], ['danger', 'danger-soft'],
+    ['warn', 'warn-soft'], ['success', 'success-soft'], ['indigo-text', 'indigo-soft'], ['on-primary', 'indigo']
+  ];
+  for (const [theme, c] of Object.entries(THEMES)) {
+    for (const [fg, bg] of TEXT) {
+      const r = contrast(c[fg], c[bg]);
+      assert.ok(r >= 4.5, `${theme}: --${fg} ${c[fg]} on --${bg} ${c[bg]} is ${r.toFixed(2)}:1`);
+    }
+  }
+});
+
+test('field edges, switches and the focus ring meet 3:1 in both themes', t => {
+  for (const [theme, c] of Object.entries(THEMES)) {
+    for (const bg of ['bg', 'surface', 'sidebar']) {
+      const r = contrast(c['control-border'], c[bg]);
+      assert.ok(r >= 3, `${theme}: --control-border on --${bg} is ${r.toFixed(2)}:1`);
+    }
+    assert.ok(contrast(c.focus, c.bg) >= 3, `${theme}: focus ring`);
+  }
 });
