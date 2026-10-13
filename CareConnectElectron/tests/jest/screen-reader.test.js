@@ -450,8 +450,8 @@ test('repeated buttons say what they act on', () => {
   expect(h.q('[data-med-miss="3"]').getAttribute('aria-label')).toBe('I missed this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM');
   h.go('messages');
   expect(h.q('[data-call="AJ"]').getAttribute('aria-label')).toBe('Call Aunt Joyce');
-  expect(h.q('#msg-input').getAttribute('aria-label')).toBe('Message Aunt Joyce');
-  expect(h.q('.quick').getAttribute('aria-label')).toBe('Quick replies');
+  expect(h.q('#msg-input').getAttribute('aria-label')).toBe('Message to Aunt Joyce');
+  expect(h.q('.quick').getAttribute('aria-label')).toBe('Quick replies, each one sends right away');
   const said = [...h.w.document.querySelectorAll('.bubble .sr-only')].map(s => s.textContent);
   expect(said).toEqual(['Aunt Joyce: ', 'You: ', 'Aunt Joyce: ']);
   h.go('schedule'); expect(h.q('[role="tablist"]').getAttribute('aria-label')).toBe('Days this week');

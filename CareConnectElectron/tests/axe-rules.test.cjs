@@ -80,7 +80,9 @@ test('the toast, with its Undo and close buttons, is a named region', t => {
   assert.equal(toast.getAttribute('role'), 'region');
   assert.equal(toast.getAttribute('aria-label'), 'Notification');
   assert.ok(toast.querySelector('[data-act="toast-undo"]'), 'Undo is inside the region');
-  assert.equal(toast.querySelector('[role="status"]').getAttribute('aria-live'), 'polite', 'the message is still announced');
+  // The message is announced from #sr-status, which stays rendered while the toast is hidden
+  assert.equal(h.q('#sr-status').getAttribute('aria-live'), 'polite', 'the message is still announced');
+  assert.equal(toast.contains(h.q('#sr-status')), false);
 });
 
 // ---------- 2.5.3 Label in Name (axe: label-content-name-mismatch) ----------
@@ -155,14 +157,15 @@ test('no button shows only symbols or emoji: its text must be words, or an icon'
   }
 });
 
-test('arrow keycaps are icons with a spoken name', t => {
+test('arrow keycaps are icons; the shortcut is spoken in words', t => {
   const h = setup(t); h.signIn(); h.go('account');
   const arrows = [...h.w.document.querySelectorAll('.shortcuts kbd')].filter(k => k.querySelector('svg'));
   assert.equal(arrows.length, 6, '↑ ↓ ← → in the first row, ← → in the third');
   for (const k of arrows) {
     assert.equal(k.querySelector('svg').getAttribute('aria-hidden'), 'true');
-    assert.match(k.querySelector('.sr-only').textContent, /^(Up|Down|Left|Right) arrow$/);
-    assert.doesNotMatch(k.textContent, /[↑↓←→]/, 'no bare arrow symbol');
+    assert.equal(k.textContent, '', 'no bare arrow symbol');
+    assert.equal(k.closest('.kbds').getAttribute('aria-hidden'), 'true', 'keycaps are not read one by one');
+    assert.match(k.closest('.sc-row').querySelector('.sr-only').textContent, /arrow keys/);
   }
 });
 
@@ -185,6 +188,24 @@ test('text is never laid over a gradient, so its contrast can be measured', () =
   assert.doesNotMatch(CSS, /gradient\(/);
   const call = CSS.match(/^\.call \{([^}]*)\}/m)[1];
   assert.match(call, /background:\s*#[0-9a-f]{3,6};/i, 'call screen has a solid background');
+});
+
+// ---------- 4.1.2: aria-keyshortcuts ----------
+
+// The attribute takes key values ("\", "-"), joined by "+"; only the plus key
+// itself is written "Plus". Spoken names ("Backslash") belong in visible or
+// screen-reader text, not in the attribute.
+test('aria-keyshortcuts use key values, so assistive tech can match the keys', t => {
+  const h = setup(t); h.signIn(); h.go('account');
+  const keys = sel => h.q(sel).getAttribute('aria-keyshortcuts');
+  assert.equal(keys('.row[data-act="voice"]'), 'Control+\\');
+  assert.equal(keys('.topbar [data-act="voice"]'), 'Control+\\', 'same value everywhere');
+  assert.equal(keys('[data-act="zoom-out"]'), 'Control+-');
+  assert.equal(keys('[data-act="zoom-in"]'), 'Control+Plus');
+  assert.equal(keys('.row[data-act="toggle-notifications"]'), 'Control+N');
+  for (const el of h.w.document.querySelectorAll('[aria-keyshortcuts]')) {
+    assert.match(el.getAttribute('aria-keyshortcuts'), /^(Control\+)?(.|Plus|Escape)$/, el.outerHTML.slice(0, 90));
+  }
 });
 
 // ---------- Windows High Contrast ----------

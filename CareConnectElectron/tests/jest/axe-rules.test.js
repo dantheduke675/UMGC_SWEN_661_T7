@@ -84,7 +84,9 @@ describe('landmarks (axe: landmark-one-main, region)', () => {
     expect(toast.getAttribute('role')).toBe('region');
     expect(toast.getAttribute('aria-label')).toBe('Notification');
     expect(toast.querySelector('[data-act="toast-undo"]')).toBeTruthy();
-    expect(toast.querySelector('[role="status"]').getAttribute('aria-live')).toBe('polite');
+    // The message is announced from #sr-status, which stays rendered while the toast is hidden
+    expect(h.q('#sr-status').getAttribute('aria-live')).toBe('polite');
+    expect(toast.contains(h.q('#sr-status'))).toBe(false);
   });
 });
 
@@ -165,14 +167,15 @@ describe('contrast: content axe can measure', () => {
     expect(problems).toEqual([]);
   });
 
-  test('arrow keycaps are icons with a spoken name', () => {
+  test('arrow keycaps are icons; the shortcut is spoken in words', () => {
     const h = setupApp(); h.signIn(); h.go('account');
     const arrows = [...h.w.document.querySelectorAll('.shortcuts kbd')].filter(k => k.querySelector('svg'));
     expect(arrows).toHaveLength(6); // ↑ ↓ ← → in the first row, ← → in the third
     for (const k of arrows) {
       expect(k.querySelector('svg').getAttribute('aria-hidden')).toBe('true');
-      expect(k.querySelector('.sr-only').textContent).toMatch(/^(Up|Down|Left|Right) arrow$/);
-      expect(k.textContent).not.toMatch(/[↑↓←→]/);
+      expect(k.textContent).toBe('');
+      expect(k.closest('.kbds').getAttribute('aria-hidden')).toBe('true');
+      expect(k.closest('.sc-row').querySelector('.sr-only').textContent).toMatch(/arrow keys/);
     }
   });
 
@@ -195,6 +198,24 @@ describe('contrast: content axe can measure', () => {
   test('text is never laid over a gradient, so its contrast can be measured', () => {
     expect(CSS).not.toMatch(/gradient\(/);
     expect(CSS.match(/^\.call \{([^}]*)\}/m)[1]).toMatch(/background:\s*#[0-9a-f]{3,6};/i);
+  });
+});
+
+describe('aria-keyshortcuts', () => {
+  // The attribute takes key values ("\", "-"), joined by "+"; only the plus key
+  // itself is written "Plus". Spoken names ("Backslash") belong in visible or
+  // screen-reader text, not in the attribute.
+  test('aria-keyshortcuts use key values, so assistive tech can match the keys', () => {
+    const h = setupApp(); h.signIn(); h.go('account');
+    const keys = sel => h.q(sel).getAttribute('aria-keyshortcuts');
+    expect(keys('.row[data-act="voice"]')).toBe('Control+\\');
+    expect(keys('.topbar [data-act="voice"]')).toBe('Control+\\');
+    expect(keys('[data-act="zoom-out"]')).toBe('Control+-');
+    expect(keys('[data-act="zoom-in"]')).toBe('Control+Plus');
+    expect(keys('.row[data-act="toggle-notifications"]')).toBe('Control+N');
+    for (const el of h.w.document.querySelectorAll('[aria-keyshortcuts]')) {
+      expect(el.getAttribute('aria-keyshortcuts')).toMatch(/^(Control\+)?(.|Plus|Escape)$/);
+    }
   });
 });
 
