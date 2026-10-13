@@ -106,7 +106,7 @@ test('sign-in errors are announced, mark the field and move focus to it', () => 
   h.input('#si-email', 'bad'); h.submit('#signin-form');
   expect(err.hidden).toBe(false); expect(err.textContent).toMatch(/valid email/);
   expect(h.q('#si-email').getAttribute('aria-invalid')).toBe('true');
-  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-err');
+  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-email-hint si-err');
   expect(h.focused()).toBe(h.q('#si-email'));
 
   h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
@@ -210,8 +210,8 @@ test('focusable cards read as named groups', () => {
 test('schedule days are tabs that name the date and count, controlling one panel', () => {
   const h = setupApp(); h.signIn(); h.go('schedule');
   const tabs = [...h.w.document.querySelectorAll('[role="tab"]')];
-  expect(accName(tabs[0])).toBe('Monday, Sep 28, 1 scheduled');
-  expect(accName(tabs[3])).toBe('Thursday, Oct 1');
+  expect(accName(tabs[0])).toBe('Mon 28, 1 scheduled');
+  expect(accName(tabs[3])).toBe('Thu 1');
   const panel = h.q('[role="tabpanel"]');
   expect(panel.getAttribute('aria-labelledby')).toBe('day-tab-0');
   expect(tabs.every(tab => tab.getAttribute('aria-controls') === panel.id)).toBeTruthy();
@@ -227,7 +227,7 @@ test('messages: unread state, the open conversation and the thread are announced
   h.go('messages');
   h.read('state.convos[1].unread = true; render()');
   const sc = h.q('[data-convo="SC"]');
-  expect(accName(sc)).toBe('Dr. Sarah Chen, Physician, unread, Monday: Thank you, Dr. Chen.');
+  expect(accName(sc)).toBe('Unread, Dr. Sarah Chen, Monday, Physician: Thank you, Dr. Chen.');
   expect(h.q('[data-convo="AJ"]').getAttribute('aria-current')).toBe('true');
   expect(sc.hasAttribute('aria-current')).toBe(false);
   expect(h.q('#thread').getAttribute('role')).toBe('log');
@@ -263,4 +263,148 @@ test('toast messages are read from one persistent live region, with an undo hint
   expect(h.q('#toast [role="status"]')).toBe(live);
   expect(textOf(live)).toMatch(/^Undone: Marked Ropivacaine \(8:00 PM\) as taken$/);
   expect(live.querySelector('button')).toBe(null);
+});
+
+// ---------- Structure, labels and state ----------
+
+test('every screen has exactly one top-level heading', () => {
+  const h = setupApp();
+  for (const view of ['landing', 'signin', 'create', 'biometrics', 'facescan', 'facesuccess']) {
+    h.read(`state.screen = ${JSON.stringify(view)}; render({ fresh: true })`);
+    expect(h.w.document.querySelectorAll('h1').length).toBe(1);
+  }
+  h.signIn();
+  for (const view of ['today', 'medications', 'messages', 'schedule', 'symptoms', 'account']) {
+    h.go(view); expect(h.w.document.querySelectorAll('h1').length).toBe(1);
+  }
+  h.go('messages'); h.click('[data-call="AJ"]');
+  expect(h.q('h1').textContent).toBe('Aunt Joyce');
+});
+
+test('repeated buttons say what they act on', () => {
+  const h = setupApp(); h.signIn();
+  expect(h.q('[data-med-take="2"]').getAttribute('aria-label')).toBe('I took this: Ropivacaine 10 mg, 8:00 PM');
+  expect(h.q('[data-med-miss="3"]').getAttribute('aria-label')).toBe('I missed this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM');
+  h.go('messages');
+  expect(h.q('[data-call="AJ"]').getAttribute('aria-label')).toBe('Call Aunt Joyce');
+  expect(h.q('#msg-input').getAttribute('aria-label')).toBe('Message Aunt Joyce');
+  expect(h.q('.quick').getAttribute('aria-label')).toBe('Quick replies');
+  const said = [...h.w.document.querySelectorAll('.bubble .sr-only')].map(s => s.textContent);
+  expect(said).toEqual(['Aunt Joyce: ', 'You: ', 'Aunt Joyce: ']);
+  h.go('schedule'); expect(h.q('[role="tablist"]').getAttribute('aria-label')).toBe('Days this week');
+});
+
+test('avatars are hidden; the name next to them is read instead', () => {
+  const h = setupApp(); h.signIn();
+  for (const view of ['today', 'messages', 'account']) {
+    h.go(view);
+    for (const av of h.w.document.querySelectorAll('.avatar')) expect(av.getAttribute('aria-hidden')).toBe('true');
+  }
+});
+
+test('sidebar toggle reports expanded / collapsed; collapsed links keep their names', () => {
+  const h = setupApp(); h.signIn();
+  const btn = () => h.q('[data-act="collapse"]');
+  expect(btn().getAttribute('aria-expanded')).toBe('true');
+  expect(btn().getAttribute('aria-controls')).toBe('sidebar');
+  h.click('[data-act="collapse"]');
+  expect(btn().getAttribute('aria-expanded')).toBe('false');
+  expect(h.q('.nav [data-go="medications"] .label').textContent).toBe('Medications');
+  expect(h.q('nav').getAttribute('aria-label')).toBe('Main');
+});
+
+test('Account on/off rows are switches; shortcuts are exposed with aria-keyshortcuts', () => {
+  const h = setupApp(); h.signIn(); h.go('account');
+  const row = act => h.q(`.list [data-act="${act}"]`);
+  for (const act of ['toggle-notifications', 'reminders', 'biometric', 'share', 'voice', 'eye', 'mouse-lock']) {
+    expect(row(act).getAttribute('role')).toBe('switch');
+  }
+  expect(row('biometric').getAttribute('aria-checked')).toBe('true');
+  h.click('.list [data-act="biometric"]');
+  expect(row('biometric').getAttribute('aria-checked')).toBe('false');
+  expect(row('biometric').getAttribute('aria-keyshortcuts')).toBe('Control+F');
+  expect(row('biometric').querySelector('.kbds').getAttribute('aria-hidden')).toBe('true');
+  expect(row('privacy').hasAttribute('role')).toBe(false);
+  expect(h.q('.theme-switch').getAttribute('aria-keyshortcuts')).toBe('Control+L');
+  expect(h.q('.topbar [data-act="sos"]').getAttribute('aria-keyshortcuts')).toBe('Control+S');
+});
+
+test('call toggles keep one label and report their state with aria-pressed', () => {
+  const h = setupApp(); h.signIn(); h.go('messages'); h.click('[data-call="AJ"]');
+  h.click('[data-act="mute"]');
+  expect(h.q('[data-act="mute"]').textContent).toMatch(/^\s*Mute\s*$/);
+  expect(h.q('[data-act="mute"]').getAttribute('aria-pressed')).toBe('true');
+  h.click('[data-act="speaker"]');
+  expect(h.q('[data-act="speaker"]').textContent).toMatch(/^\s*Speaker\s*$/);
+  expect(h.q('.call .back').getAttribute('aria-label')).toBe('End call and go back');
+});
+
+test('the page behind a dialog is inert until the dialog closes', () => {
+  const h = setupApp(); h.signIn();
+  h.click('[data-act="sos"]');
+  expect(h.q('#app').hasAttribute('inert')).toBe(true);
+  expect(h.q('#toast').hasAttribute('inert')).toBe(true);
+  h.key('Escape');
+  expect(h.q('#app').hasAttribute('inert')).toBe(false);
+  h.go('symptoms'); h.click('[data-act="log-symptom"]');
+  expect(h.q('#app').hasAttribute('inert')).toBe(true);
+  expect(h.q('#sym-form').noValidate).toBe(true);
+  h.input('#sym-name', 'Cough'); h.submit('#sym-form');
+  expect(h.q('#app').hasAttribute('inert')).toBe(false);
+});
+
+test('form fields are marked required and described by their hints', () => {
+  const h = setupApp(); h.go('signin');
+  expect(h.q('#si-email').getAttribute('aria-required')).toBe('true');
+  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-email-hint');
+  h.input('#si-email', 'bad'); h.submit('#signin-form');
+  h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
+  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-email-hint');
+  h.go('create');
+  expect(h.q('#ca-pass').getAttribute('aria-describedby')).toBe('ca-pass-hint');
+});
+
+// ---------- Colour contrast (WCAG 2.1 AA) ----------
+
+const CSS = require('node:fs').readFileSync(require('node:path').resolve(__dirname, '../../src/styles.css'), 'utf8');
+function tokens(selector) {
+  const block = CSS.slice(CSS.indexOf(selector + ' {')).match(/\{([^}]*)\}/)[1];
+  return Object.fromEntries([...block.matchAll(/--([\w-]+):\s*(#[0-9a-f]{6})/gi)].map(m => [m[1], m[2]]));
+}
+const THEMES = { light: tokens('[data-theme="light"]'), dark: tokens('[data-theme="dark"]') };
+function contrast(a, b) {
+  const lum = hex => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test('text colours meet 4.5:1 on every surface they are used on, in both themes', () => {
+  const TEXT = [
+    ['text', 'bg'], ['text', 'surface'], ['text', 'surface-2'],
+    ['text-2', 'bg'], ['text-2', 'surface'], ['text-2', 'surface-2'], ['text-2', 'sidebar'], ['text-2', 'input'],
+    ['text-3', 'bg'], ['text-3', 'surface'], ['text-3', 'surface-2'], ['text-3', 'input'],
+    ['primary-soft-text', 'primary-soft'], ['primary-soft-text', 'bg'], ['primary-soft-text', 'surface'],
+    ['on-primary', 'primary'], ['on-primary', 'primary-hover'], ['on-primary', 'danger-fill'],
+    ['danger', 'bg'], ['danger', 'surface'], ['danger', 'sidebar'], ['danger', 'danger-soft'],
+    ['warn', 'warn-soft'], ['success', 'success-soft'], ['indigo-text', 'indigo-soft'], ['on-primary', 'indigo']
+  ];
+  for (const [theme, c] of Object.entries(THEMES)) {
+    for (const [fg, bg] of TEXT) {
+      const r = contrast(c[fg], c[bg]);
+      expect(r >= 4.5).toBeTruthy();
+    }
+  }
+});
+
+test('field edges, switches and the focus ring meet 3:1 in both themes', () => {
+  for (const [theme, c] of Object.entries(THEMES)) {
+    for (const bg of ['bg', 'surface', 'sidebar']) {
+      const r = contrast(c['control-border'], c[bg]);
+      expect(r >= 3).toBeTruthy();
+    }
+    expect(contrast(c.focus, c.bg) >= 3).toBeTruthy();
+  }
 });
