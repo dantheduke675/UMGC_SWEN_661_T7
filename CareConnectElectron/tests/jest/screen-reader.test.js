@@ -106,7 +106,7 @@ test('sign-in errors are announced, mark the field and move focus to it', () => 
   h.input('#si-email', 'bad'); h.submit('#signin-form');
   expect(err.hidden).toBe(false); expect(err.textContent).toMatch(/valid email/);
   expect(h.q('#si-email').getAttribute('aria-invalid')).toBe('true');
-  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-err');
+  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-email-hint si-err');
   expect(h.focused()).toBe(h.q('#si-email'));
 
   h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
@@ -222,8 +222,8 @@ test('schedule days are tabs that name the date and count, controlling one panel
 
 test('messages: unread state, the open conversation and the thread are announced', () => {
   const h = setupApp(); h.signIn();
-  expect(accName(h.q('.nav [data-go="messages"]'))).toBe('Messages (1 unread)');
-  expect(h.q('.nav [data-go="messages"] .label').firstChild.textContent).toBe('Messages (1');
+  expect(accName(h.q('.nav [data-go="messages"]'))).toBe('Messages, 1 unread');
+  expect(h.q('.nav [data-go="messages"] .label').textContent).toBe('Messages (1)');
   h.go('messages');
   h.read('state.convos[1].unread = true; render()');
   const sc = h.q('[data-convo="SC"]');
@@ -251,16 +251,179 @@ test('the call timer is exposed as a timer, not re-read every second', () => {
 
 // ---------- Toasts ----------
 
-test('toast messages are read from one persistent live region, with an undo hint', () => {
+// NVDA heard none of the toasts while the live region sat inside the toast:
+// the toast is visibility:hidden between messages, and text added to a hidden
+// region is not announced. The region now lives outside it, always rendered.
+test('toast messages are read from one always-rendered live region, with an undo hint', () => {
   const h = setupApp();
-  const live = h.q('#toast [role="status"]');
-  expect(live).toBeTruthy(); expect(live.getAttribute('aria-live')).toBe('polite');
+  const live = h.q('#sr-status');
+  expect(live.getAttribute('role')).toBe('status'); expect(live.getAttribute('aria-live')).toBe('polite');
+  expect(live.classList.contains('sr-only')).toBeTruthy();
+  expect(h.q('#toast').contains(live)).toBe(false);
   h.signIn(); h.click('[data-med-take="2"]');
-  expect(h.q('#toast [role="status"]')).toBe(live);
-  expect(textOf(live)).toBe('Marked as taken Press Control U to undo.');
+  expect(live.textContent).toBe('');
+  h.tick(250);
+  expect(h.q('#sr-status')).toBe(live);
+  expect(live.textContent).toBe('Marked as taken. Press Control U to undo.');
   expect(h.q('.toast-msg').textContent).toBe('Marked as taken');
-  h.click('.toast-undo');
-  expect(h.q('#toast [role="status"]')).toBe(live);
-  expect(textOf(live)).toMatch(/^Undone: Marked Ropivacaine \(8:00 PM\) as taken$/);
-  expect(live.querySelector('button')).toBe(null);
+  expect(h.q('.toast-msg').getAttribute('aria-hidden')).toBe('true');
+  expect(accName(h.q('.toast-undo'))).toBe('Undo');
+  expect(h.q('.toast-undo').getAttribute('aria-describedby')).toBe('toast-msg');
+  h.click('.toast-undo'); h.tick(250);
+  expect(live.textContent).toMatch(/^Undone: Marked Ropivacaine \(8:00 PM\) as taken$/);
+});
+
+test('the same message twice is announced twice', () => {
+  const h = setupApp(); h.signIn();
+  h.click('[data-med-take="2"]'); h.tick(250);
+  h.click('[data-med-take="3"]');
+  expect(h.q('#sr-status').textContent).toBe('');
+  h.tick(250);
+  expect(h.q('#sr-status').textContent).toBe('Marked as taken. Press Control U to undo.');
+});
+
+test('announcements are cleared once read, so they are not re-read later', () => {
+  const h = setupApp(); h.signIn(); h.go('medications');
+  h.click('[data-med-take="2"]'); h.tick(250);
+  expect(h.q('#sr-status').textContent).not.toBe(''); expect(h.q('#sr-page').textContent).toBe('Medications page');
+  h.tick(5000);
+  expect(h.q('#sr-status').textContent).toBe('');
+  expect(h.q('#sr-page').textContent).toBe('');
+});
+
+// ---------- Fixes from the NVDA pass ----------
+
+test('every screen has one level-1 heading and a main landmark', () => {
+  const h = setupApp();
+  for (const view of everyView(h)) {
+    if (/panel|dialog/.test(view)) continue;
+    const d = h.w.document;
+    expect(d.querySelectorAll('#app h1').length).toBe(1);
+    expect(d.querySelectorAll('#app main').length).toBe(1);
+  }
+});
+
+test('medication buttons name the dose they act on', () => {
+  const h = setupApp(); h.signIn();
+  expect(accName(h.q('[data-med-take="2"]'))).toBe('I took this: Ropivacaine 10 mg, 8:00 PM');
+  expect(accName(h.q('[data-med-miss="3"]'))).toBe('I missed this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM');
+  const names = [...h.w.document.querySelectorAll('[data-med-take]')].map(accName);
+  expect(new Set(names).size).toBe(names.length);
+  expect(h.q('.status-bar.taken span').getAttribute('aria-hidden')).toBe('true');
+});
+
+test('medications are lists with a heading per medication', () => {
+  const h = setupApp(); h.signIn();
+  expect(h.q('[aria-labelledby="today-meds-title"]').getAttribute('role')).toBe('list');
+  expect(h.w.document.querySelectorAll('[aria-labelledby="today-meds-title"] > [role="listitem"]').length).toBe(9);
+  expect(h.q('.med-name').getAttribute('role')).toBe('heading'); expect(h.q('.med-name').getAttribute('aria-level')).toBe('4');
+  h.go('medications');
+  expect(h.q('.med-grid').getAttribute('role')).toBe('list');
+  expect(h.q('.med-name').getAttribute('aria-level')).toBe('2');
+  expect(h.q('.stats').getAttribute('role')).toBe('list');
+});
+
+test('focusable cards are not read twice', () => {
+  const h = setupApp(); h.signIn();
+  const visibleToReader = el => textOf(el);
+  expect(visibleToReader(h.q('.card.tip'))).toBe('');
+  h.go('symptoms');
+  expect(visibleToReader(h.q('.sym'))).toBe('');
+  expect(h.q('.logs-title').tagName).toBe('H3');
+  h.go('schedule');
+  expect(visibleToReader(h.q('.appt-card'))).toBe('');
+});
+
+test('the unread count survives a collapsed sidebar, and tooltips do not repeat names', () => {
+  const h = setupApp(); h.signIn();
+  expect(h.q('.nav [data-go="today"]').hasAttribute('title')).toBe(false);
+  h.click('[data-act="collapse"]');
+  expect(h.q('.nav [data-go="today"]').getAttribute('title')).toBe('Today');
+  expect(accName(h.q('.nav [data-go="messages"]'))).toBe('Messages, 1 unread');
+  expect(h.q('.sidebar .avatar').getAttribute('aria-hidden')).toBe('true');
+});
+
+test('account toggles are switches that report on or off', () => {
+  const h = setupApp(); h.signIn(); h.go('account');
+  for (const act of ['toggle-notifications', 'reminders', 'biometric', 'share', 'voice', 'eye', 'mouse-lock']) {
+    const row = h.q(`.row[data-act="${act}"]`);
+    expect(row.getAttribute('role')).toBe('switch');
+    expect(['true', 'false'].includes(row.getAttribute('aria-checked'))).toBeTruthy();
+  }
+  expect(accName(h.q('[data-act="reminders"]'))).toBe('Medication reminders');
+  expect(h.q('[data-act="reminders"]').getAttribute('aria-checked')).toBe('true');
+  h.click('[data-act="reminders"]');
+  expect(h.q('[data-act="reminders"]').getAttribute('aria-checked')).toBe('false');
+  expect(h.q('[data-act="biometric"]').getAttribute('aria-keyshortcuts')).toBe('Control+F');
+  expect(h.q('[data-act="privacy"]').hasAttribute('role')).toBe(false);
+});
+
+test('keyboard shortcuts are spelled out for screen readers', () => {
+  const h = setupApp(); h.signIn(); h.go('account');
+  const spoken = [...h.w.document.querySelectorAll('.shortcuts .sr-only')].map(s => s.textContent);
+  expect(spoken[0]).toBe(': arrow keys or W A S D.');
+  expect(spoken.includes(': Control+Plus.')).toBeTruthy(); expect(spoken.includes(': Control+Backslash.')).toBeTruthy(); expect(spoken.includes(': Escape.')).toBeTruthy();
+  expect(h.q('.shortcuts .kbds').getAttribute('aria-hidden')).toBe('true');
+});
+
+test('messages say who sent each one, and what the reply controls do', () => {
+  const h = setupApp(); h.signIn(); h.go('messages');
+  const bubbles = [...h.w.document.querySelectorAll('#thread .bubble')].map(textOf);
+  expect(bubbles[0]).toBe('Aunt Joyce: Hi Maddy, did you take your morning medications?');
+  expect(bubbles[1]).toBe('You: Yes, I finished them with breakfast.');
+  expect(accName(h.q('[data-call="AJ"]'))).toBe('Call Aunt Joyce');
+  expect(accName(h.q('.quick'))).toBe('Quick replies, each one sends right away');
+  expect(accName(h.q('#msg-input'))).toBe('Message to Aunt Joyce');
+  expect(accName(h.q('.send'))).toBe('Send message');
+});
+
+test('call buttons keep their label and report state as pressed', () => {
+  const h = setupApp(); h.go('messages'); h.click('[data-call="AJ"]');
+  expect(accName(h.q('.call .back'))).toBe('End call and go back');
+  const mute = () => h.q('[data-act="mute"]'), speaker = () => h.q('[data-act="speaker"]');
+  expect(accName(mute())).toBe('Mute'); expect(mute().getAttribute('aria-pressed')).toBe('false');
+  expect(accName(speaker())).toBe('Speaker'); expect(speaker().getAttribute('aria-pressed')).toBe('false');
+  h.click('[data-act="mute"]'); h.click('[data-act="speaker"]');
+  expect(accName(mute())).toBe('Mute'); expect(mute().getAttribute('aria-pressed')).toBe('true');
+  expect(accName(speaker())).toBe('Speaker'); expect(speaker().getAttribute('aria-pressed')).toBe('true');
+  expect(h.q('.call .big-av').getAttribute('aria-hidden')).toBe('true');
+});
+
+test('the page behind a dialog is inert until it closes', () => {
+  const h = setupApp(); h.signIn();
+  h.click('[data-act="sos"]');
+  expect(h.q('#app').hasAttribute('inert')).toBeTruthy(); expect(h.q('#toast').hasAttribute('inert')).toBeTruthy();
+  expect(h.q('[role="alertdialog"]').getAttribute('aria-describedby')).toBe('sos-lead');
+  h.key('Escape');
+  expect(h.q('#app').hasAttribute('inert')).toBe(false); expect(h.q('#toast').hasAttribute('inert')).toBe(false);
+  h.go('symptoms'); h.click('[data-act="log-symptom"]');
+  expect(h.q('#app').hasAttribute('inert')).toBeTruthy();
+  h.click('[data-close].btn');
+  expect(h.q('#app').hasAttribute('inert')).toBe(false);
+});
+
+test('form hints are read with their fields, and arrows on links are not', () => {
+  const h = setupApp(); h.go('signin');
+  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-email-hint');
+  expect(h.q('#si-email-hint').textContent).toBe('We will never share this.');
+  expect(accName(h.q('[data-go="facescan"]'))).toBe('Use Face ID instead');
+  expect(accName(h.q('[data-act="back"]'))).toBe('Back');
+  h.input('#si-email', 'bad'); h.submit('#signin-form');
+  h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
+  expect(h.q('#si-email').getAttribute('aria-describedby')).toBe('si-email-hint');
+  expect(h.q('#si-pass').getAttribute('aria-describedby')).toBe('si-pass-hint si-err');
+  h.go('create');
+  expect(h.q('#ca-pass').getAttribute('aria-describedby')).toBe('ca-pass-hint');
+  expect(h.q('#ca-pass').hasAttribute('placeholder')).toBe(false);
+});
+
+test('top bar buttons say they open a panel, and what they are when off', () => {
+  const h = setupApp(); h.signIn();
+  expect(h.q('[data-act="notes"]').getAttribute('aria-haspopup')).toBe('dialog');
+  expect(accName(h.q('.sos'))).toBe('SOS, send emergency alert');
+  h.ctrl('n');
+  expect(accName(h.q('[data-act="notes"]'))).toBe('Notifications, turned off');
+  h.ctrl('n'); h.click('[data-act="notes"]');
+  expect(h.q('.popover [role="list"]').getAttribute('aria-label')).toBe('3 notifications');
+  expect(h.w.document.querySelectorAll('.popover [role="listitem"]').length).toBe(3);
 });

@@ -229,7 +229,7 @@ kbd {
 .rings::after { inset: 32px; animation: pulse 2s ease-out .4s infinite; }
 @keyframes pulse { 0% { transform: scale(.92); } 50% { transform: scale(1.03); } 100% { transform: scale(.92); } }
 .rings .face-circle { width: 162px; height: 162px; font-size: 68px; }
-.scan h2 { font-size: 1.9rem; margin: 20px 0 14px; }
+.scan h1 { font-size: 1.9rem; margin: 20px 0 14px; }
 .scan p { color: var(--text-2); font-size: 1.1rem; margin: 0; }
 .check-circle {
   width: 162px; height: 162px; border-radius: 50%;
@@ -240,8 +240,8 @@ kbd {
   animation: pop .35s ease-out;
 }
 @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.scan h2.ok { color: var(--primary-soft-text); margin-top: 36px; }
-[data-theme="light"] .scan h2.ok { color: var(--primary); }
+.scan h1.ok { color: var(--primary-soft-text); margin-top: 36px; }
+[data-theme="light"] .scan h1.ok { color: var(--primary); }
 
 /* ---------- App shell ---------- */
 .shell { display: flex; height: 100%; }
@@ -705,7 +705,7 @@ button.row:hover { background: var(--surface-2); }
   border: 8px solid rgba(255,255,255,.12);
   box-shadow: 0 0 80px rgba(99, 102, 241, .5);
 }
-.call h2 { font-size: 2.6rem; margin: 60px 0 16px; letter-spacing: -.5px; }
+.call h1 { font-size: 2.6rem; margin: 60px 0 16px; letter-spacing: -.5px; }
 .call .role { color: #a8afc4; font-size: 1.2rem; }
 .call .timer { font-size: 1.9rem; font-weight: 800; margin: 22px 0 44px; font-variant-numeric: tabular-nums; }
 .call-ctrls { display: flex; gap: 50px; align-items: flex-start; }
@@ -754,7 +754,7 @@ textarea.input { height: 100px; padding: 16px 20px; resize: vertical; }
 }
 [data-theme="light"] .toast { background: #fff; border-color: var(--border-strong); box-shadow: 0 12px 32px rgba(26, 34, 51, .16); }
 .toast.show { opacity: 1; transform: none; visibility: visible; transition-delay: 0s; }
-.toast-live, .toast-actions { display: contents; }
+.toast-actions { display: contents; }
 .toast-msg { padding: 8px 0; line-height: 1.35; }
 .toast-undo {
   background: none; border: none; border-radius: 8px;
