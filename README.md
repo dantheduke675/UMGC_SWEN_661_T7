@@ -477,8 +477,11 @@ flutter build apk --enable-native-access=ALL-UNNAMED
 CareConnectElectron/
 ├── main.js          main process: creates one BrowserWindow, removes the default menu, F12 opens DevTools
 ├── preload.js       exposes only getZoom()/setZoom() to the page through contextBridge
-├── package.json     npm scripts (start, test, test:jest, test:all, test:coverage); no runtime
-│                    dependencies; dev dependencies are Electron 44, Jest, jsdom and c8
+├── package.json     npm scripts (start, test, test:jest, test:all, test:coverage, test:axe,
+│                    serve:axe); no runtime dependencies; dev dependencies are Electron 44,
+│                    Jest, jsdom, c8 and axe-core
+├── scripts/
+│   └── serve-renderer.cjs   serves src/ to Chrome for axe DevTools scans (npm run serve:axe)
 ├── src/
 │   ├── index.html   page shell, Content-Security-Policy, mount points (#app, #modal-root,
 │   │                #toast) and the #sr-page screen reader announcer
@@ -488,7 +491,9 @@ CareConnectElectron/
 │                    high zoom, and Windows High Contrast (forced colors) styles
 └── tests/
     ├── *.test.cjs   Node test runner suites (npm test), sharing harness.cjs
-    └── jest/        Jest suites (npm run test:jest), including business-logic tests
+    ├── jest/        Jest suites (npm run test:jest), including business-logic tests
+    ├── axe-electron.cjs   axe scan of every screen inside Electron (npm run test:axe)
+    └── axe-report.cjs     builds the HTML report that scan writes to reports/
 ```
 
 - **Process model.** The main process opens the window and removes Electron's
@@ -555,6 +560,7 @@ with clicks and key presses, and they run `main.js` against a fake Electron.
 | `npm run test:all`  | Everything: the Node test runner suite, then the Jest suite         |
 | `npm test`          | The Node test runner suite (`tests/*.test.cjs`)                     |
 | `npm run test:jest` | The Jest suite (`tests/jest/*.test.js`)                             |
+| `npm run test:axe`  | The axe accessibility scan in a real Electron window, with an HTML report (see [Accessibility Testing with axe](#accessibility-testing-with-axe)) |
 
 `npm run test:all` stops before Jest if the first suite fails. To run a
 single file, pass it directly:
@@ -575,6 +581,8 @@ npx jest tests/jest/business-logic.test.js
 | `undo-history.test.cjs`           | Undo toast, Ctrl+U, the action history panel, "Changed since" entries                               |
 | `high-contrast.test.cjs`          | Windows High Contrast (forced colors) styles use system colors for every state                      |
 | `screen-reader.test.cjs`          | Accessible names and roles on every screen, announced errors, page announcements, live regions      |
+| `accessibility.test.cjs`          | WCAG 2.2 AA checks on every screen, dialog and panel: ARIA, headings, labels, target sizes, motion  |
+| `axe-rules.test.cjs`              | The rules axe checks, in fast jsdom form: landmarks, label in name, allowed roles, icons, `aria-keyshortcuts` |
 | `jest/business-logic.test.js`     | Rules called directly: progress percentages, validation, undo engine, zoom steps, keyboard rules    |
 
 The other files in `tests/jest/` are Jest versions of the Node test runner
@@ -604,6 +612,103 @@ because it loads `app.js` into a simulated page rather than importing it. You ca
 ```
 npm test -- --coverage
 ```
+
+## Accessibility Testing with axe
+
+The app is checked with [axe](https://www.deque.com/axe/), Deque's
+accessibility testing engine, in two ways: an automated scan that runs inside
+the Electron app, and the **axe DevTools** browser extension in Chrome for
+scanning screens by hand and taking screenshots. Both use the same rules
+engine (axe-core), and both should report **0 issues** on every screen.
+
+axe sorts what it finds into two kinds, and this project treats both as
+failures:
+
+| axe DevTools term     | Called here | Meaning                                                    |
+| --------------------- | ----------- | ---------------------------------------------------------- |
+| Issues / violations   | Errors      | Rules the page fails                                       |
+| Needs review          | Warnings    | Checks axe could not decide automatically, so a person must |
+
+### Automated scan and HTML report
+
+```
+npm run test:axe
+```
+
+This opens the app in a hidden Electron window and runs axe-core on 20 views
+(every screen, plus the undo toast, the history and notifications panels, the
+SOS and symptom dialogs, an empty schedule day, a call, and signing out) in
+three themes: dark, light and Windows High Contrast (forced colors), so 60
+scans in all. It checks WCAG 2.0, 2.1 and 2.2 at levels A and AA, plus axe's
+best practices. Any error is printed with the element it was found on, and
+the command exits with code 1 if there is even one error or warning.
+
+Each run also writes a report to `reports/axe-report.html`. Open it in any
+browser. It has the overall result, a table per theme with each screen's
+errors, warnings and rules passed, and a section per screen listing any issues
+and every rule it passed. The report is a single self-contained file, so it
+can be submitted or shared as is. `reports/` is ignored by git, because the
+report is regenerated on every run.
+
+### Scanning screens with the axe DevTools extension
+
+The axe DevTools extension cannot scan inside the Electron window itself: it
+loads there, but Electron does not support the browser features it needs
+(`chrome.storage.sync`, `chrome.debugger`, and the link between the
+extension and the page), so every scan ends with "unable to analyze the
+current tab". The screens are plain HTML, CSS and JavaScript in `src/`, so
+the same pages can be scanned in Chrome instead:
+
+1. Install **axe DevTools - Web Accessibility Testing** from the Chrome Web
+   Store, and open it once to accept its terms.
+2. From `CareConnectElectron`, start the page server:
+
+   ```
+   npm run serve:axe
+   ```
+
+   It serves `src/` at `http://127.0.0.1:5180/` (only on this computer, and
+   nothing outside `src/`). Ctrl+C stops it.
+3. Open `http://127.0.0.1:5180/` in Chrome, press **F12** and open the
+   **axe DevTools** tab (it may be under the **»** menu).
+4. Go to each screen and click **Scan full page**. Take a screenshot of the
+   results for each one.
+
+| Screen | How to get there |
+| ------ | ---------------- |
+| Welcome | Shown when the page loads |
+| Sign in, Create account | The buttons on Welcome |
+| Face ID setup | Create account: enter a name, an email such as `a@b.co` and a password of 8 or more characters, then **Create account**. (Submitting it empty shows an error message, which is worth scanning too) |
+| Face scan, Face recognised | These move on by themselves after a second or two; see the tip below |
+| Today, Medications, Messages, Schedule, Symptoms, Account | Sign in (the form is pre-filled), then the sidebar |
+| Undo toast | Today → **I took this**. Hovering over the toast keeps it open while you scan |
+| History panel, Notifications panel | The clock and bell buttons in the top bar (the clock appears after your first action) |
+| SOS dialog, Symptom dialog | The **SOS** button in the top bar; Symptoms → **Log symptom** |
+| Call | Messages → **Call** |
+
+**Tips**
+
+- **Holding the Face ID screens.** To keep Face scan on screen long enough to
+  scan, paste this into the DevTools **Console**, and use `'facesuccess'` in
+  place of `'facescan'` for Face recognised:
+
+  ```
+  state.screen = 'facescan'; render({ fresh: true }); clearTimeout(flowTimer)
+  ```
+
+- **Light mode.** Use the sun button on Welcome or the Dark mode switch in
+  the sidebar.
+- **High Contrast.** In DevTools open **⋮ → More tools → Rendering** and set
+  **Emulate CSS media feature forced-colors** to **active**.
+- **Saving results.** The free extension shows results in its panel but saving
+  and exporting them needs a Deque account, so use screenshots, or the HTML
+  report from `npm run test:axe`.
+
+A few things differ from the desktop app in Chrome: Chrome keeps some Ctrl
+shortcuts for itself (Ctrl+N opens a new window, for example), so move between
+screens with the mouse; zoom uses Chrome's zoom instead of the app's; and
+reloading the page returns to Welcome, because the app keeps its state in
+memory.
 
 ## Building the Application
 
@@ -687,6 +792,8 @@ for the items that apply to a local-only app:
 - **Accessibility testing.** Screen reader support was verified against
   Chromium's accessibility tree, and High Contrast against Chromium's
   forced-colors emulation, not with every screen reader and Windows theme.
+  axe finds the issues that can be detected automatically; it does not replace
+  testing with a screen reader and a keyboard.
   The automated tests cannot press Enter to activate a button (the browser
   does that natively), so that is checked by hand.
 
@@ -704,6 +811,9 @@ for the items that apply to a local-only app:
 | Arrow keys do not move the focus indicator while a screen reader is on | NVDA and JAWS use arrow keys to read the page. Use Tab, or switch the screen reader to focus mode (NVDA+Space). |
 | The app opens zoomed in or with old settings | Press Ctrl+0 to reset zoom. To clear every saved preference, press F12, open the Console and run `localStorage.clear(); location.reload()`. |
 | Checking Windows High Contrast | Press Left Alt + Left Shift + Print Screen to turn it on or off. |
+| axe DevTools says "unable to analyze the current tab" | It was run inside the Electron window, which it does not support. Use Chrome with `npm run serve:axe` (see [Accessibility Testing with axe](#accessibility-testing-with-axe)). |
+| `npm run serve:axe` says the port is in use | Another copy is already running, or something else uses port 5180. Run `npm run serve:axe -- 5181` and open `http://127.0.0.1:5181/`. |
+| `npm run test:axe` fails | It prints each error or warning with the element it was found on; `reports/axe-report.html` has the same details. |
 
 # React:
 
@@ -1094,7 +1204,27 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 - Worked on the README
 - Worked on Electron screen functionality/navigation tests
 - Provided basic code coverage setup
-- Reviewed newly-added tests to ensure integration with pre-existing screen tests/proper coverage
+- Reviewed newly-added tests to ensure integration with pre-existing screen tests/proper coverage# Weekly Contributions 10/07-10/13
+
+## Daniel
+
+- Worked on the README
+- Worked on the keyboard short cut video
+- Worked on all of the documentation except for the vpat
+- built the executable
+- built the installer
+- worked and tested the fixes relating to the keyboard shortcuts
+- implemented all the accessibility tests
+
+## Justin
+
+- 
+
+## Ian
+
+-
+
+
 
   # Weekly Contributions 10/07-10/13
 

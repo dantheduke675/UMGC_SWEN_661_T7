@@ -27,7 +27,7 @@ test('undo toast matches the design: message, Undo, dismiss', t => {
   h.click('[data-med-take="2"]');
   assert.equal(h.q('.toast-msg').textContent, 'Marked as taken');
   assert.equal(h.q('.toast-undo').textContent, 'Undo');
-  assert.equal(h.q('.toast-close').getAttribute('aria-label'), 'Dismiss');
+  assert.equal(h.q('.toast-close').getAttribute('aria-label'), 'Dismiss message');
   h.click('.toast-close'); assert.equal(h.toastShown(), false);
 });
 

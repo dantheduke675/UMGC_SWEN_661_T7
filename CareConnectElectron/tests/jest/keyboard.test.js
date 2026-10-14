@@ -313,3 +313,77 @@ test('top bar buttons advertise their shortcuts; Account lists every shortcut', 
   for (const act of ['voice', 'eye', 'mouse-lock']) h.click(`.list [data-act="${act}"]`);
   expect(h.read('state.voice && state.eyeTracking && state.mouseLock')).toBe(true);
 });
+
+// ---------- Tab order, traps and keeping focus in view ----------
+
+test('Tab and Shift+Tab wrap at the ends of the page instead of leaving it', () => {
+  const h = setupApp(); h.layout(SHELL); h.signIn();
+  h.q('[data-med-take="3"]').focus();
+  expect(h.key('Tab')).toBe(true);
+  assertFocus(h, '.nav [data-go="today"]', 'Back to the first control');
+  expect(h.key('Tab', { shiftKey: true })).toBe(true);
+  assertFocus(h, '[data-med-take="3"]', 'Shift+Tab from the first goes to the last');
+  h.q('[data-act="eye"]').focus();
+  expect(h.key('Tab')).toBe(false);
+});
+
+test('tabbing out of an open panel closes it; tabbing inside keeps it open', () => {
+  const h = setupApp(); h.layout(SHELL); h.signIn();
+  h.click('[data-act="notes"]');
+  expect(h.read('state.panel')).toBe('notes');
+  h.key('Tab'); h.q('[data-act="notes"]').focus(); h.tick(0);
+  expect(h.read('state.panel')).toBe('notes');
+  h.key('Tab'); h.q('[data-act="sos"]').focus(); h.tick(0);
+  expect(h.read('state.panel')).toBe(null);
+  assertFocus(h, '[data-act="sos"]', 'Focus stays where Tab put it');
+});
+
+test('Esc dismisses a showing toast even when focus is elsewhere', () => {
+  const h = setupApp(); h.layout(SHELL); h.signIn();
+  h.click('[data-med-take="2"]'); expect(h.toastShown()).toBe(true);
+  h.q('[data-act="eye"]').focus();
+  h.key('Escape'); expect(h.toastShown()).toBe(false);
+  assertFocus(h, '[data-act="eye"]', 'Focus is not moved');
+});
+
+test('the toast hides when focus moves onto a control it covers', () => {
+  const h = setupApp(); h.layout([...SHELL, ['#toast', [300, 500, 500, 60]]]); h.signIn();
+  h.click('[data-med-take="2"]'); expect(h.toastShown()).toBe(true);
+  h.q('[data-act="eye"]').focus(); expect(h.toastShown()).toBe(true);
+  h.q('[data-med-take="3"]').focus(); expect(h.toastShown()).toBe(false);
+});
+
+test('Left / Right choose schedule days; only the selected day is a Tab stop', () => {
+  const days = [0, 1, 2, 3, 4, 5, 6].map(i => [`[data-day="${i}"]`, [335 + i * 150, 150, 140, 122]]);
+  const h = setupApp(); h.layout([...SHELL, ...days]); h.signIn(); h.go('schedule');
+  const tabStops = () => [...h.w.document.querySelectorAll('[role="tab"]')].filter(x => x.tabIndex === 0).map(x => x.dataset.day);
+  expect(tabStops()).toEqual(['0']);
+  h.q('[data-day="0"]').focus();
+  h.key('ArrowRight'); expect(h.read('state.selDay')).toBe(1); assertFocus(h, '[data-day="1"]');
+  expect(tabStops()).toEqual(['1']);
+  h.key('d'); expect(h.read('state.selDay')).toBe(2);
+  h.key('ArrowLeft'); h.key('ArrowLeft');
+  expect(h.read('state.selDay')).toBe(0); assertFocus(h, '[data-day="0"]');
+  h.key('ArrowLeft'); expect(h.read('state.selDay')).toBe(0);
+  assertFocus(h, '.nav [data-go="medications"]', 'to the sidebar, as anywhere else');
+});
+
+test('Left / Right choose a radio option; the group is one Tab stop', () => {
+  const h = setupApp(); h.go('create');
+  h.layout([...SHELL, ['[data-role="recipient"]', [470, 600, 267, 200]], ['[data-role="caregiver"]', [753, 600, 267, 200]]]);
+  const checked = () => h.q('[role="radio"][aria-checked="true"]').dataset.role;
+  h.q('[data-role="recipient"]').focus();
+  h.key('ArrowRight'); expect(checked()).toBe('caregiver'); assertFocus(h, '[data-role="caregiver"]');
+  expect(h.q('[data-role="recipient"]').tabIndex).toBe(-1);
+  h.key('ArrowLeft'); expect(checked()).toBe('recipient');
+  h.signIn(); h.go('symptoms'); h.click('[data-act="log-symptom"]');
+  h.q('[data-sev="2"]').focus(); h.key('ArrowRight');
+  expect(h.q('[data-sev="3"]').getAttribute('aria-checked')).toBe('true');
+  expect([...h.w.document.querySelectorAll('[data-sev]')].filter(x => x.tabIndex === 0).map(x => x.dataset.sev)).toEqual(['3']);
+});
+
+
+test('the call screen keeps a bright focus ring in light mode', () => {
+  const css = require('node:fs').readFileSync(require('node:path').resolve(__dirname, '../../src/styles.css'), 'utf8');
+  expect(css).toMatch(/\.call \{[^}]*--focus: #fbbf24/);
+});

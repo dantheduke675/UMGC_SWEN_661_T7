@@ -312,3 +312,77 @@ test('top bar buttons advertise their shortcuts; Account lists every shortcut', 
   for (const act of ['voice', 'eye', 'mouse-lock']) h.click(`.list [data-act="${act}"]`);
   assert.equal(h.read('state.voice && state.eyeTracking && state.mouseLock'), true, 'Each mode can also be switched with the mouse');
 });
+
+// ---------- Tab order, traps and keeping focus in view ----------
+
+test('Tab and Shift+Tab wrap at the ends of the page instead of leaving it', t => {
+  const h = setup(t); h.layout(SHELL); h.signIn();
+  h.q('[data-med-take="3"]').focus();
+  assert.equal(h.key('Tab'), true, 'Handled at the last control');
+  assertFocus(h, '.nav [data-go="today"]', 'Back to the first control');
+  assert.equal(h.key('Tab', { shiftKey: true }), true);
+  assertFocus(h, '[data-med-take="3"]', 'Shift+Tab from the first goes to the last');
+  h.q('[data-act="eye"]').focus();
+  assert.equal(h.key('Tab'), false, 'In the middle Tab is left to the browser');
+});
+
+test('tabbing out of an open panel closes it; tabbing inside keeps it open', t => {
+  const h = setup(t); h.layout(SHELL); h.signIn();
+  h.click('[data-act="notes"]');
+  assert.equal(h.read('state.panel'), 'notes');
+  h.key('Tab'); h.q('[data-act="notes"]').focus(); h.tick(0);
+  assert.equal(h.read('state.panel'), 'notes', 'Its own button keeps it open');
+  h.key('Tab'); h.q('[data-act="sos"]').focus(); h.tick(0);
+  assert.equal(h.read('state.panel'), null, 'Closed once focus left it');
+  assertFocus(h, '[data-act="sos"]', 'Focus stays where Tab put it');
+});
+
+test('Esc dismisses a showing toast even when focus is elsewhere', t => {
+  const h = setup(t); h.layout(SHELL); h.signIn();
+  h.click('[data-med-take="2"]'); assert.equal(h.toastShown(), true);
+  h.q('[data-act="eye"]').focus();
+  h.key('Escape'); assert.equal(h.toastShown(), false);
+  assertFocus(h, '[data-act="eye"]', 'Focus is not moved');
+});
+
+test('the toast hides when focus moves onto a control it covers', t => {
+  const h = setup(t); h.layout([...SHELL, ['#toast', [300, 500, 500, 60]]]); h.signIn();
+  h.click('[data-med-take="2"]'); assert.equal(h.toastShown(), true);
+  h.q('[data-act="eye"]').focus(); assert.equal(h.toastShown(), true, 'Not in the way: stays');
+  h.q('[data-med-take="3"]').focus(); assert.equal(h.toastShown(), false, 'Covered the focused control: hidden');
+});
+
+test('Left / Right choose schedule days; only the selected day is a Tab stop', t => {
+  const days = [0, 1, 2, 3, 4, 5, 6].map(i => [`[data-day="${i}"]`, [335 + i * 150, 150, 140, 122]]);
+  const h = setup(t); h.layout([...SHELL, ...days]); h.signIn(); h.go('schedule');
+  const tabStops = () => [...h.w.document.querySelectorAll('[role="tab"]')].filter(x => x.tabIndex === 0).map(x => x.dataset.day);
+  assert.deepEqual(tabStops(), ['0']);
+  h.q('[data-day="0"]').focus();
+  h.key('ArrowRight'); assert.equal(h.read('state.selDay'), 1); assertFocus(h, '[data-day="1"]');
+  assert.deepEqual(tabStops(), ['1']);
+  h.key('d'); assert.equal(h.read('state.selDay'), 2, 'D works like Right');
+  h.key('ArrowLeft'); h.key('ArrowLeft');
+  assert.equal(h.read('state.selDay'), 0); assertFocus(h, '[data-day="0"]');
+  h.key('ArrowLeft'); assert.equal(h.read('state.selDay'), 0, 'Past the first day the arrow moves on');
+  assertFocus(h, '.nav [data-go="medications"]', 'to the sidebar, as anywhere else');
+});
+
+test('Left / Right choose a radio option; the group is one Tab stop', t => {
+  const h = setup(t); h.go('create');
+  h.layout([...SHELL, ['[data-role="recipient"]', [470, 600, 267, 200]], ['[data-role="caregiver"]', [753, 600, 267, 200]]]);
+  const checked = () => h.q('[role="radio"][aria-checked="true"]').dataset.role;
+  h.q('[data-role="recipient"]').focus();
+  h.key('ArrowRight'); assert.equal(checked(), 'caregiver'); assertFocus(h, '[data-role="caregiver"]');
+  assert.equal(h.q('[data-role="recipient"]').tabIndex, -1);
+  h.key('ArrowLeft'); assert.equal(checked(), 'recipient');
+  h.signIn(); h.go('symptoms'); h.click('[data-act="log-symptom"]');
+  h.q('[data-sev="2"]').focus(); h.key('ArrowRight');
+  assert.equal(h.q('[data-sev="3"]').getAttribute('aria-checked'), 'true');
+  assert.deepEqual([...h.w.document.querySelectorAll('[data-sev]')].filter(x => x.tabIndex === 0).map(x => x.dataset.sev), ['3']);
+});
+
+
+test('the call screen keeps a bright focus ring in light mode', () => {
+  const css = require('node:fs').readFileSync(require('node:path').resolve(__dirname, '../src/styles.css'), 'utf8');
+  assert.match(css, /\.call \{[^}]*--focus: #fbbf24/);
+});
