@@ -11,7 +11,8 @@
     "test:coverage": "c8 --all --include=main.js --include=src/app.js --exclude=tests/** --reporter=text --reporter=html --reporter=json-summary --reporter=lcov --check-coverage --lines=70 --statements=70 --functions=70 --branches=70 --per-file npm test",
     "test:jest": "jest",
     "test:all": "npm test && npm run test:jest",
-    "test:axe": "electron tests/axe-electron.cjs"
+    "test:axe": "electron tests/axe-electron.cjs",
+    "serve:axe": "node scripts/serve-renderer.cjs"
   },
   "jest": {
     "testEnvironment": "node",

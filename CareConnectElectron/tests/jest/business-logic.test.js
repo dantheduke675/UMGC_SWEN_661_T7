@@ -204,7 +204,7 @@ describe('notifications', () => {
 describe('messages', () => {
   test('unread count falls as conversations are opened', () => {
     const h = setupApp(); h.signIn();
-    expect(h.q('.nav [data-go="messages"]').textContent).toMatch('Messages (1 unread)'); // "unread" is screen-reader only
+    expect(h.q('.nav [data-go="messages"]').getAttribute('aria-label')).toBe('Messages, 1 unread'); // the screen shows "Messages (1)"
     h.click('[data-chat="AJ"]');
     expect(h.q('.unread-count').textContent).toBe('0 unread conversations');
     h.read(`state.convos[1].unread = true; state.convos[2].unread = true; render()`);
@@ -420,9 +420,10 @@ describe('keyboard rules', () => {
     const h = setupApp();
     const d = h.w.document.createElement('div');
     d.innerHTML = h.read('kbd')('↑ ↓ / W S');
-    // Arrow keys are icons, named for screen readers
-    expect([...d.querySelectorAll('kbd')].map(k => k.textContent)).toEqual(['Up arrow', 'Down arrow', 'W', 'S']);
-    expect([...d.querySelectorAll('kbd')].slice(0, 2).every(k => k.querySelector('svg[aria-hidden="true"]') && k.querySelector('.sr-only'))).toBe(true);
+    // Arrow keys are icons; the whole combination is spoken in words instead
+    expect([...d.querySelectorAll('kbd')].map(k => k.textContent)).toEqual(['', '', 'W', 'S']);
+    expect([...d.querySelectorAll('kbd')].slice(0, 2).every(k => k.querySelector('svg[aria-hidden="true"]'))).toBe(true);
+    expect(d.querySelector('.sr-only').textContent).toBe(': arrow keys or W S.');
     expect(d.querySelectorAll('.or').length).toBe(1);
     d.innerHTML = h.read('kbd')('Ctrl \\');
     expect([...d.querySelectorAll('kbd')].map(k => k.textContent)).toEqual(['Ctrl', '\\']);

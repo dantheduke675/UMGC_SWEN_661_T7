@@ -145,6 +145,7 @@ kbd {
 }
 [data-theme="light"] .link { color: var(--primary); }
 .link:hover { text-decoration: underline; }
+.link > .icon { vertical-align: -3px; }
 
 /* ---------- Auth screens ---------- */
 .auth {
@@ -766,7 +767,7 @@ textarea.input { height: 100px; padding: 16px 20px; resize: vertical; }
 }
 [data-theme="light"] .toast { background: #fff; border-color: var(--border-strong); box-shadow: 0 12px 32px rgba(26, 34, 51, .16); }
 .toast.show { opacity: 1; transform: none; visibility: visible; transition-delay: 0s; }
-.toast-live, .toast-actions { display: contents; }
+.toast-actions { display: contents; }
 .toast-msg { padding: 8px 0; line-height: 1.35; }
 .toast-undo {
   background: none; border: none; border-radius: 8px;

@@ -167,7 +167,9 @@ test('status shown in colour is also shown in words', () => {
   h.click('[data-med-miss="3"]');
   expect(h.q('.status-bar.taken').textContent).toMatch(/Taken/);
   expect(h.q('.status-bar.missed').textContent).toMatch(/Missed/);
-  expect(h.q('.nav [data-go="messages"]').textContent).toMatch(/\(1 unread\)/);
+  // Unread count, not only a red dot: shown as a number, spoken in the name
+  expect(h.q('.nav [data-go="messages"] .label').textContent).toMatch(/\(1\)/);
+  expect(h.q('.nav [data-go="messages"]').getAttribute('aria-label')).toMatch(/1 unread/);
   h.go('symptoms');
   for (const card of h.w.document.querySelectorAll('.sym')) expect(card.textContent).toMatch(/[1-5]\/5/);
   h.go('schedule');
@@ -278,7 +280,8 @@ test('animations and smooth scrolling stop when the user asks for reduced motion
 test('the page language is set and status messages use live regions', () => {
   const h = setupApp();
   expect(h.w.document.documentElement.lang).toBe('en');
-  expect(h.q('#toast [role="status"]').getAttribute('aria-live')).toBe('polite');
+  expect(h.q('#sr-status').getAttribute('role')).toBe('status');
+  expect(h.q('#sr-status').getAttribute('aria-live')).toBe('polite');
   expect(h.q('#sr-page').getAttribute('aria-live')).toBe('polite');
   for (const view of everyView(h)) {
     for (const err of h.w.document.querySelectorAll('.error')) expect(err.getAttribute('role')).toBe('alert');

@@ -223,8 +223,8 @@ test('schedule days are tabs that name the date and count, controlling one panel
 
 test('messages: unread state, the open conversation and the thread are announced', t => {
   const h = setup(t); h.signIn();
-  assert.equal(accName(h.q('.nav [data-go="messages"]')), 'Messages (1 unread)');
-  assert.equal(h.q('.nav [data-go="messages"] .label').firstChild.textContent, 'Messages (1', 'Screen still shows "(1)"');
+  assert.equal(accName(h.q('.nav [data-go="messages"]')), 'Messages, 1 unread');
+  assert.equal(h.q('.nav [data-go="messages"] .label').textContent, 'Messages (1)', 'Screen still shows "(1)"');
   h.go('messages');
   h.read('state.convos[1].unread = true; render()');
   const sc = h.q('[data-convo="SC"]');
@@ -252,18 +252,181 @@ test('the call timer is exposed as a timer, not re-read every second', t => {
 
 // ---------- Toasts ----------
 
-test('toast messages are read from one persistent live region, with an undo hint', t => {
+// NVDA heard none of the toasts while the live region sat inside the toast:
+// the toast is visibility:hidden between messages, and text added to a hidden
+// region is not announced. The region now lives outside it, always rendered.
+test('toast messages are read from one always-rendered live region, with an undo hint', t => {
   const h = setup(t);
-  const live = h.q('#toast [role="status"]');
-  assert.ok(live, 'Live region exists before any toast'); assert.equal(live.getAttribute('aria-live'), 'polite');
+  const live = h.q('#sr-status');
+  assert.equal(live.getAttribute('role'), 'status'); assert.equal(live.getAttribute('aria-live'), 'polite');
+  assert.ok(live.classList.contains('sr-only'), 'Announced, not shown');
+  assert.equal(h.q('#toast').contains(live), false, 'Not inside the toast, which is hidden between messages');
   h.signIn(); h.click('[data-med-take="2"]');
-  assert.equal(h.q('#toast [role="status"]'), live, 'Same element, so each new message is announced');
-  assert.equal(textOf(live), 'Marked as taken Press Control U to undo.');
+  assert.equal(live.textContent, '', 'Set after a short delay, so the focus change from the same action does not cut it off');
+  h.tick(250);
+  assert.equal(h.q('#sr-status'), live, 'Same element, so each new message is announced');
+  assert.equal(live.textContent, 'Marked as taken. Press Control U to undo.');
   assert.equal(h.q('.toast-msg').textContent, 'Marked as taken', 'Visible text unchanged');
-  h.click('.toast-undo');
-  assert.equal(h.q('#toast [role="status"]'), live);
-  assert.match(textOf(live), /^Undone: Marked Ropivacaine \(8:00 PM\) as taken$/, 'No undo hint when there is nothing to undo');
-  assert.equal(live.querySelector('button'), null, 'Buttons are outside the live region, so they are not read with the message');
+  assert.equal(h.q('.toast-msg').getAttribute('aria-hidden'), 'true', 'Not read a second time');
+  assert.equal(accName(h.q('.toast-undo')), 'Undo');
+  assert.equal(h.q('.toast-undo').getAttribute('aria-describedby'), 'toast-msg', 'Undo says what it undoes');
+  h.click('.toast-undo'); h.tick(250);
+  assert.match(live.textContent, /^Undone: Marked Ropivacaine \(8:00 PM\) as taken$/, 'No undo hint when there is nothing to undo');
+});
+
+test('the same message twice is announced twice', t => {
+  const h = setup(t); h.signIn();
+  h.click('[data-med-take="2"]'); h.tick(250);
+  h.click('[data-med-take="3"]');
+  assert.equal(h.q('#sr-status').textContent, '', 'Cleared first, so the repeat counts as a change');
+  h.tick(250);
+  assert.equal(h.q('#sr-status').textContent, 'Marked as taken. Press Control U to undo.');
+});
+
+test('announcements are cleared once read, so they are not re-read later', t => {
+  const h = setup(t); h.signIn(); h.go('medications');
+  h.click('[data-med-take="2"]'); h.tick(250);
+  assert.notEqual(h.q('#sr-status').textContent, ''); assert.equal(h.q('#sr-page').textContent, 'Medications page');
+  h.tick(5000);
+  assert.equal(h.q('#sr-status').textContent, '', 'NVDA re-read a stale message when a dialog closed');
+  assert.equal(h.q('#sr-page').textContent, '');
+});
+
+// ---------- Fixes from the NVDA pass ----------
+
+test('every screen has one level-1 heading and a main landmark', t => {
+  const h = setup(t);
+  for (const view of everyView(h)) {
+    if (/panel|dialog/.test(view)) continue;
+    const d = h.w.document;
+    assert.equal(d.querySelectorAll('#app h1').length, 1, `${view}: one <h1>`);
+    assert.equal(d.querySelectorAll('#app main').length, 1, `${view}: one <main>`);
+  }
+});
+
+test('medication buttons name the dose they act on', t => {
+  const h = setup(t); h.signIn();
+  assert.equal(accName(h.q('[data-med-take="2"]')), 'I took this: Ropivacaine 10 mg, 8:00 PM');
+  assert.equal(accName(h.q('[data-med-miss="3"]')), 'I missed this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM');
+  const names = [...h.w.document.querySelectorAll('[data-med-take]')].map(accName);
+  assert.equal(new Set(names).size, names.length, 'No two buttons sound the same');
+  assert.equal(h.q('.status-bar.taken span').getAttribute('aria-hidden'), 'true', 'Visible "✓ Taken" is not read after the label');
+});
+
+test('medications are lists with a heading per medication', t => {
+  const h = setup(t); h.signIn();
+  assert.equal(h.q('[aria-labelledby="today-meds-title"]').getAttribute('role'), 'list');
+  assert.equal(h.w.document.querySelectorAll('[aria-labelledby="today-meds-title"] > [role="listitem"]').length, 9);
+  assert.equal(h.q('.med-name').getAttribute('role'), 'heading'); assert.equal(h.q('.med-name').getAttribute('aria-level'), '4');
+  h.go('medications');
+  assert.equal(h.q('.med-grid').getAttribute('role'), 'list');
+  assert.equal(h.q('.med-name').getAttribute('aria-level'), '2', 'Directly under the page heading');
+  assert.equal(h.q('.stats').getAttribute('role'), 'list');
+});
+
+test('focusable cards are not read twice', t => {
+  const h = setup(t); h.signIn();
+  const visibleToReader = el => textOf(el);
+  assert.equal(visibleToReader(h.q('.card.tip')), '', 'Tip text is in the label only');
+  h.go('symptoms');
+  assert.equal(visibleToReader(h.q('.sym')), '');
+  assert.equal(h.q('.logs-title').tagName, 'H3', '"Recent logs" is a heading');
+  h.go('schedule');
+  assert.equal(visibleToReader(h.q('.appt-card')), '');
+});
+
+test('the unread count survives a collapsed sidebar, and tooltips do not repeat names', t => {
+  const h = setup(t); h.signIn();
+  assert.equal(h.q('.nav [data-go="today"]').hasAttribute('title'), false, 'Expanded: no "Today, button, Today"');
+  h.click('[data-act="collapse"]');
+  assert.equal(h.q('.nav [data-go="today"]').getAttribute('title'), 'Today', 'Collapsed: tooltip for the icon-only button');
+  assert.equal(accName(h.q('.nav [data-go="messages"]')), 'Messages, 1 unread');
+  assert.equal(h.q('.sidebar .avatar').getAttribute('aria-hidden'), 'true');
+});
+
+test('account toggles are switches that report on or off', t => {
+  const h = setup(t); h.signIn(); h.go('account');
+  for (const act of ['toggle-notifications', 'reminders', 'biometric', 'share', 'voice', 'eye', 'mouse-lock']) {
+    const row = h.q(`.row[data-act="${act}"]`);
+    assert.equal(row.getAttribute('role'), 'switch', act);
+    assert.ok(['true', 'false'].includes(row.getAttribute('aria-checked')), act);
+  }
+  assert.equal(accName(h.q('[data-act="reminders"]')), 'Medication reminders');
+  assert.equal(h.q('[data-act="reminders"]').getAttribute('aria-checked'), 'true');
+  h.click('[data-act="reminders"]');
+  assert.equal(h.q('[data-act="reminders"]').getAttribute('aria-checked'), 'false');
+  assert.equal(h.q('[data-act="biometric"]').getAttribute('aria-keyshortcuts'), 'Control+F');
+  assert.equal(h.q('[data-act="privacy"]').hasAttribute('role'), false, 'Privacy opens information, it is not a toggle');
+});
+
+test('keyboard shortcuts are spelled out for screen readers', t => {
+  const h = setup(t); h.signIn(); h.go('account');
+  const spoken = [...h.w.document.querySelectorAll('.shortcuts .sr-only')].map(s => s.textContent);
+  assert.equal(spoken[0], ': arrow keys or W A S D.');
+  assert.ok(spoken.includes(': Control+Plus.')); assert.ok(spoken.includes(': Control+Backslash.')); assert.ok(spoken.includes(': Escape.'));
+  assert.equal(h.q('.shortcuts .kbds').getAttribute('aria-hidden'), 'true', 'Keycaps are not read letter by letter');
+});
+
+test('messages say who sent each one, and what the reply controls do', t => {
+  const h = setup(t); h.signIn(); h.go('messages');
+  const bubbles = [...h.w.document.querySelectorAll('#thread .bubble')].map(textOf);
+  assert.equal(bubbles[0], 'Aunt Joyce: Hi Maddy, did you take your morning medications?');
+  assert.equal(bubbles[1], 'You: Yes, I finished them with breakfast.');
+  assert.equal(accName(h.q('[data-call="AJ"]')), 'Call Aunt Joyce');
+  assert.equal(accName(h.q('.quick')), 'Quick replies, each one sends right away');
+  assert.equal(accName(h.q('#msg-input')), 'Message to Aunt Joyce');
+  assert.equal(accName(h.q('.send')), 'Send message');
+});
+
+test('call buttons keep their label and report state as pressed', t => {
+  const h = setup(t); h.go('messages'); h.click('[data-call="AJ"]');
+  assert.equal(accName(h.q('.call .back')), 'End call and go back', 'Not just "Back": it ends the call');
+  const mute = () => h.q('[data-act="mute"]'), speaker = () => h.q('[data-act="speaker"]');
+  assert.equal(accName(mute()), 'Mute'); assert.equal(mute().getAttribute('aria-pressed'), 'false');
+  assert.equal(accName(speaker()), 'Speaker'); assert.equal(speaker().getAttribute('aria-pressed'), 'false');
+  h.click('[data-act="mute"]'); h.click('[data-act="speaker"]');
+  assert.equal(accName(mute()), 'Mute', 'Not "Unmute, pressed"'); assert.equal(mute().getAttribute('aria-pressed'), 'true');
+  assert.equal(accName(speaker()), 'Speaker', 'Not "Earpiece, not pressed"'); assert.equal(speaker().getAttribute('aria-pressed'), 'true');
+  assert.equal(h.q('.call .big-av').getAttribute('aria-hidden'), 'true');
+});
+
+test('the page behind a dialog is inert until it closes', t => {
+  const h = setup(t); h.signIn();
+  h.click('[data-act="sos"]');
+  assert.ok(h.q('#app').hasAttribute('inert')); assert.ok(h.q('#toast').hasAttribute('inert'));
+  assert.equal(h.q('[role="alertdialog"]').getAttribute('aria-describedby'), 'sos-lead', 'The 911 warning is read with the dialog');
+  h.key('Escape');
+  assert.equal(h.q('#app').hasAttribute('inert'), false); assert.equal(h.q('#toast').hasAttribute('inert'), false);
+  h.go('symptoms'); h.click('[data-act="log-symptom"]');
+  assert.ok(h.q('#app').hasAttribute('inert'));
+  h.click('[data-close].btn');
+  assert.equal(h.q('#app').hasAttribute('inert'), false);
+});
+
+test('form hints are read with their fields, and arrows on links are not', t => {
+  const h = setup(t); h.go('signin');
+  assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint');
+  assert.equal(h.q('#si-email-hint').textContent, 'We will never share this.');
+  assert.equal(accName(h.q('[data-go="facescan"]')), 'Use Face ID instead');
+  assert.equal(accName(h.q('[data-act="back"]')), 'Back');
+  h.input('#si-email', 'bad'); h.submit('#signin-form');
+  h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
+  assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint', 'Hint stays once the error moves on');
+  assert.equal(h.q('#si-pass').getAttribute('aria-describedby'), 'si-pass-hint si-err');
+  h.go('create');
+  assert.equal(h.q('#ca-pass').getAttribute('aria-describedby'), 'ca-pass-hint');
+  assert.equal(h.q('#ca-pass').hasAttribute('placeholder'), false, 'No "bullet bullet bullet" placeholder');
+});
+
+test('top bar buttons say they open a panel, and what they are when off', t => {
+  const h = setup(t); h.signIn();
+  assert.equal(h.q('[data-act="notes"]').getAttribute('aria-haspopup'), 'dialog');
+  assert.equal(accName(h.q('.sos')), 'SOS, send emergency alert');
+  h.ctrl('n');
+  assert.equal(accName(h.q('[data-act="notes"]')), 'Notifications, turned off');
+  h.ctrl('n'); h.click('[data-act="notes"]');
+  assert.equal(h.q('.popover [role="list"]').getAttribute('aria-label'), '3 notifications');
+  assert.equal(h.w.document.querySelectorAll('.popover [role="listitem"]').length, 3);
 });
 
 // ---------- Structure, labels and state ----------
@@ -288,8 +451,8 @@ test('repeated buttons say what they act on', t => {
   assert.equal(h.q('[data-med-miss="3"]').getAttribute('aria-label'), 'I missed this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM');
   h.go('messages');
   assert.equal(h.q('[data-call="AJ"]').getAttribute('aria-label'), 'Call Aunt Joyce');
-  assert.equal(h.q('#msg-input').getAttribute('aria-label'), 'Message Aunt Joyce');
-  assert.equal(h.q('.quick').getAttribute('aria-label'), 'Quick replies');
+  assert.equal(h.q('#msg-input').getAttribute('aria-label'), 'Message to Aunt Joyce');
+  assert.equal(h.q('.quick').getAttribute('aria-label'), 'Quick replies, each one sends right away');
   const said = [...h.w.document.querySelectorAll('.bubble .sr-only')].map(s => s.textContent);
   assert.deepEqual(said, ['Aunt Joyce: ', 'You: ', 'Aunt Joyce: '], 'Each message says who sent it');
   h.go('schedule'); assert.equal(h.q('[role="tablist"]').getAttribute('aria-label'), 'Days this week');
