@@ -168,7 +168,9 @@ test('status shown in colour is also shown in words', t => {
   h.click('[data-med-miss="3"]');
   assert.match(h.q('.status-bar.taken').textContent, /Taken/);
   assert.match(h.q('.status-bar.missed').textContent, /Missed/);
-  assert.match(h.q('.nav [data-go="messages"]').textContent, /\(1 unread\)/, 'Unread count, not only a red dot');
+  // Unread count, not only a red dot: shown as a number, spoken in the name
+  assert.match(h.q('.nav [data-go="messages"] .label').textContent, /\(1\)/, 'Unread count shown');
+  assert.match(h.q('.nav [data-go="messages"]').getAttribute('aria-label'), /1 unread/, 'Unread count spoken');
   h.go('symptoms');
   for (const card of h.w.document.querySelectorAll('.sym')) assert.match(card.textContent, /[1-5]\/5/, 'Severity as a number, not only a colour');
   h.go('schedule');
@@ -279,7 +281,8 @@ test('animations and smooth scrolling stop when the user asks for reduced motion
 test('the page language is set and status messages use live regions', t => {
   const h = setup(t);
   assert.equal(h.w.document.documentElement.lang, 'en');
-  assert.equal(h.q('#toast [role="status"]').getAttribute('aria-live'), 'polite');
+  assert.equal(h.q('#sr-status').getAttribute('role'), 'status');
+  assert.equal(h.q('#sr-status').getAttribute('aria-live'), 'polite');
   assert.equal(h.q('#sr-page').getAttribute('aria-live'), 'polite');
   for (const view of everyView(h)) {
     for (const err of h.w.document.querySelectorAll('.error')) assert.equal(err.getAttribute('role'), 'alert', `${view}: error not announced`);

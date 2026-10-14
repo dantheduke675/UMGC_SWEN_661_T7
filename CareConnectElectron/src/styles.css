@@ -145,6 +145,7 @@ kbd {
 }
 [data-theme="light"] .link { color: var(--primary); }
 .link:hover { text-decoration: underline; }
+.link > .icon { vertical-align: -3px; }
 
 /* ---------- Auth screens ---------- */
 .auth {

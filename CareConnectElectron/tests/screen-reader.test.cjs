@@ -107,7 +107,6 @@ test('sign-in errors are announced, mark the field and move focus to it', t => {
   h.input('#si-email', 'bad'); h.submit('#signin-form');
   assert.equal(err.hidden, false); assert.match(err.textContent, /valid email/);
   assert.equal(h.q('#si-email').getAttribute('aria-invalid'), 'true');
-  assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint si-err', 'Field is described by its hint and the message');
   assert.equal(h.q('#si-email').getAttribute('aria-describedby'), 'si-email-hint si-err', 'Field is described by its hint, then the message');
   assert.equal(h.focused(), h.q('#si-email'), 'Focus moves to the field to fix');
 
@@ -452,8 +451,8 @@ test('repeated buttons say what they act on', t => {
   assert.equal(h.q('[data-med-miss="3"]').getAttribute('aria-label'), 'I missed this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM');
   h.go('messages');
   assert.equal(h.q('[data-call="AJ"]').getAttribute('aria-label'), 'Call Aunt Joyce');
-  assert.equal(h.q('#msg-input').getAttribute('aria-label'), 'Message Aunt Joyce');
-  assert.equal(h.q('.quick').getAttribute('aria-label'), 'Quick replies');
+  assert.equal(h.q('#msg-input').getAttribute('aria-label'), 'Message to Aunt Joyce');
+  assert.equal(h.q('.quick').getAttribute('aria-label'), 'Quick replies, each one sends right away');
   const said = [...h.w.document.querySelectorAll('.bubble .sr-only')].map(s => s.textContent);
   assert.deepEqual(said, ['Aunt Joyce: ', 'You: ', 'Aunt Joyce: '], 'Each message says who sent it');
   h.go('schedule'); assert.equal(h.q('[role="tablist"]').getAttribute('aria-label'), 'Days this week');
