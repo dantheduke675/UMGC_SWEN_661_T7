@@ -1220,7 +1220,9 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 
 ## Justin
 
-- 
+- Created Screen NVDA accessibility video
+- Enhanced the code to improve screen reader compatibiilty
+- added and refined tests for these enhancements
 
 ## Ian
 
