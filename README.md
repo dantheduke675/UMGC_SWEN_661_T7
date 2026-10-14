@@ -1204,8 +1204,10 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 - Worked on the README
 - Worked on Electron screen functionality/navigation tests
 - Provided basic code coverage setup
-- Reviewed newly-added tests to ensure integration with pre-existing screen tests/proper coverage# Weekly Contributions 10/07-10/13
+- Reviewed newly-added tests to ensure integration with pre-existing screen tests/proper coverage
 
+# Weekly Contributions 10/07-10/13
+  
 ## Daniel
 
 - Worked on the README
