@@ -1222,22 +1222,6 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 
 ## Ian
 
--
-
-
-
-  # Weekly Contributions 10/07-10/13
-
-## Daniel
-
-- 
-
-## Justin
-
-- 
-
-## Ian
-
 - Worked on the README
 - Worked on the VPAT
 - Provided additional clarification on needs in advance of additional accessibility needs for WCAG 2.1 AA compliance
