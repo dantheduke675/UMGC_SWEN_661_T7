@@ -1101,6 +1101,183 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 - No EAS build profile is committed, so release builds require a one-time `eas build:configure`.
 - Some packages are deprecated or will be soon. The application still builds, but with warnings.
 
+# Web App:
+
+The web front end is a responsive, installable Progressive Web App (PWA) built with [Vite](https://vite.dev/), React 19, [React Router](https://reactrouter.com/) and [Tailwind CSS](https://tailwindcss.com/) 4, written in TypeScript. Its layout follows the team's Figma Make design and adapts to the three device sizes in that design: phone, tablet and desktop.
+
+## HTML Pages
+
+Every page of the web app is its own HTML file, so each one can be opened, bookmarked, refreshed or hosted directly by any static web server:
+
+| HTML file             | Page           |
+| --------------------- | -------------- |
+| `index.html`          | Landing page   |
+| `signin.html`         | Sign in        |
+| `create-account.html` | Create account |
+| `today.html`          | Today          |
+| `medications.html`    | Medications    |
+| `schedule.html`       | Schedule       |
+| `404.html`            | Page not found |
+
+The HTML files live in the root of `CareConnectWeb/`. Each one loads the shared React code in `src/`, and React Router shows the matching page. Once a page is open, links to the other pages switch instantly without a full reload, which keeps the medication check-ins made during the visit.
+
+## Navigation
+
+First when in the home directory navigate to the web front end using
+
+```
+cd ./CareConnectWeb
+```
+
+## Running the Application
+
+First run
+
+```
+npm install
+```
+
+this will make sure that all your application dependencies are up to date.
+
+Next use
+
+```
+npm run dev
+```
+
+to start the development server, then open http://localhost:5173 in your browser. Any page can be opened directly by its HTML file, for example http://localhost:5173/today.html or http://localhost:5173/medications.html. The page reloads automatically whenever a source file is saved. Stop the server with `Ctrl + C`.
+
+## Building the Application
+
+To type-check the code and create a production build use
+
+```
+npm run build
+```
+
+this writes a static HTML site to `dist/`: one HTML file per page (`index.html`, `signin.html`, `create-account.html`, `today.html`, `medications.html`, `schedule.html` and `404.html`), plus the shared JavaScript and CSS in `dist/assets/`. Upload the contents of `dist/` to any static web server to host it; no server-side code or URL rewrite rules are needed. The build also generates the PWA web manifest, the service worker and the app icons.
+
+### Note 1. Open the built pages through a web server (such as `npm run preview` below) rather than by double-clicking the files, because browsers block the JavaScript modules on `file://` pages.
+
+To run the production build locally use
+
+```
+npm run preview
+```
+
+then open http://localhost:4173. The service worker is only active in this mode (not in `npm run dev`), so use it when testing installing the app or using it offline.
+
+## Testing the Application
+
+### Running the tests
+
+The web app has an automated test suite built with [Vitest](https://vitest.dev/), [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) and [axe-core](https://github.com/dequelabs/axe-core). The tests run in Node with jsdom, so no browser or running server is needed. Run the whole suite once with
+
+```
+npm run test:run
+```
+
+or in watch mode while developing (re-runs on every file change) with
+
+```
+npm test
+```
+
+Run only the accessibility tests with
+
+```
+npm run test:a11y
+```
+
+and generate a coverage report with
+
+```
+npm run test:coverage
+```
+
+which prints a summary and writes an HTML report to `coverage/index.html` (the `coverage/` folder is git ignored). Run a single file with `npx vitest run tests/<file name>`, or every test whose name matches a string with `npx vitest run -t "<test name>"`.
+
+All tests live in `CareConnectWeb/tests/`:
+
+| Test file                 | Tests | What it covers                                                                                                     |
+| ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
+| `accessibility.test.tsx`  | 61    | axe-core scans of every page at phone, tablet and desktop sizes, in both themes and with dialogs, menus and errors open; landmarks, headings, skip link, live regions, labels; keyboard-only use and focus handling; large tremor-friendly targets |
+| `shell.test.tsx`          | 28    | Sidebar, tab bar and phone menu navigation; current-page marking; collapsing the sidebar; theme switching and saving; profile menu; sign out; SOS / Call confirmation; Alerts, Video and eye-tracking messages; Scroll up / down; voice commands; Page not found |
+| `html-pages.test.ts`      | 16    | Every HTML page file is a complete document (language, charset, viewport, root element, script), has a route, the right title and its own description, and is built by `vite.config.ts` |
+| `auth.test.tsx`           | 14    | Sign in and Create account: fields, validation errors, Face ID, Back, Enter key, role buttons, theme toggle         |
+| `today.test.tsx`          | 12    | Greeting by time of day, progress bar, marking doses taken / missed, confirmation dialog, Undo, the undo message hiding after 5 seconds, links |
+| `landing.test.tsx`        | 7     | Hero content, links to the sign-in and sign-up pages, in-page section links, photo description                    |
+| `medications.test.tsx`    | 7     | All 9 doses, categories, taken / missed states and card colours, dose status shared with Today                    |
+| `schedule.test.tsx`       | 6     | Month and week strip (including weeks that cross into the next month), selecting a day, schedule items and Done markers |
+| `data.test.ts`            | 4     | The demo data: dose count, unique keys, starting state, schedule                                                   |
+
+As of 2026-10-20 the suite is 9 files / 155 tests, all passing, with 98% line coverage of `src/`.
+
+### Note 1. jsdom loads no CSS, so `tests/utils.tsx` applies the app's Tailwind visibility classes for a chosen device size before each axe scan. This way each scan sees only what a phone, tablet or desktop browser would show. jsdom also cannot measure colours, so colour contrast is checked in a real browser (see Accessibility testing below).
+
+### Linting and type checking
+
+Check the code for problems with
+
+```
+npm run lint
+```
+
+and check the TypeScript types of the app and the tests (this is also the first step of `npm run build`) with
+
+```
+npx tsc -b
+```
+
+### Testing the responsive layouts
+
+With the application running, open it in Chrome or Edge, press `F12` to open DevTools, then press `Ctrl + Shift + M` to turn on device mode. Choose a device or type a width to test each layout:
+
+| Device  | Width to test               | What to check                                                                                   |
+| ------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| Phone   | 390px (iPhone 12 Pro)       | Header with Call / Alerts / Video / theme buttons, bottom tab bar, Scroll up / Voice / Scroll down bar, ☰ menu |
+| Tablet  | 820px (iPad Air)            | Sidebar that collapses with the ‹ button, top bar with SOS and profile menu, scroll / voice bar  |
+| Desktop | 1024px or wider             | Full sidebar, top bar, medication and schedule cards in two columns                              |
+
+### Manual test flow
+
+1. On the landing page (`index.html`), select **I already have an account**, then **Sign in**. The Today page (`today.html`) opens.
+2. On Today or Medications, select **I took this**. The progress bar goes from 2 of 9 to 3 of 9 and a message with **Undo** appears. Select **Undo** to reverse it.
+3. Select **I missed this**. A confirmation dialog appears; confirm it and the card shows **✗ Missed**.
+4. Switch between light and dark themes (the sun / moon button). The choice is remembered after a page reload.
+5. Move between Today, Medications and Schedule using the sidebar, the bottom tab bar or the phone ☰ menu.
+6. Select **SOS** (tablet / desktop) or **Call** (phone). A confirmation dialog asks before "calling" (no call is placed).
+7. Select **Voice** and choose a command such as **Go to medications** or **Scroll down**.
+8. Use only the keyboard (`Tab`, `Shift + Tab`, `Enter`, `Esc`) to repeat the steps above. Every control shows a visible focus outline and `Esc` closes dialogs and menus.
+9. Open each HTML file directly (for example http://localhost:5173/schedule.html) and refresh it. The matching page loads and the browser tab shows its title, such as **Schedule · CareConnect**. A file that does not exist, such as `nope.html`, shows the **Page not found** page.
+
+### Testing the PWA
+
+1. Run `npm run build` and then `npm run preview`, and open http://localhost:4173.
+2. In DevTools open **Application → Manifest** to check the name, colours and icons, and **Application → Service workers** to check the service worker is activated.
+3. Install the app with the install icon in the browser's address bar. It opens in its own window.
+4. In DevTools **Network**, set throttling to **Offline** and reload. The application still loads.
+
+### Accessibility testing
+
+The automated accessibility tests (`npm run test:a11y`) scan every page with axe-core against WCAG 2.2 A / AA and axe's best-practice rules, at phone, tablet and desktop sizes. They also check keyboard use, focus handling, labels and live announcements.
+
+Colour contrast needs a real browser. With the application running, scan each page with the [axe DevTools](https://www.deque.com/axe/devtools/) browser extension or the **Lighthouse** tab in Chrome DevTools. Do this at the phone, tablet and desktop widths, in both light and dark themes. As of 2026-10-20, axe-core's colour-contrast rule reports no violations on any page at the three widths in either theme.
+
+## Security Notes
+
+- **No real data.** All medications and schedule items are fictional and live in memory (`src/data.ts`); changes are lost when a page is reloaded or opened from its HTML file directly.
+- **Simulated sign-in.** Sign in and create account do not check, store or send any credential.
+- **Only the theme is stored.** The light / dark choice is the only value saved in `localStorage`.
+- **Demo-only features.** SOS / Call, Video, Alerts, eye tracking and voice commands only show a message. No call is placed and no microphone or camera is used.
+- **Network.** The app loads the DM Sans and Inter fonts from Google Fonts (cached by the service worker for offline use); it makes no other network requests.
+
+## Known Issues / Limitations
+
+- No backend/API integration. All data is static/in-memory.
+- Only the Today, Medications and Schedule pages are implemented; Messages, Symptoms and Account from the design are not yet built.
+- No browser-based end-to-end tests yet. The automated tests run in jsdom, so layout and colour contrast are checked manually in a browser.
+
 # Weekly Contributions 09/02-09/08
 
 ## Daniel
