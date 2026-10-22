@@ -5,7 +5,7 @@ import { PAGE_TITLES } from '../src/nav'
 import { routes } from '../src/router'
 
 // Every page is its own HTML file in the project root
-const PAGES = ['index', 'signin', 'create-account', 'today', 'medications', 'schedule', '404']
+const PAGES = ['index', 'signin', 'create-account', 'today', 'medications', 'messages', 'schedule', 'symptoms', 'account', '404']
 const read = (file: string) => readFileSync(resolve(__dirname, '..', file), 'utf8')
 
 // All route paths, including nested ones

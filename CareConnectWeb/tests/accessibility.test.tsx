@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { axeViolations, renderApp, sidebar, simulateViewport, tabBar, VIEWPORTS } from './utils'
+import { axeViolations, renderApp, sidebar, simulateViewport, VIEWPORTS } from './utils'
 
 describe('Accessibility test helpers', () => {
   it('report a real violation (so a clean scan means something)', async () => {
@@ -9,24 +9,25 @@ describe('Accessibility test helpers', () => {
   })
 
   it.each([
-    ['phone', { sidebar: false, tabBar: true, accessBar: true }],
-    ['tablet', { sidebar: true, tabBar: false, accessBar: true }],
-    ['desktop', { sidebar: true, tabBar: false, accessBar: false }],
+    ['phone', { accessBar: true }],
+    ['tablet', { accessBar: true }],
+    ['desktop', { accessBar: false }],
   ] as const)('simulate the %s layout from the Figma design', (size, expected) => {
     renderApp('/today.html')
     const sidebarEl = sidebar()
-    const tabBarEl = tabBar()
+    const topBarEl = screen.getByRole('banner')
     const accessBarEl = screen.getByRole('button', { name: /Scroll down/ }).parentElement!
     simulateViewport(size)
     const shown = (el: HTMLElement) => el.style.display !== 'none'
-    expect(shown(sidebarEl)).toBe(expected.sidebar)
-    expect(shown(tabBarEl)).toBe(expected.tabBar)
+    // Every size has the sidebar (a rail on phones) and the top bar
+    expect(shown(sidebarEl)).toBe(true)
+    expect(shown(topBarEl)).toBe(true)
     expect(shown(accessBarEl)).toBe(expected.accessBar)
     expect(shown(screen.getByRole('main'))).toBe(true)
   })
 })
 
-const PAGES = ['/', '/signin.html', '/create-account.html', '/today.html', '/medications.html', '/schedule.html', '/nope.html']
+const PAGES = ['/', '/signin.html', '/create-account.html', '/today.html', '/medications.html', '/messages.html', '/schedule.html', '/symptoms.html', '/account.html', '/nope.html']
 
 describe('Accessibility: axe-core scan (WCAG 2.2 A/AA + best practices)', () => {
   // Every page at every device size from the Figma design
@@ -67,10 +68,42 @@ describe('Accessibility: axe-core scan (WCAG 2.2 A/AA + best practices)', () => 
     expect(await axeViolations('desktop')).toEqual([])
   })
 
-  it('has no violations with the menu drawer open (phone)', async () => {
+  it.each(['phone', 'tablet'] as const)('has no violations with the sidebar collapsed to a rail (%s)', async size => {
+    const { user } = renderApp('/messages.html')
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    expect(await axeViolations(size)).toEqual([])
+  })
+
+  it.each(VIEWPORTS)('has no violations with the help dialog open (%s)', async size => {
     const { user } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: 'Open navigation menu' }))
-    expect(await axeViolations('phone')).toEqual([])
+    await user.click(screen.getByRole('button', { name: 'Help' }))
+    expect(await axeViolations(size)).toEqual([])
+  })
+
+  it.each(VIEWPORTS)('has no violations with the add-symptom form showing an error (%s)', async size => {
+    const { user } = renderApp('/symptoms.html')
+    await user.click(screen.getByRole('button', { name: 'Add a symptom' }))
+    await user.click(screen.getByRole('button', { name: 'Save symptom' }))
+    expect(await axeViolations(size)).toEqual([])
+  })
+
+  it.each(VIEWPORTS)('has no violations in an open conversation (%s)', async size => {
+    renderApp('/messages.html?c=joyce')
+    expect(await axeViolations(size)).toEqual([])
+  })
+
+  it.each(VIEWPORTS)('has no violations on the Face ID screens (%s)', async size => {
+    const { user } = renderApp('/signin.html')
+    await user.click(screen.getByRole('button', { name: 'Use Face ID instead' }))
+    expect(await axeViolations(size)).toEqual([])
+    await user.click(screen.getByRole('button', { name: 'Yes, use Face ID' }))
+    expect(await axeViolations(size)).toEqual([])
+  })
+
+  it.each(VIEWPORTS)('has no violations on the call screen (%s)', async size => {
+    const { user } = renderApp('/messages.html?c=joyce')
+    await user.click(screen.getByRole('button', { name: 'Call Aunt Joyce' }))
+    expect(await axeViolations(size)).toEqual([])
   })
 
   it('has no violations with the sidebar collapsed (tablet)', async () => {
@@ -188,7 +221,7 @@ describe('Accessibility: keyboard', () => {
   it('focuses the first item when the profile menu opens', async () => {
     const { user } = renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'Maddy, account menu' }))
-    expect(screen.getByRole('menuitem', { name: 'Use light theme' })).toHaveFocus()
+    expect(screen.getByRole('menuitem', { name: 'Account' })).toHaveFocus()
   })
 
   it('focuses Cancel when the voice panel opens', async () => {

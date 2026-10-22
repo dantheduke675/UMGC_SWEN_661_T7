@@ -1,18 +1,19 @@
 import { screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { renderApp, sidebar, statusMessages, tabBar } from './utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { renderApp, sidebar, statusMessages } from './utils'
 
 describe('App shell: navigation', () => {
   it.each([
     ['/today.html', 'Today'],
     ['/medications.html', 'Medications'],
+    ['/messages.html', 'Messages'],
     ['/schedule.html', 'Schedule'],
+    ['/symptoms.html', 'Symptoms'],
+    ['/account.html', 'Account'],
   ])('shows %s with its title and marks it current', (path, label) => {
     renderApp(path)
-    // Top bar title (tablet/desktop) and the phone header's screen-reader title
-    expect(screen.getAllByRole('heading', { level: 1, name: label })).toHaveLength(2)
-    expect(within(sidebar()).getByRole('link', { name: label })).toHaveAttribute('aria-current', 'page')
-    expect(within(tabBar()).getByRole('link', { name: label })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('heading', { level: 1, name: label })).toBeInTheDocument()
+    expect(within(sidebar()).getByRole('link', { name: new RegExp(`^${label}`) })).toHaveAttribute('aria-current', 'page')
   })
 
   it('moves between pages with the sidebar', async () => {
@@ -23,22 +24,17 @@ describe('App shell: navigation', () => {
     expect(currentPath()).toBe('/medications.html')
   })
 
-  it('moves between pages with the phone tab bar', async () => {
-    const { user, currentPath } = renderApp('/today.html')
-    await user.click(within(tabBar()).getByRole('link', { name: 'Schedule' }))
-    expect(currentPath()).toBe('/schedule.html')
-  })
-
   it('links every nav item to its HTML page', () => {
     renderApp('/today.html')
     const hrefs = within(sidebar()).getAllByRole('link').map(a => a.getAttribute('href'))
-    expect(hrefs).toEqual(['/today.html', '/medications.html', '/schedule.html'])
+    expect(hrefs).toEqual(['/today.html', '/medications.html', '/messages.html', '/schedule.html', '/symptoms.html', '/account.html'])
   })
 
-  it('opens the full plan (schedule) from the phone header', async () => {
-    const { user, currentPath } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: 'Full Plan' }))
-    expect(currentPath()).toBe('/schedule.html')
+  it('shows the unread count on Messages until the conversation is opened', async () => {
+    const { user } = renderApp('/today.html')
+    await user.click(within(sidebar()).getByRole('link', { name: 'Messages, 1 unread' }))
+    await user.click(screen.getByRole('button', { name: /^Aunt Joyce/ }))
+    expect(within(sidebar()).getByRole('link', { name: 'Messages' })).toBeInTheDocument()
   })
 
   it('shows "Page not found" for an unknown page, with a way back', async () => {
@@ -49,28 +45,29 @@ describe('App shell: navigation', () => {
   })
 })
 
-describe('App shell: phone menu drawer', () => {
-  it('opens, navigates and closes', async () => {
+// Phones start with the sidebar collapsed to an icon rail (jsdom has no matchMedia, so fake it)
+function fakePhone() {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+}
+
+describe('App shell: phone sidebar', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('starts as a rail, expands, and closes after picking a page', async () => {
+    fakePhone()
     const { user, currentPath } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: 'Open navigation menu' }))
-    const drawer = screen.getByRole('dialog', { name: 'Navigation menu' })
-    await user.click(within(drawer).getByRole('link', { name: 'Medications' }))
-    expect(currentPath()).toBe('/medications.html')
-    expect(screen.queryByRole('dialog', { name: 'Navigation menu' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Expand sidebar' }))
+    await user.click(within(sidebar()).getByRole('link', { name: 'Symptoms' }))
+    expect(currentPath()).toBe('/symptoms.html')
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('closes with Escape and with the × button', async () => {
+  it('closes with Escape', async () => {
+    fakePhone()
     const { user } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: 'Open navigation menu' }))
+    await user.click(screen.getByRole('button', { name: 'Expand sidebar' }))
     await user.keyboard('{Escape}')
-    expect(screen.queryByRole('dialog', { name: 'Navigation menu' })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Open navigation menu' }))
-    const drawer = screen.getByRole('dialog', { name: 'Navigation menu' })
-    const close = within(drawer).getAllByRole('button', { name: 'Close navigation menu' }).find(b => b.textContent === '×')!
-    expect(close).toHaveFocus()
-    await user.click(close)
-    expect(screen.queryByRole('dialog', { name: 'Navigation menu' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument()
   })
 })
 
@@ -103,12 +100,6 @@ describe('App shell: theme and account', () => {
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 
-  it('switches theme from the phone header', async () => {
-    const { user } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: 'Switch to light theme' }))
-    expect(document.documentElement.dataset.theme).toBe('light')
-  })
-
   it('opens the profile menu, switches theme from it and closes with Escape', async () => {
     const { user } = renderApp('/today.html')
     const profile = screen.getByRole('button', { name: 'Maddy, account menu' })
@@ -124,10 +115,11 @@ describe('App shell: theme and account', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  it('signs out from the sidebar', async () => {
+  it('signs out from the sidebar to the landing page', async () => {
     const { user, currentPath } = renderApp('/today.html')
     await user.click(within(sidebar()).getByRole('button', { name: 'Sign out' }))
     expect(currentPath()).toBe('/')
+    expect(screen.getByRole('heading', { level: 1, name: /Stay on track/ })).toBeInTheDocument()
   })
 
   it('signs out from the profile menu', async () => {
@@ -135,6 +127,7 @@ describe('App shell: theme and account', () => {
     await user.click(screen.getByRole('button', { name: 'Maddy, account menu' }))
     await user.click(screen.getByRole('menuitem', { name: 'Sign out' }))
     expect(currentPath()).toBe('/')
+    expect(screen.getByRole('heading', { level: 1, name: /Stay on track/ })).toBeInTheDocument()
   })
 })
 
@@ -148,11 +141,14 @@ describe('App shell: SOS and quick actions', () => {
     expect(statusMessages().queryByText(/Calling/)).not.toBeInTheDocument()
   })
 
-  it('"calls" after confirming (demo message only)', async () => {
+  it('opens the call screen after confirming (demo only)', async () => {
     const { user } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: 'Call emergency contact' }))
+    await user.click(screen.getByRole('button', { name: 'SOS, call emergency contact' }))
     await user.click(screen.getByRole('button', { name: 'Call Aunt Joyce' }))
-    expect(statusMessages().getByText('Calling Aunt Joyce… (demo — no call is placed)')).toBeInTheDocument()
+    const call = screen.getByRole('dialog', { name: 'Aunt Joyce' })
+    await user.click(within(call).getByRole('button', { name: 'End call' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(statusMessages().getByText(/^Call with Aunt Joyce ended · 00:0\d \(demo — no call was placed\)$/)).toBeInTheDocument()
   })
 
   it('closes the SOS dialog with Escape', async () => {
@@ -162,14 +158,28 @@ describe('App shell: SOS and quick actions', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
-  it.each([
-    ['Alerts', 'All caught up — no new alerts'],
-    ['Video', 'Video calls are coming soon'],
-    ['Eye tracking (coming soon)', 'Eye tracking is coming soon'],
-  ])('shows a message for %s', async (button, message) => {
+  it('shows a message for eye tracking', async () => {
     const { user } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: button }))
-    expect(statusMessages().getByText(message)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Eye tracking (coming soon)' }))
+    expect(statusMessages().getByText('Eye tracking is coming soon')).toBeInTheDocument()
+  })
+
+  it('opens the help guide and closes it with Got it or Escape', async () => {
+    const { user } = renderApp('/today.html')
+    await user.click(screen.getByRole('button', { name: 'Help' }))
+    expect(screen.getByRole('button', { name: 'Got it' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('dialog', { name: 'Help' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Help' }))
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Help' })).not.toBeInTheDocument()
+  })
+
+  it('opens the Account page from the profile menu', async () => {
+    const { user, currentPath } = renderApp('/today.html')
+    await user.click(screen.getByRole('button', { name: 'Maddy, account menu' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Account' }))
+    expect(currentPath()).toBe('/account.html')
   })
 })
 
@@ -188,6 +198,8 @@ describe('App shell: scroll and voice controls', () => {
     ['Go to medications', '/medications.html'],
     ['Open schedule', '/schedule.html'],
     ['Go home', '/today.html'],
+    ['Open messages', '/messages.html'],
+    ['Log a symptom', '/symptoms.html'],
   ])('voice command "%s" opens %s', async (command, path) => {
     // Start somewhere else so the command has to move
     const { user, currentPath } = renderApp(path === '/today.html' ? '/schedule.html' : '/today.html')

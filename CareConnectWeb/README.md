@@ -49,11 +49,14 @@ in-memory dose log.
 | HTML file             | Page           | Notes                                                    |
 | --------------------- | -------------- | -------------------------------------------------------- |
 | `index.html`          | Landing        | Marketing page (always light); also served at `/`        |
-| `signin.html`         | Sign in        | Simulated: no credential is checked or sent              |
+| `signin.html`         | Sign in        | Simulated: no credential is checked or sent. "Use Face ID instead" asks first, then shows a short scan (no camera). |
 | `create-account.html` | Create account | Simulated: choosing a role opens the app                 |
 | `today.html`          | Today          | Progress, next doses, next appointment                   |
 | `medications.html`    | Medications    | Every dose today; mark taken or missed, with undo        |
+| `messages.html`       | Messages       | Conversations with the care team; open one (`?c=<id>`) full-page to read, reply (typed or one-tap quick replies) and call |
 | `schedule.html`       | Schedule       | Week strip and today's plan                              |
+| `symptoms.html`       | Symptoms       | Today's symptoms with a 1-5 severity bar; log a new one  |
+| `account.html`        | Account        | Profile, preferences (theme, reminders, Face ID), care team, sign out |
 | `404.html`            | Not found      | Shown for unknown URLs (and offline by the service worker) |
 
 To add a page: create its HTML file here, add it to `pages` in
@@ -69,9 +72,15 @@ JavaScript and CSS in `dist/assets/`. Open them through a web server
 
 | Device  | Width      | Signed-in layout                                                                 |
 | ------- | ---------- | -------------------------------------------------------------------------------- |
-| Phone   | < 768px    | Header with Call / Alerts / Video / theme, bottom tab bar, scroll + voice bar, menu drawer |
+| Phone   | < 768px    | Same as tablet, scaled down: sidebar starts as an icon rail and expands over the page, top bar (SOS, profile menu), scroll + voice bar |
 | Tablet  | 768–1023px | Collapsible sidebar, top bar (voice, eye tracking, SOS, profile menu), scroll + voice bar |
 | Desktop | ≥ 1024px   | Full sidebar, top bar, two-column cards                                          |
+
+An open conversation fills the page with its own reply box, so it hides the
+scroll + voice bar. Calls (from a conversation, or SOS after confirming) open a
+full-screen call screen with a running timer, Mute, Speaker and End call.
+
+Every size has a floating **?** button that opens a short guide to the controls.
 
 The sign-in screens show a brand panel beside the form on tablet and desktop,
 and the form alone on phones. The landing page hero stacks below 900px.
@@ -80,7 +89,8 @@ and the form alone on phones. The landing page hero stacks below 900px.
 
 As in the other CareConnect apps, all data is fictional and lives in memory
 (`src/data.ts`, `src/AppState.tsx`). Only the light/dark theme preference is
-stored in `localStorage`. SOS / Call, video, alerts, eye tracking and voice
+stored in `localStorage`. Messages you send, symptoms you log and Account
+switches also stay in memory. SOS, calls, eye tracking and voice
 commands are demo UI only: no call is placed and no microphone or camera is used.
 
 Network: the app loads the DM Sans and Inter fonts from Google Fonts (cached by
