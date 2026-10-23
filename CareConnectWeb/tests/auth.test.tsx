@@ -25,8 +25,20 @@ describe('Sign in (signin.html)', () => {
     const { user, currentPath } = renderApp('/signin.html')
     await user.clear(screen.getByLabelText('Email address'))
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Enter your email address and password.')
-    expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter your email address.')
+    expect(screen.getByLabelText('Email address')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Email address')).toHaveFocus()
+    expect(currentPath()).toBe('/signin.html')
+  })
+
+  it('rejects an email address without an @ and a domain', async () => {
+    const { user, currentPath } = renderApp('/signin.html')
+    const email = screen.getByLabelText('Email address')
+    await user.clear(email)
+    await user.type(email, 'maddy.example.com')
+    await user.click(screen.getByRole('button', { name: 'Sign in' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter an email address like name@example.com.')
+    expect(email).toHaveAccessibleDescription(expect.stringContaining('name@example.com'))
     expect(currentPath()).toBe('/signin.html')
   })
 
@@ -34,7 +46,8 @@ describe('Sign in (signin.html)', () => {
     const { user } = renderApp('/signin.html')
     await user.clear(screen.getByLabelText('Password'))
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter your password.')
+    expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true')
   })
 
   // Waits for the real 2.5 s scan
@@ -46,7 +59,7 @@ describe('Sign in (signin.html)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Yes, use Face ID' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Welcome back, Maddy' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Looking for your face…')
+    expect(screen.getByText('Looking for your face…').closest('[role="status"]')).toBeInTheDocument()
     expect(currentPath()).toBe('/signin.html')
 
     await waitFor(() => expect(currentPath()).toBe('/today.html'), { timeout: 4000 })
@@ -92,6 +105,18 @@ describe('Create account (create-account.html)', () => {
     const roles = screen.getByRole('group', { name: 'I AM A…' })
     expect(roles).toContainElement(screen.getByRole('button', { name: 'Care recipient' }))
     expect(roles).toContainElement(screen.getByRole('button', { name: 'Caregiver' }))
+  })
+
+  it('checks every field, lists each problem under its field and focuses the first', async () => {
+    const { user, currentPath } = renderApp('/create-account.html')
+    await user.clear(screen.getByLabelText('Full name'))
+    await user.clear(screen.getByLabelText('Email address'))
+    await user.type(screen.getByLabelText('Email address'), 'maddy@')
+    await user.click(screen.getByRole('button', { name: 'Care recipient' }))
+    expect(screen.getAllByRole('alert').map(a => a.textContent)).toEqual(['Enter your full name.', 'Enter an email address like name@example.com.'])
+    expect(screen.getByLabelText('Full name')).toHaveFocus()
+    expect(screen.getByLabelText('Password')).not.toHaveAttribute('aria-invalid')
+    expect(currentPath()).toBe('/create-account.html')
   })
 
   it('rejects a password shorter than 8 characters', async () => {

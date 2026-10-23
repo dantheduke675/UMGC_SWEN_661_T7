@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import { useAppState } from '../appStateContext'
 import { patient } from '../data'
+import { useFocusTrap } from '../focus'
+import { NotificationsButton } from '../components/NotificationsPanel'
+import { useClickOutside, useEscapeKey } from '../hooks'
 import { NAV_ITEMS } from '../nav'
+import { CTRL_SHORTCUTS, OTHER_KEYS } from '../shortcuts'
 
 export function Avatar({ size = 34 }: { size?: number }) {
   return (
@@ -16,13 +20,14 @@ export function Avatar({ size = 34 }: { size?: number }) {
   )
 }
 
-function IconBtn({ icon, label, onClick, className = '' }: { icon: string; label: string; onClick?: () => void; className?: string }) {
+function IconBtn({ icon, label, onClick, pressed, className = '' }: { icon: string; label: string; onClick?: () => void; pressed?: boolean; className?: string }) {
   return (
     <button
       onClick={onClick}
       aria-label={label}
+      aria-pressed={pressed}
       title={label}
-      className={`flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-lg transition-all active:scale-90 ${className}`}
+      className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-lg transition-all active:scale-90 pointer-coarse:size-12 ${pressed ? 'bg-brand/25 ring-2 ring-brand' : 'bg-surface-2'} ${className}`}
     >
       <span aria-hidden="true">{icon}</span>
     </button>
@@ -63,12 +68,12 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="absolute top-6 -right-[15px] z-10 size-[30px] rounded-[10px] border border-line bg-surface-2 text-xl font-extrabold text-sub lg:hidden"
+          className="absolute top-6 -right-[15px] z-10 size-[30px] rounded-[10px] pointer-coarse:top-5 pointer-coarse:-right-[22px] pointer-coarse:size-11 border border-line bg-surface-2 text-xl font-extrabold text-sub lg:hidden"
         >
           {collapsed ? '›' : '‹'}
         </button>
 
-        <nav aria-label="Primary" className="flex flex-1 flex-col gap-[5px] overflow-y-auto px-2.5 py-3.5">
+        <nav id="primary-nav" aria-label="Primary" className="flex flex-1 flex-col gap-[5px] overflow-y-auto px-2.5 py-3.5">
           {NAV_ITEMS.map(n => {
             const badge = n.to === '/messages.html' ? unread : 0
             return (
@@ -116,26 +121,30 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
 
 /* ---------- Top bar (every size) ---------- */
 export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string; onVoice: () => void; onSos: () => void; onEyeTracking: () => void }) {
-  const { theme, toggleTheme } = useAppState()
+  const { theme, toggleTheme, prefs, history, setHistoryOpen } = useAppState()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const menuRef = useClickOutside<HTMLDivElement>(() => setOpen(false), open)
+  const undoable = history.filter(h => !h.undone).length
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  useEscapeKey(() => setOpen(false), open)
 
   return (
     <header className="flex min-h-[68px] items-center gap-2 border-b border-line bg-surface py-2.5 pr-3 pl-6 md:gap-3.5 md:pr-[18px] lg:min-h-[76px] lg:px-8">
       <div className="min-w-0 flex-1">
         <p className="truncate text-[10px] leading-snug font-extrabold tracking-[0.12em] text-sub">CARECONNECT WEB</p>
-        <h1 className="truncate text-xl leading-tight font-extrabold text-ink lg:text-[23px]">{title}</h1>
+        <h1 id="page-title" className="truncate text-xl leading-tight font-extrabold text-ink lg:text-[23px]">{title}</h1>
       </div>
-      <div className="flex items-center gap-2">
+      <div id="page-tools" role="group" aria-label="Voice, SOS and account" className="flex items-center gap-2">
+        <IconBtn
+          icon="🕘"
+          label={undoable ? `Action history, ${undoable} can be undone` : 'Action history'}
+          onClick={() => setHistoryOpen(true)}
+          className="max-[860px]:hidden"
+        />
         <IconBtn icon="🎤" label="Voice commands" onClick={onVoice} className="max-[860px]:hidden" />
-        <IconBtn icon="👁" label="Eye tracking (coming soon)" onClick={onEyeTracking} className="max-[860px]:hidden" />
+        <IconBtn icon="👁" label="Eye tracking" pressed={prefs.eyeTracking} onClick={onEyeTracking} className="max-[860px]:hidden" />
+        <NotificationsButton />
         <button
           onClick={onSos}
           title="Call emergency contact"
@@ -144,7 +153,7 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
         >
           SOS
         </button>
-        <div className="relative">
+        <div ref={menuRef} className="relative">
           <button
             onClick={() => setOpen(o => !o)}
             aria-haspopup="menu"
@@ -194,7 +203,7 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
 export function AccessBar({ onScroll, onVoice }: { onScroll: (dir: 'up' | 'down') => void; onVoice: () => void }) {
   const side = 'flex h-16 flex-1 flex-col items-center justify-center gap-1 rounded-2xl border-2 border-line bg-surface-2 text-[13px] font-bold text-sub transition-all active:scale-95'
   return (
-    <div className="flex shrink-0 items-center gap-2.5 border-t border-line bg-surface px-3 py-2.5 pb-[max(10px,env(safe-area-inset-bottom))] lg:hidden">
+    <section aria-label="Scroll and voice controls" className="flex shrink-0 items-center gap-2.5 border-t border-line bg-surface px-3 py-2.5 pb-[max(10px,env(safe-area-inset-bottom))] lg:hidden">
       <button onClick={() => onScroll('up')} className={side}>
         <span className="text-[22px] leading-none" aria-hidden="true">↑</span>
         <span>Scroll up</span>
@@ -211,7 +220,7 @@ export function AccessBar({ onScroll, onVoice }: { onScroll: (dir: 'up' | 'down'
         <span className="text-[22px] leading-none" aria-hidden="true">↓</span>
         <span>Scroll down</span>
       </button>
-    </div>
+    </section>
   )
 }
 
@@ -224,50 +233,75 @@ const APP_HELP: HelpItem[] = [
   ['🆘', 'SOS', 'Calls your emergency contact after you confirm.'],
   ['💊', 'I took this / I missed this', 'Logs a dose. Each change can be undone for a few seconds.'],
   ['‹›', 'Sidebar arrow', 'Shows or hides the page names next to the icons.'],
+  ['🕘', 'Action history', 'Ctrl + H lists what you have done, so you can undo any of it.'],
 ]
 
-// Placement: above the scroll / voice bar in the app; the bottom corner on pages without it
-export function HelpButton({ items = APP_HELP, position = 'bottom-[104px] lg:right-5 lg:bottom-5' }: { items?: HelpItem[]; position?: string }) {
-  const [open, setOpen] = useState(false)
+const kbd = 'rounded-md border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-[13px] font-bold whitespace-nowrap text-ink'
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+// Every keyboard shortcut, from shortcuts.ts
+function ShortcutList() {
+  return (
+    <section aria-labelledby="shortcuts-title" className="mb-5">
+      <h3 id="shortcuts-title" className="mb-3 text-base font-bold text-ink">Keyboard shortcuts</h3>
+      <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-3 gap-y-2 text-sm">
+        {[...OTHER_KEYS.map(k => [k.label, k.does]), ...CTRL_SHORTCUTS.map(s => [s.label, s.does])].map(([keys, does]) => (
+          <div key={keys} className="contents">
+            <dt>
+              <kbd className={kbd}>{keys}</kbd>
+            </dt>
+            <dd className="text-sub">{does}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
+// Placement: above the scroll / voice bar in the app; the bottom corner on pages without it
+export function HelpButton({ id, items = APP_HELP, position = 'bottom-[104px] lg:right-5 lg:bottom-5' }: { id?: string; items?: HelpItem[]; position?: string }) {
+  const [open, setOpen] = useState(false)
 
   return (
     <>
       <button
+        id={id}
         onClick={() => setOpen(true)}
         aria-label="Help"
         title="Help"
-        className={`fixed right-4 z-20 grid size-11 place-items-center rounded-full border border-line bg-surface-2 text-xl font-bold text-ink shadow-lg ${position}`}
+        className={`fixed right-4 z-20 grid size-11 place-items-center pointer-coarse:size-12 rounded-full border border-line bg-surface-2 text-xl font-bold text-ink shadow-lg ${position}`}
       >
         ?
       </button>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-labelledby="help-title" className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-line bg-surface p-6">
-            <h2 id="help-title" className="mb-4 text-xl font-bold text-ink">Help</h2>
-            <ul className="mb-5 flex flex-col gap-3.5">
-              {items.map(([icon, term, desc]) => (
-                <li key={term} className="flex gap-3">
-                  <span className="w-7 shrink-0 text-center text-xl" aria-hidden="true">{icon}</span>
-                  <div>
-                    <p className="font-bold text-ink">{term}</p>
-                    <p className="text-sm text-sub">{desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <button onClick={() => setOpen(false)} autoFocus className="h-14 w-full rounded-2xl bg-brand text-base font-bold text-white">
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
+      {open && <HelpDialog items={items} onClose={() => setOpen(false)} />}
     </>
+  )
+}
+
+function HelpDialog({ items, onClose }: { items: HelpItem[]; onClose: () => void }) {
+  const ref = useFocusTrap<HTMLDivElement>()
+
+  useEscapeKey(onClose)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+      <div ref={ref} role="dialog" aria-modal="true" aria-labelledby="help-title" className="max-h-[90%] w-full max-w-md overflow-y-auto rounded-3xl border border-line bg-surface p-6">
+        <h2 id="help-title" className="mb-4 text-xl font-bold text-ink">Help</h2>
+        <ul className="mb-5 flex flex-col gap-3.5">
+          {items.map(([icon, term, desc]) => (
+            <li key={term} className="flex gap-3">
+              <span className="w-7 shrink-0 text-center text-xl" aria-hidden="true">{icon}</span>
+              <div>
+                <p className="font-bold text-ink">{term}</p>
+                <p className="text-sm text-sub">{desc}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <ShortcutList />
+        <button onClick={onClose} autoFocus className="h-14 w-full rounded-2xl bg-brand text-base font-bold text-white">
+          Got it
+        </button>
+      </div>
+    </div>
   )
 }

@@ -1,9 +1,16 @@
 import { Link } from 'react-router'
+import { SkipLinks, type SkipLink } from '../components/SkipLinks'
+
+const SKIP_LINKS: SkipLink[] = [
+  ['main', 'Skip to main content'],
+  ['site-actions', 'Skip to sign in'],
+]
 
 // Marketing page from the Figma design; layout rules are in index.css (.website-*)
 export function Landing() {
   return (
     <div className="website-landing">
+      <SkipLinks links={SKIP_LINKS} />
       <header className="website-nav">
         <div className="website-brand">
           <span className="website-brand-mark" aria-hidden="true">✚</span>
@@ -14,19 +21,19 @@ export function Landing() {
           <a href="#care">For caregivers</a>
           <a href="#accessibility">Accessibility</a>
         </nav>
-        <div className="website-nav-actions">
+        <div id="site-actions" className="website-nav-actions">
           <Link to="/signin.html" className="website-button website-button-quiet">Sign in</Link>
           <Link to="/create-account.html" className="website-button website-button-primary">Create account</Link>
         </div>
       </header>
 
-      <main>
-        <section className="website-hero">
+      <main id="main">
+        <section className="website-hero" aria-labelledby="hero-title">
           <div className="website-hero-copy">
             <div className="website-eyebrow">
               <span aria-hidden="true">●</span>Medication support, made human
             </div>
-            <h1>
+            <h1 id="hero-title">
               Stay on track.
               <br />
               <em>Stay connected.</em>
@@ -70,21 +77,21 @@ export function Landing() {
         </section>
 
         <section className="website-proof" id="how-it-works" aria-labelledby="proof-title">
-          <p id="proof-title">One calm place for the details that matter</p>
+          <h2 id="proof-title">One calm place for the details that matter</h2>
           <div className="website-feature-grid">
-            <article>
-              <span>01</span>
-              <h2>Simple medication check-ins</h2>
+            <article aria-labelledby="feature-1">
+              <span aria-hidden="true">01</span>
+              <h3 id="feature-1">Simple medication check-ins</h3>
               <p>Large, clear actions make it easy to log a dose—and every action can be undone.</p>
             </article>
-            <article id="care">
-              <span>02</span>
-              <h2>Your people stay informed</h2>
+            <article id="care" aria-labelledby="feature-2">
+              <span aria-hidden="true">02</span>
+              <h3 id="feature-2">Your people stay informed</h3>
               <p>Caregivers and clinicians can see updates and coordinate without repeated phone calls.</p>
             </article>
-            <article id="accessibility">
-              <span>03</span>
-              <h2>Designed around real needs</h2>
+            <article id="accessibility" aria-labelledby="feature-3">
+              <span aria-hidden="true">03</span>
+              <h3 id="feature-3">Designed around real needs</h3>
               <p>Tremor-safe controls, high contrast, and voice-ready navigation support independent use.</p>
             </article>
           </div>

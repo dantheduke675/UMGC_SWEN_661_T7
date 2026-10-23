@@ -16,7 +16,7 @@ function UndoToast({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
             toast.onUndo?.()
             onDismiss(toast.id)
           }}
-          className="shrink-0 rounded-xl bg-brand px-3 py-1.5 text-sm font-bold text-white"
+          className="min-h-9 shrink-0 rounded-xl bg-brand px-3 py-1.5 text-sm font-bold text-white pointer-coarse:min-h-12 pointer-coarse:px-4"
         >
           Undo
         </button>
