@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { useNavigate } from 'react-router'
 import { AuthButton, AuthField } from '../components/AuthControls'
 import { patient } from '../data'
+import { checkEmail, checkRequired, collectErrors, focusFirstError, type FieldErrors } from '../validation'
 
 // How long the simulated face scan takes before opening the app
 const FACE_SCAN_MS = 2500
@@ -14,17 +15,19 @@ type Step = 'password' | 'ask-face' | 'scanning'
 */
 export function SignIn() {
   const navigate = useNavigate()
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState<FieldErrors<'email' | 'password'>>({})
   const [step, setStep] = useState<Step>('password')
   const openApp = useCallback(() => navigate('/today.html'), [navigate])
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
-    if (!String(data.get('email')).trim() || !String(data.get('password'))) {
-      setError('Enter your email address and password.')
-      return
-    }
+    const found = collectErrors({
+      email: checkEmail(String(data.get('email'))),
+      password: checkRequired(String(data.get('password')), 'Enter your password.'),
+    })
+    setErrors(found)
+    if (Object.keys(found).length) return focusFirstError(e.currentTarget, found)
     navigate('/today.html')
   }
 
@@ -53,6 +56,7 @@ export function SignIn() {
           autoComplete="email"
           defaultValue={patient.email}
           helper="We will never share this."
+          error={errors.email}
         />
         <AuthField
           id="si-pass"
@@ -62,7 +66,7 @@ export function SignIn() {
           autoComplete="current-password"
           defaultValue="password"
           helper="Your password manager can fill this for you."
-          error={error}
+          error={errors.password}
         />
       </div>
       <div className="mt-2 flex flex-col gap-[18px] md:mt-0 md:gap-6">

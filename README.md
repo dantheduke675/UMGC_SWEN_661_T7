@@ -1103,7 +1103,7 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 
 # Web App:
 
-The web front end is a responsive, installable Progressive Web App (PWA) built with [Vite](https://vite.dev/), React 19, [React Router](https://reactrouter.com/) and [Tailwind CSS](https://tailwindcss.com/) 4, written in TypeScript. Its layout follows the team's Figma Make design and adjusts automatically to the screen size of the device it is opened on: phone, tablet or desktop. There is no switch to pick a layout; resizing the window or rotating a device changes it straight away.
+The web front end is a responsive, installable Progressive Web App (PWA) built with [Vite](https://vite.dev/), React 19, [React Router](https://reactrouter.com/) and [Tailwind CSS](https://tailwindcss.com/) 4, written in TypeScript. App-wide state is kept with React's Context API (`src/AppState.tsx`). Its layout follows the team's Figma Make design and adjusts automatically to the screen size of the device it is opened on: phone, tablet or desktop. There is no switch to pick a layout; resizing the window or rotating a device changes it straight away.
 
 ## HTML Pages
 
@@ -1113,16 +1113,84 @@ Every page of the web app is its own HTML file, so each one can be opened, bookm
 | --------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
 | `index.html`          | Landing page   | The marketing page the app always starts on, with links to sign in and create an account. Signing out of the app returns here |
 | `signin.html`         | Sign in        | Email and password sign-in, or **Use Face ID instead**: a "Sign in with your face?" question, then a short simulated face scan that opens Today |
-| `create-account.html` | Create account | Sign-up form with the Care recipient / Caregiver role buttons                                             |
+| `create-account.html` | Create account | Sign-up form (name, email and password are checked) with the Care recipient / Caregiver role buttons     |
 | `today.html`          | Today          | Greeting, today's medication progress, next doses and the next appointment                                |
 | `medications.html`    | Medications    | Every dose today; mark each one taken or missed, with Undo                                                 |
 | `messages.html`       | Messages       | Conversations with the care team, with an unread badge. Opening one (`messages.html?c=<id>`) shows the full conversation, quick replies, a reply box and a call button |
 | `schedule.html`       | Schedule       | Week strip and today's plan                                                                                |
 | `symptoms.html`       | Symptoms       | Symptoms logged today with a 1–5 colour-coded severity bar; **+ Add** logs a new one                      |
-| `account.html`        | Account        | Profile, emergency contact, preferences (appearance, medication reminders, Face ID), care team and Sign out |
+| `account.html`        | Account        | Profile, emergency contact, preferences (appearance, notifications, medication reminders, Face ID, share health data), accessibility (focus indicator, zoom, eye tracking, mouse lock, action history), care team, app version and privacy, and Sign out |
 | `404.html`            | Page not found | Shown for any page that does not exist                                                                    |
 
 The HTML files live in the root of `CareConnectWeb/`. Each one loads the shared React code in `src/`, and React Router shows the matching page. Once a page is open, links to the other pages switch instantly without a full reload, which keeps the medication check-ins, messages and symptoms entered during the visit.
+
+## Keyboard Shortcuts and Accessibility Features
+
+Every feature of the web app can be used with the keyboard alone, as in the desktop (Electron) version. The shortcuts are defined in `src/shortcuts.ts` and handled in `src/layouts/RootLayout.tsx` (voice commands and the emergency call in `src/layouts/AppShell.tsx`). They are also listed in the **?** Help guide on every page.
+
+| Keys                          | Action                                                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Ctrl + =`                    | Turn the focus indicator on or off. It is **off by default**, and the choice is remembered     |
+| Arrow keys                    | Move the focus indicator to the next (↓ →) or previous (↑ ←) control. Only works while the focus indicator is on, and stays inside an open dialog |
+| `Enter`                       | Press the focused button; submits the sign-in form                                             |
+| `Tab` / `Shift + Tab`         | Move between controls. Inside an open dialog, focus is trapped in the dialog and returns to the button that opened it when it closes |
+| `Ctrl + +` / `Ctrl + -`       | Zoom in / out, from 80% to 200% (`Ctrl + 0` resets to 100%)                                    |
+| `Ctrl + L`                    | Switch light / dark mode                                                                       |
+| `Ctrl + \`                     | Open voice commands                                                                            |
+| `Ctrl + I`                    | Eye tracking on / off (simulated)                                                              |
+| `Ctrl + O`                    | Mouse lock-on on / off: the focus indicator snaps to the control nearest the pointer, and a click on empty space presses it |
+| `Ctrl + U`                    | Undo the last action                                                                           |
+| `Ctrl + H`                    | Open the action history, where any earlier action can be undone                               |
+| `Ctrl + S`                    | Emergency call (asks for confirmation first)                                                   |
+| `Ctrl + F`                    | Biometric unlock (Face ID) on / off                                                            |
+| `Ctrl + R`                    | Refresh the page                                                                               |
+| `Ctrl + N`                    | Notifications on / off                                                                         |
+| `Esc`                         | Close a dialog, menu, the expanded phone sidebar or the call screen                            |
+
+Every shortcut that changes a setting shows a message with **Undo**, and is added to the action history. The focus indicator, zoom, eye tracking, mouse lock and action history can also be reached from the **Accessibility** group on the Account page, and the action history from its button in the top bar. Voice commands and the emergency call need you to be signed in; on the landing and sign-in pages those shortcuts show a message instead.
+
+### Semantic HTML and ARIA landmarks
+
+Each page uses semantic HTML elements together with named ARIA landmarks, so a screen reader can list the parts of a page and jump between them:
+
+- `header` (banner): the top bar, holding the page's `h1` title.
+- `main`: the page content, named by that `h1` with `aria-labelledby`.
+- `aside` (complementary): the **Sidebar**, and the **About CareConnect** brand panel on the sign-in screens.
+- `nav` (navigation): **Primary** page navigation, **Skip links**, and **Website navigation** on the landing page. Each navigation landmark has its own name.
+- `section` (region): the **Scroll and voice controls** bar, and page sections named by their headings with `aria-labelledby`.
+- Headings follow the page order (`h1` page title, `h2` sections, `h3` cards), and decorative emoji are hidden from screen readers with `aria-hidden`.
+
+### Skip links
+
+Each page starts with skip links, the first thing `Tab` reaches. They are hidden until focused, and they move keyboard focus (not only the scroll position) to their target:
+
+| Page                     | Skip links                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| Signed-in pages          | **Skip to content**, **Skip to navigation**, **Skip to voice, SOS and account** |
+| Sign in / Create account | **Skip to form**, **Skip to help**                                              |
+| Landing page             | **Skip to main content**, **Skip to sign in**                                   |
+
+## Features Shared With the Desktop App
+
+- **Notifications.** The bell in the top bar opens a Notifications panel built from the live data: the next dose due (in time order), today's appointment and any unread messages, each linking to its page. When notifications are off, the panel offers to turn them back on.
+- **Action history.** A top bar button (and `Ctrl + H`) lists every undoable action from this visit, newest first, with an **Undo** for each.
+- **Account settings.** Notifications, medication reminders, Face ID and share health data switches; zoom with − / + buttons (80% to 200%); the app version and a privacy summary.
+- **Mouse lock-on.** For people whose hand shakes: when it is on, the focus indicator follows the control nearest the pointer, and a click on empty space presses that control.
+
+## Forms and Validation
+
+Sign in and Create account check every field when the form is sent (`src/validation.ts`): the email must look like `name@example.com`, the name and password must not be empty, and a new password needs at least 8 characters. Each problem is shown under its own field, announced to screen readers (`role="alert"`, linked to the field with `aria-describedby`, `aria-invalid` set), and the cursor moves to the first field with a problem. The Log a symptom form works the same way.
+
+## Code Structure
+
+| Folder / file                         | What it holds                                                                     |
+| ------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/pages/`                          | One component per page                                                            |
+| `src/layouts/`                        | `RootLayout` (shortcuts, messages, offline notice), `AuthLayout`, `AppShell` and its parts |
+| `src/components/`                     | Reusable pieces: dose card, dialogs, toasts, skip links, notifications panel, form fields |
+| `src/AppState.tsx`, `src/appStateContext.ts` | App-wide state with the Context API                                        |
+| `src/hooks.ts`, `src/focus.ts`, `src/actions.ts` | Custom hooks: `useEscapeKey`, `useClickOutside`, `useMediaQuery`, `useOnlineStatus`, `useMouseLock`, `useFocusTrap`, `useToggleActions` |
+| `src/validation.ts`, `src/shortcuts.ts` | Form checks and the keyboard shortcut list                                     |
 
 ## Navigation
 
@@ -1166,7 +1234,7 @@ To type-check the code and create a production build use
 npm run build
 ```
 
-this writes a static HTML site to `dist/`: one HTML file per page (`index.html`, `signin.html`, `create-account.html`, `today.html`, `medications.html`, `messages.html`, `schedule.html`, `symptoms.html`, `account.html` and `404.html`), plus the shared JavaScript and CSS in `dist/assets/`. Upload the contents of `dist/` to any static web server to host it; no server-side code or URL rewrite rules are needed. The build also generates the PWA web manifest, the service worker and the app icons.
+this writes a static HTML site to `dist/`: one HTML file per page (`index.html`, `signin.html`, `create-account.html`, `today.html`, `medications.html`, `messages.html`, `schedule.html`, `symptoms.html`, `account.html` and `404.html`), plus the shared JavaScript and CSS in `dist/assets/`. Upload the contents of `dist/` to any static web server to host it; no server-side code or URL rewrite rules are needed. The build also generates the PWA web manifest (`dist/manifest.json`), the service worker and the app icons.
 
 ### Note 1. Open the built pages through a web server (such as `npm run preview` below) rather than by double-clicking the files, because browsers block the JavaScript modules on `file://` pages.
 
@@ -1213,29 +1281,35 @@ All tests live in `CareConnectWeb/tests/`:
 | Test file                 | Tests | What it covers                                                                                                     |
 | ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
 | `accessibility.test.tsx`  | 89    | axe-core scans of every page at phone, tablet and desktop sizes, in both themes and with dialogs, menus, errors, the collapsed sidebar, the help guide, an open conversation, the call screen and the Face ID screens; landmarks, headings, skip link, live regions, labels; keyboard-only use and focus handling; large tremor-friendly targets |
-| `shell.test.tsx`          | 31    | Sidebar navigation and current-page marking for all six pages; the Messages unread badge; the phone sidebar (starts as an icon rail, expands, closes after picking a page or with Escape); collapsing the tablet sidebar; theme switching and saving; profile menu (Account, theme, sign out); signing out to the landing page; SOS confirmation opening the call screen; eye tracking; help guide; Scroll up / down; voice commands |
+| `shell.test.tsx`          | 31    | Sidebar navigation and current-page marking for all six pages; the Messages unread badge; the phone sidebar (starts as an icon rail, expands, closes after picking a page or with Escape); collapsing the tablet sidebar; theme switching and saving; profile menu (Account, theme, sign out); signing out to the landing page; SOS confirmation opening the call screen; the eye tracking switch; help guide; Scroll up / down; voice commands |
+| `features.test.tsx`       | 18    | The notifications panel (contents, links, updates as doses are logged, turned-off state, Escape and click-outside); the top bar history button; closing the account menu by clicking outside; the offline notice; mouse lock-on; the email and password rules |
+| `keyboard.test.tsx`       | 28    | The focus indicator (off by default, `Ctrl + =`, remembered, Account switch); arrow-key focus movement, inside dialogs and around text fields; every `Ctrl` shortcut (zoom, theme, voice, SOS, settings); undo with `Ctrl + U` and the action history (`Ctrl + H`); focus trapping in dialogs and focus returning to the opener; skip links; named landmarks; the shortcut list in Help |
 | `html-pages.test.ts`      | 22    | Every HTML page file is a complete document (language, charset, viewport, root element, script), has a route, the right title and its own description, and is built by `vite.config.ts` |
-| `auth.test.tsx`           | 16    | Sign in and Create account: fields, validation errors, Back, Enter key, role buttons, theme toggle; the Face ID question, "No, use my password", the face scan opening Today and "Use my password instead" |
+| `auth.test.tsx`           | 18    | Sign in and Create account: fields, validation errors (empty and badly formed email, empty password, empty name, short password, focus on the first problem), Back, Enter key, role buttons, theme toggle; the Face ID question, "No, use my password", the face scan opening Today and "Use my password instead" |
 | `today.test.tsx`          | 12    | Greeting by time of day, progress bar, marking doses taken / missed, confirmation dialog, Undo, the undo message hiding after 5 seconds, links |
 | `landing.test.tsx`        | 7     | Hero content, links to the sign-in and sign-up pages, in-page section links, photo description                    |
 | `medications.test.tsx`    | 7     | All 9 doses, categories, taken / missed states and card colours, dose status shared with Today                    |
 | `messages.test.tsx`       | 6     | Conversation list, opening a conversation full-page and marking it read, typed and quick replies, the call screen (timer, Mute, Speaker, End call, Escape) |
-| `account.test.tsx`        | 6     | Profile, emergency contact and care team; Appearance theme switch; reminder and Face ID switches; care team opening a conversation; sign out to the landing page |
+| `account.test.tsx`        | 8     | Profile, emergency contact and care team; Appearance theme switch; notifications, reminders, Face ID and data-sharing switches; the zoom buttons and their 80% limit; the app version and privacy summary; care team opening a conversation; sign out to the landing page |
 | `schedule.test.tsx`       | 6     | Month and week strip (including weeks that cross into the next month), selecting a day, schedule items and Done markers |
 | `symptoms.test.tsx`       | 4     | Symptom list and severity bars, logging a new symptom, the missing-name error, closing the form without saving    |
 | `data.test.ts`            | 4     | The demo data: dose count, unique keys, starting state, schedule                                                   |
 
-As of 2026-10-22 the suite is 12 files / 210 tests, all passing, with 99% line coverage of `src/`.
+As of 2026-10-23 the suite is 14 files / 260 tests, all passing, with 98% line coverage of `src/`.
 
-### Note 1. jsdom loads no CSS, so `tests/utils.tsx` applies the app's Tailwind visibility classes for a chosen device size before each axe scan. This way each scan sees only what a phone, tablet or desktop browser would show. jsdom also cannot measure colours, so colour contrast is checked in a real browser (see Accessibility testing below).
+### Note 1. Any test that logs a console error or warning fails (`tests/setup.ts`), so the suite also guards against console errors and warnings. jsdom's own "Not implemented: canvas" notices, triggered by axe-core, are ignored because they do not come from the app.
+
+### Note 2. jsdom loads no CSS, so `tests/utils.tsx` applies the app's Tailwind visibility classes for a chosen device size before each axe scan. This way each scan sees only what a phone, tablet or desktop browser would show. jsdom also cannot measure colours, so colour contrast is checked in a real browser (see Accessibility testing below).
 
 ### Linting and type checking
 
-Check the code for problems with
+Check the code with ESLint (the Vite React TypeScript rules: `typescript-eslint`, `react-hooks` and `react-refresh`, configured in `eslint.config.js`). Any error or warning fails the check:
 
 ```
 npm run lint
 ```
+
+The faster oxlint linter is also available with `npm run lint:oxlint`.
 
 and check the TypeScript types of the app and the tests (this is also the first step of `npm run build`) with
 
@@ -1249,9 +1323,11 @@ The layout follows the screen width automatically. With the application running,
 
 | Device  | Width to test               | What to check                                                                                   |
 | ------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
-| Phone   | 390px (iPhone 12 Pro)       | Same pieces as the tablet, scaled down: the sidebar starts as a narrow column of icons and the › arrow slides the full sidebar over the page; top bar with SOS and the profile menu; Scroll up / Voice / Scroll down bar; one column of cards |
-| Tablet  | 820px (iPad Air)            | Sidebar that collapses with the ‹ button, top bar with SOS and profile menu, scroll / voice bar, one column of cards |
-| Desktop | 1024px or wider             | Full sidebar, top bar with voice and eye-tracking buttons, cards in two columns                  |
+| Phone   | 375px (iPhone SE / 12 mini) | Same pieces as the tablet, scaled down: the sidebar starts as a narrow column of icons and the › arrow slides the full sidebar over the page; top bar with notifications, SOS and the profile menu; Scroll up / Voice / Scroll down bar; one column of cards |
+| Tablet  | 768px (iPad)                | Sidebar that collapses with the ‹ button, top bar with notifications, SOS and profile menu, scroll / voice bar, one column of cards |
+| Desktop | 1440px                      | Full sidebar, top bar with history, voice, eye-tracking, notifications, SOS and profile menu, cards in two columns |
+
+On touch screens (`pointer: coarse`) the smaller controls grow to at least 48px (top bar buttons, **?**, the message's **Undo**) and the 30px sidebar arrow grows to 44px; with a mouse they keep the design's click-target sizes. The dose, sign-in and scroll / voice buttons are 52–80px on every device, for people with a tremor.
 
 On every size a floating **?** button opens a short guide to the controls. An open conversation fills the page with its own reply box, so the scroll / voice bar and the **?** button are hidden there.
 
@@ -1265,21 +1341,27 @@ On every size a floating **?** button opens a short guide to the controls. An op
 6. In a conversation, select the green call button. The call screen shows the timer, **Mute**, **Speaker** and **End call**. End the call; a message shows how long it lasted.
 7. Select **SOS** in the top bar and confirm. The call screen opens for Aunt Joyce, the emergency contact.
 8. Open **Symptoms**, select **+ Add**, enter a symptom, choose a severity from 1 to 5 and save. It appears at the top of the list and the count goes up.
-9. Open **Account**. Select **Appearance** to switch theme, and **Notifications** and **Biometrics** to turn them off and on. Select a care team member to open their conversation.
+9. Open **Account**. Select **Appearance** to switch theme; turn **Notifications**, **Medication reminders**, **Biometrics** and **Share health data** off and on; use the **Zoom** − / + buttons. Select a care team member to open their conversation.
 10. Switch between light and dark themes (the sun / moon button). The choice is remembered after a page reload.
 11. Move between all six pages with the sidebar. On a phone width, select **›** to expand the sidebar, then pick a page; the sidebar closes again.
 12. Select **Voice** and choose a command such as **Go to medications**, **Open messages**, **Log a symptom** or **Scroll down**.
 13. Select **?** to open the help guide.
 14. Sign out from the sidebar, the profile menu or the red button on Account. Each one returns to the landing page.
-15. Use only the keyboard (`Tab`, `Shift + Tab`, `Enter`, `Esc`) to repeat the steps above. Every control shows a visible focus outline and `Esc` closes dialogs, menus, the expanded phone sidebar and the call screen.
-16. Open each HTML file directly (for example http://localhost:5173/symptoms.html) and refresh it. The matching page loads and the browser tab shows its title, such as **Symptoms · CareConnect**. A file that does not exist, such as `nope.html`, shows the **Page not found** page.
+15. Press `Ctrl + =` to turn on the focus indicator, then use only the keyboard (arrow keys, `Tab`, `Shift + Tab`, `Enter`, `Esc`) to repeat the steps above. Every control shows a visible focus outline while the indicator is on, and `Esc` closes dialogs, menus, the expanded phone sidebar and the call screen. Press `Ctrl + =` again and the outline is hidden.
+16. Open a dialog (such as **?** or **SOS**) and press `Tab` repeatedly: focus stays inside the dialog. Close it and focus returns to the button that opened it.
+17. Reload a page and press `Tab` once: **Skip to content** appears in the top corner. Press `Enter` to jump to the page content.
+18. Try the shortcuts from the table above: `Ctrl + L` (theme), `Ctrl + +` / `Ctrl + -` (zoom), `Ctrl + \` (voice), `Ctrl + S` (emergency call), `Ctrl + N`, `Ctrl + F`, `Ctrl + I` and `Ctrl + O` (settings). Mark a dose taken, press `Ctrl + U` to undo it, then press `Ctrl + H` to see the action history.
+19. Select the bell in the top bar. The Notifications panel lists the next dose, today's appointment and the unread message; select one to go to its page. Turn notifications off with `Ctrl + N` and open the panel again.
+20. Press `Ctrl + O` to turn on mouse lock-on, then move the pointer near a button: the focus indicator jumps to it (turn the indicator on with `Ctrl + =` to see it). Click on empty space next to the button and it is pressed.
+21. On Sign in, change the email to `maddy.example.com` and select **Sign in**: an error appears under the email field and the cursor moves there. On Create account, clear the name and select a role: an error appears under the name.
+22. Open each HTML file directly (for example http://localhost:5173/symptoms.html) and refresh it. The matching page loads and the browser tab shows its title, such as **Symptoms · CareConnect**. A file that does not exist, such as `nope.html`, shows the **Page not found** page.
 
 ### Testing the PWA
 
 1. Run `npm run build` and then `npm run preview`, and open http://localhost:4173.
 2. In DevTools open **Application → Manifest** to check the name, colours and icons, and **Application → Service workers** to check the service worker is activated.
 3. Install the app with the install icon in the browser's address bar. It opens in its own window.
-4. In DevTools **Network**, set throttling to **Offline** and reload. The application still loads.
+4. In DevTools **Network**, set throttling to **Offline** and reload. The application still loads, and a notice at the top says you are offline and that changes stay on the device. Set throttling back to **No throttling** and the notice goes away.
 
 ### Accessibility testing
 
@@ -1291,8 +1373,8 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 - **No real data.** All medications, schedule items, messages, symptoms and care team details are fictional and live in memory (`src/data.ts`, `src/AppState.tsx`); changes are lost when a page is reloaded or opened from its HTML file directly.
 - **Simulated sign-in.** Sign in, Face ID and create account do not check, store or send any credential, and the Face ID screens never use the camera.
-- **Only the theme is stored.** The light / dark choice is the only value saved in `localStorage`. Messages you send, symptoms you log and the Account switches stay in memory.
-- **Demo-only features.** SOS, calls, eye tracking and voice commands are simulated. The call screen places no call, and no microphone, speaker or camera is used.
+- **Only UI preferences are stored.** The light / dark theme, the focus indicator setting and the zoom level are the only values saved in `localStorage`. Messages you send, symptoms you log, the Account switches and the action history stay in memory.
+- **Demo-only features.** SOS, calls, eye tracking, voice commands and health-data sharing are simulated. The call screen places no call, nothing is shared, and no microphone, speaker or camera is used. Mouse lock-on only moves focus within the page; it never captures the pointer.
 - **Network.** The app loads the DM Sans and Inter fonts from Google Fonts (cached by the service worker for offline use); it makes no other network requests.
 
 ## Known Issues / Limitations
@@ -1300,6 +1382,10 @@ Colour contrast needs a real browser. With the application running, scan each pa
 - No backend/API integration. All data is static/in-memory, so sent messages, logged symptoms and Account changes reset on reload.
 - Profile and emergency contact editing on the Account page are not built yet; they show a "coming soon" message.
 - No browser-based end-to-end tests yet. The automated tests run in jsdom, so layout and colour contrast are checked manually in a browser.
+- The focus indicator is off until it is turned on with `Ctrl + =` (or on the Account page), as the design asks. Until then keyboard focus is not visible, which does not meet WCAG 2.4.7 (Focus Visible).
+- `Ctrl + =` replaces the browser's own `Ctrl + =` zoom; zoom in with `Ctrl + +` (`Ctrl + Shift + =`, or the numpad `+`) instead.
+- Chrome and Edge keep `Ctrl + N` for opening a new window in a normal browser tab, so that shortcut only reaches the app when it is installed as a PWA (its own window) or in browsers that pass it through.
+- `Ctrl + Shift` + letter is left to the browser (for example `Ctrl + Shift + I` for developer tools).
 
 # Weekly Contributions 09/02-09/08
 

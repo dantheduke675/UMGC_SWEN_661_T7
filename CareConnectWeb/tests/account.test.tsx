@@ -20,16 +20,38 @@ describe('Account page', () => {
     expect(screen.getByRole('button', { name: /Appearance/ })).toHaveTextContent('Light mode')
   })
 
-  it('turns reminders and Face ID on and off', async () => {
+  it('turns notifications, reminders, Face ID and data sharing on and off', async () => {
     const { user } = renderApp('/account.html')
-    const reminders = screen.getByRole('switch', { name: /Notifications/ })
-    expect(reminders).toHaveAttribute('aria-checked', 'true')
-    await user.click(reminders)
-    expect(reminders).toHaveAttribute('aria-checked', 'false')
-    expect(reminders).toHaveTextContent('Medication reminders off')
-    const faceId = screen.getByRole('switch', { name: /Biometrics/ })
-    await user.click(faceId)
-    expect(faceId).toHaveTextContent('Face ID off')
+    for (const [name, off] of [
+      [/^Notifications/, 'Off · Ctrl + N'],
+      [/^Medication reminders/, 'Off'],
+      [/^Biometrics/, 'Face ID off'],
+      [/^Share health data/, 'Not shared'],
+    ] as const) {
+      const row = screen.getByRole('switch', { name })
+      expect(row).toHaveAttribute('aria-checked', 'true')
+      await user.click(row)
+      expect(row).toHaveAttribute('aria-checked', 'false')
+      expect(row).toHaveTextContent(off)
+    }
+  })
+
+  it('zooms with the Zoom buttons, between 80% and 200%', async () => {
+    const { user } = renderApp('/account.html')
+    const zoomIn = screen.getByRole('button', { name: 'Zoom in' })
+    await user.click(zoomIn)
+    expect(screen.getByText('110%')).toBeInTheDocument()
+    expect(document.documentElement.style.getPropertyValue('--zoom')).toBe('1.1')
+    for (let i = 0; i < 4; i++) await user.click(screen.getByRole('button', { name: 'Zoom out' }))
+    expect(screen.getByText('80%')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Zoom out' })).toBeDisabled()
+  })
+
+  it('shows the app version and the privacy summary', async () => {
+    const { user } = renderApp('/account.html')
+    expect(screen.getByText('CareConnect version').parentElement).toHaveTextContent('1.0.0')
+    await user.click(screen.getByRole('button', { name: /Privacy and data/ }))
+    expect(statusMessages().getByText('Your data is encrypted and only shared with your care team.')).toBeInTheDocument()
   })
 
   it('opens a care team member’s conversation', async () => {
