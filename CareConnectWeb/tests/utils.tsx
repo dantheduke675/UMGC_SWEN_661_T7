@@ -32,7 +32,6 @@ export function freezeClock(date = new Date(2026, 9, 20, 9, 0)) {
 
 // Parts of the signed-in shell
 export const sidebar = () => screen.getByRole('complementary', { name: 'Sidebar' })
-export const tabBar = () => screen.getByRole('navigation', { name: 'Tab bar' })
 export const progress = () => screen.getByRole('progressbar', { name: 'Medications taken today' })
 
 export const statusMessages = () => within(screen.getByRole('status'))

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderApp } from './utils'
 
@@ -37,10 +37,35 @@ describe('Sign in (signin.html)', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument()
   })
 
-  it('opens Today with "Use Face ID instead"', async () => {
+  // Waits for the real 2.5 s scan
+  it('asks before using Face ID, scans, then opens Today', { timeout: 8000 }, async () => {
     const { user, currentPath } = renderApp('/signin.html')
     await user.click(screen.getByRole('button', { name: 'Use Face ID instead' }))
-    expect(currentPath()).toBe('/today.html')
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in with your face?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Yes, use Face ID' })).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: 'Yes, use Face ID' }))
+    expect(screen.getByRole('heading', { level: 1, name: 'Welcome back, Maddy' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Looking for your face…')
+    expect(currentPath()).toBe('/signin.html')
+
+    await waitFor(() => expect(currentPath()).toBe('/today.html'), { timeout: 4000 })
+  })
+
+  it('goes back to the password form with "No, use my password"', async () => {
+    const { user } = renderApp('/signin.html')
+    await user.click(screen.getByRole('button', { name: 'Use Face ID instead' }))
+    await user.click(screen.getByRole('button', { name: 'No, use my password' }))
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+  })
+
+  it('stops the scan with "Use my password instead"', async () => {
+    const { user, currentPath } = renderApp('/signin.html')
+    await user.click(screen.getByRole('button', { name: 'Use Face ID instead' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, use Face ID' }))
+    await user.click(screen.getByRole('button', { name: 'Use my password instead' }))
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
+    expect(currentPath()).toBe('/signin.html')
   })
 
   it('goes back to the landing page', async () => {
