@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAppState } from '../appStateContext'
+import { useFocusTrap } from '../focus'
 
 const SEVERITY_LABELS = ['Very mild', 'Mild', 'Moderate', 'Severe', 'Very severe']
 
@@ -48,12 +49,13 @@ export function Symptoms() {
 }
 
 function AddSymptomDialog({ onClose }: { onClose: () => void }) {
-  const { addSymptom, addToast } = useAppState()
+  const { addSymptom, removeSymptom, addToast } = useAppState()
   const [name, setName] = useState('')
   const [severity, setSeverity] = useState(2)
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const nameRef = useRef<HTMLInputElement>(null)
+  const ref = useFocusTrap<HTMLDivElement>()
 
   useEffect(() => {
     nameRef.current?.focus()
@@ -70,8 +72,8 @@ function AddSymptomDialog({ onClose }: { onClose: () => void }) {
       return
     }
     const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    addSymptom({ name: name.trim(), severity, note: note.trim(), time })
-    addToast('Symptom logged')
+    const id = addSymptom({ name: name.trim(), severity, note: note.trim(), time })
+    addToast('Symptom logged', () => removeSymptom(id))
     onClose()
   }
 
@@ -79,7 +81,7 @@ function AddSymptomDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-      <div role="dialog" aria-modal="true" aria-labelledby="add-symptom-title" className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl border border-line bg-surface p-6">
+      <div ref={ref} role="dialog" aria-modal="true" aria-labelledby="add-symptom-title" className="max-h-[90%] w-full max-w-md overflow-y-auto rounded-3xl border border-line bg-surface p-6">
         <form onSubmit={save} noValidate className="flex flex-col gap-4">
           <h2 id="add-symptom-title" className="text-xl font-bold text-ink">Log a symptom</h2>
 

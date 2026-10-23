@@ -1119,10 +1119,56 @@ Every page of the web app is its own HTML file, so each one can be opened, bookm
 | `messages.html`       | Messages       | Conversations with the care team, with an unread badge. Opening one (`messages.html?c=<id>`) shows the full conversation, quick replies, a reply box and a call button |
 | `schedule.html`       | Schedule       | Week strip and today's plan                                                                                |
 | `symptoms.html`       | Symptoms       | Symptoms logged today with a 1–5 colour-coded severity bar; **+ Add** logs a new one                      |
-| `account.html`        | Account        | Profile, emergency contact, preferences (appearance, medication reminders, Face ID), care team and Sign out |
+| `account.html`        | Account        | Profile, emergency contact, preferences (appearance, medication reminders, Face ID), accessibility (focus indicator, eye tracking, mouse lock, action history), care team and Sign out |
 | `404.html`            | Page not found | Shown for any page that does not exist                                                                    |
 
 The HTML files live in the root of `CareConnectWeb/`. Each one loads the shared React code in `src/`, and React Router shows the matching page. Once a page is open, links to the other pages switch instantly without a full reload, which keeps the medication check-ins, messages and symptoms entered during the visit.
+
+## Keyboard Shortcuts and Accessibility Features
+
+Every feature of the web app can be used with the keyboard alone, as in the desktop (Electron) version. The shortcuts are defined in `src/shortcuts.ts` and handled in `src/layouts/RootLayout.tsx` (voice commands and the emergency call in `src/layouts/AppShell.tsx`). They are also listed in the **?** Help guide on every page.
+
+| Keys                          | Action                                                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `Ctrl + =`                    | Turn the focus indicator on or off. It is **off by default**, and the choice is remembered     |
+| Arrow keys                    | Move the focus indicator to the next (↓ →) or previous (↑ ←) control. Only works while the focus indicator is on, and stays inside an open dialog |
+| `Enter`                       | Press the focused button; submits the sign-in form                                             |
+| `Tab` / `Shift + Tab`         | Move between controls. Inside an open dialog, focus is trapped in the dialog and returns to the button that opened it when it closes |
+| `Ctrl + +` / `Ctrl + -`       | Zoom in / out, from 80% to 200% (`Ctrl + 0` resets to 100%)                                    |
+| `Ctrl + L`                    | Switch light / dark mode                                                                       |
+| `Ctrl + \`                     | Open voice commands                                                                            |
+| `Ctrl + I`                    | Eye tracking on / off (simulated)                                                              |
+| `Ctrl + O`                    | Mouse lock on / off (simulated)                                                                |
+| `Ctrl + U`                    | Undo the last action                                                                           |
+| `Ctrl + H`                    | Open the action history, where any earlier action can be undone                               |
+| `Ctrl + S`                    | Emergency call (asks for confirmation first)                                                   |
+| `Ctrl + F`                    | Biometric unlock (Face ID) on / off                                                            |
+| `Ctrl + R`                    | Refresh the page                                                                               |
+| `Ctrl + N`                    | Medication reminder notifications on / off                                                     |
+| `Esc`                         | Close a dialog, menu, the expanded phone sidebar or the call screen                            |
+
+Every shortcut that changes a setting shows a message with **Undo**, and is added to the action history. The focus indicator, eye tracking, mouse lock and action history can also be reached from the **Accessibility** group on the Account page. Voice commands and the emergency call need you to be signed in; on the landing and sign-in pages those shortcuts show a message instead.
+
+### Semantic HTML and ARIA landmarks
+
+Each page uses semantic HTML elements together with named ARIA landmarks, so a screen reader can list the parts of a page and jump between them:
+
+- `header` (banner): the top bar, holding the page's `h1` title.
+- `main`: the page content, named by that `h1` with `aria-labelledby`.
+- `aside` (complementary): the **Sidebar**, and the **About CareConnect** brand panel on the sign-in screens.
+- `nav` (navigation): **Primary** page navigation, **Skip links**, and **Website navigation** on the landing page. Each navigation landmark has its own name.
+- `section` (region): the **Scroll and voice controls** bar, and page sections named by their headings with `aria-labelledby`.
+- Headings follow the page order (`h1` page title, `h2` sections, `h3` cards), and decorative emoji are hidden from screen readers with `aria-hidden`.
+
+### Skip links
+
+Each page starts with skip links, the first thing `Tab` reaches. They are hidden until focused, and they move keyboard focus (not only the scroll position) to their target:
+
+| Page                     | Skip links                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| Signed-in pages          | **Skip to content**, **Skip to navigation**, **Skip to voice, SOS and account** |
+| Sign in / Create account | **Skip to form**, **Skip to help**                                              |
+| Landing page             | **Skip to main content**, **Skip to sign in**                                   |
 
 ## Navigation
 
@@ -1213,7 +1259,8 @@ All tests live in `CareConnectWeb/tests/`:
 | Test file                 | Tests | What it covers                                                                                                     |
 | ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
 | `accessibility.test.tsx`  | 89    | axe-core scans of every page at phone, tablet and desktop sizes, in both themes and with dialogs, menus, errors, the collapsed sidebar, the help guide, an open conversation, the call screen and the Face ID screens; landmarks, headings, skip link, live regions, labels; keyboard-only use and focus handling; large tremor-friendly targets |
-| `shell.test.tsx`          | 31    | Sidebar navigation and current-page marking for all six pages; the Messages unread badge; the phone sidebar (starts as an icon rail, expands, closes after picking a page or with Escape); collapsing the tablet sidebar; theme switching and saving; profile menu (Account, theme, sign out); signing out to the landing page; SOS confirmation opening the call screen; eye tracking; help guide; Scroll up / down; voice commands |
+| `shell.test.tsx`          | 31    | Sidebar navigation and current-page marking for all six pages; the Messages unread badge; the phone sidebar (starts as an icon rail, expands, closes after picking a page or with Escape); collapsing the tablet sidebar; theme switching and saving; profile menu (Account, theme, sign out); signing out to the landing page; SOS confirmation opening the call screen; the eye tracking switch; help guide; Scroll up / down; voice commands |
+| `keyboard.test.tsx`       | 28    | The focus indicator (off by default, `Ctrl + =`, remembered, Account switch); arrow-key focus movement, inside dialogs and around text fields; every `Ctrl` shortcut (zoom, theme, voice, SOS, settings); undo with `Ctrl + U` and the action history (`Ctrl + H`); focus trapping in dialogs and focus returning to the opener; skip links; named landmarks; the shortcut list in Help |
 | `html-pages.test.ts`      | 22    | Every HTML page file is a complete document (language, charset, viewport, root element, script), has a route, the right title and its own description, and is built by `vite.config.ts` |
 | `auth.test.tsx`           | 16    | Sign in and Create account: fields, validation errors, Back, Enter key, role buttons, theme toggle; the Face ID question, "No, use my password", the face scan opening Today and "Use my password instead" |
 | `today.test.tsx`          | 12    | Greeting by time of day, progress bar, marking doses taken / missed, confirmation dialog, Undo, the undo message hiding after 5 seconds, links |
@@ -1225,7 +1272,7 @@ All tests live in `CareConnectWeb/tests/`:
 | `symptoms.test.tsx`       | 4     | Symptom list and severity bars, logging a new symptom, the missing-name error, closing the form without saving    |
 | `data.test.ts`            | 4     | The demo data: dose count, unique keys, starting state, schedule                                                   |
 
-As of 2026-10-22 the suite is 12 files / 210 tests, all passing, with 99% line coverage of `src/`.
+As of 2026-10-23 the suite is 13 files / 238 tests, all passing, with 98% line coverage of `src/`.
 
 ### Note 1. jsdom loads no CSS, so `tests/utils.tsx` applies the app's Tailwind visibility classes for a chosen device size before each axe scan. This way each scan sees only what a phone, tablet or desktop browser would show. jsdom also cannot measure colours, so colour contrast is checked in a real browser (see Accessibility testing below).
 
@@ -1271,8 +1318,11 @@ On every size a floating **?** button opens a short guide to the controls. An op
 12. Select **Voice** and choose a command such as **Go to medications**, **Open messages**, **Log a symptom** or **Scroll down**.
 13. Select **?** to open the help guide.
 14. Sign out from the sidebar, the profile menu or the red button on Account. Each one returns to the landing page.
-15. Use only the keyboard (`Tab`, `Shift + Tab`, `Enter`, `Esc`) to repeat the steps above. Every control shows a visible focus outline and `Esc` closes dialogs, menus, the expanded phone sidebar and the call screen.
-16. Open each HTML file directly (for example http://localhost:5173/symptoms.html) and refresh it. The matching page loads and the browser tab shows its title, such as **Symptoms · CareConnect**. A file that does not exist, such as `nope.html`, shows the **Page not found** page.
+15. Press `Ctrl + =` to turn on the focus indicator, then use only the keyboard (arrow keys, `Tab`, `Shift + Tab`, `Enter`, `Esc`) to repeat the steps above. Every control shows a visible focus outline while the indicator is on, and `Esc` closes dialogs, menus, the expanded phone sidebar and the call screen. Press `Ctrl + =` again and the outline is hidden.
+16. Open a dialog (such as **?** or **SOS**) and press `Tab` repeatedly: focus stays inside the dialog. Close it and focus returns to the button that opened it.
+17. Reload a page and press `Tab` once: **Skip to content** appears in the top corner. Press `Enter` to jump to the page content.
+18. Try the shortcuts from the table above: `Ctrl + L` (theme), `Ctrl + +` / `Ctrl + -` (zoom), `Ctrl + \` (voice), `Ctrl + S` (emergency call), `Ctrl + N`, `Ctrl + F`, `Ctrl + I` and `Ctrl + O` (settings). Mark a dose taken, press `Ctrl + U` to undo it, then press `Ctrl + H` to see the action history.
+19. Open each HTML file directly (for example http://localhost:5173/symptoms.html) and refresh it. The matching page loads and the browser tab shows its title, such as **Symptoms · CareConnect**. A file that does not exist, such as `nope.html`, shows the **Page not found** page.
 
 ### Testing the PWA
 
@@ -1291,8 +1341,8 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 - **No real data.** All medications, schedule items, messages, symptoms and care team details are fictional and live in memory (`src/data.ts`, `src/AppState.tsx`); changes are lost when a page is reloaded or opened from its HTML file directly.
 - **Simulated sign-in.** Sign in, Face ID and create account do not check, store or send any credential, and the Face ID screens never use the camera.
-- **Only the theme is stored.** The light / dark choice is the only value saved in `localStorage`. Messages you send, symptoms you log and the Account switches stay in memory.
-- **Demo-only features.** SOS, calls, eye tracking and voice commands are simulated. The call screen places no call, and no microphone, speaker or camera is used.
+- **Only UI preferences are stored.** The light / dark theme, the focus indicator setting and the zoom level are the only values saved in `localStorage`. Messages you send, symptoms you log, the Account switches and the action history stay in memory.
+- **Demo-only features.** SOS, calls, eye tracking, mouse lock and voice commands are simulated. The call screen places no call, and no microphone, speaker or camera is used.
 - **Network.** The app loads the DM Sans and Inter fonts from Google Fonts (cached by the service worker for offline use); it makes no other network requests.
 
 ## Known Issues / Limitations
@@ -1300,6 +1350,10 @@ Colour contrast needs a real browser. With the application running, scan each pa
 - No backend/API integration. All data is static/in-memory, so sent messages, logged symptoms and Account changes reset on reload.
 - Profile and emergency contact editing on the Account page are not built yet; they show a "coming soon" message.
 - No browser-based end-to-end tests yet. The automated tests run in jsdom, so layout and colour contrast are checked manually in a browser.
+- The focus indicator is off until it is turned on with `Ctrl + =` (or on the Account page), as the design asks. Until then keyboard focus is not visible, which does not meet WCAG 2.4.7 (Focus Visible).
+- `Ctrl + =` replaces the browser's own `Ctrl + =` zoom; zoom in with `Ctrl + +` (`Ctrl + Shift + =`, or the numpad `+`) instead.
+- Chrome and Edge keep `Ctrl + N` for opening a new window in a normal browser tab, so that shortcut only reaches the app when it is installed as a PWA (its own window) or in browsers that pass it through.
+- `Ctrl + Shift` + letter is left to the browser (for example `Ctrl + Shift + I` for developer tools).
 
 # Weekly Contributions 09/02-09/08
 

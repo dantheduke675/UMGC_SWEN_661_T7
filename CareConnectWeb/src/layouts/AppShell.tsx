@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { useToggleActions } from '../actions'
 import { useAppState } from '../appStateContext'
 import { CallScreen } from '../components/CallScreen'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { Toasts } from '../components/Toasts'
+import { SkipLinks, type SkipLink } from '../components/SkipLinks'
 import { VoiceModal, type VoiceCommand } from '../components/VoiceModal'
 import { emergencyContact } from '../data'
 import { NAV_ITEMS } from '../nav'
+import { matchShortcut } from '../shortcuts'
 import { AccessBar, HelpButton, Sidebar, TopBar } from './ShellParts'
 
 /*
@@ -18,8 +20,15 @@ import { AccessBar, HelpButton, Sidebar, TopBar } from './ShellParts'
 const PHONE = '(max-width: 767px)'
 const isPhone = () => typeof window.matchMedia === 'function' && window.matchMedia(PHONE).matches
 
+const SKIP_LINKS: SkipLink[] = [
+  ['content', 'Skip to content'],
+  ['primary-nav', 'Skip to navigation'],
+  ['page-tools', 'Skip to voice, SOS and account'],
+]
+
 export function AppShell() {
   const { addToast, conversations, callWith, startCall, endCall } = useAppState()
+  const toggles = useToggleActions()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [params] = useSearchParams()
@@ -54,6 +63,20 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [expandedOnPhone])
 
+  // Ctrl + \ opens voice commands and Ctrl + S the emergency call. Capture runs
+  // before RootLayout's handler, which answers these keys outside the shell.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const id = matchShortcut(e)
+      if (id !== 'voice' && id !== 'sos') return
+      e.preventDefault()
+      if (id === 'voice') setVoiceOpen(true)
+      else setSosOpen(true)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
+
   function onVoiceCommand(c: VoiceCommand) {
     if (c === 'Scroll down') scroll('down')
     else if (c === 'Scroll up') scroll('up')
@@ -65,10 +88,8 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex h-dvh bg-bg">
-      <a href="#content" className="sr-only z-50 rounded-lg bg-brand px-4 py-2 text-white focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
-        Skip to content
-      </a>
+    <div className="flex h-full bg-bg">
+      <SkipLinks links={SKIP_LINKS} />
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} onNavigate={() => expandedOnPhone && setCollapsed(true)} />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -76,10 +97,10 @@ export function AppShell() {
           title={title}
           onVoice={() => setVoiceOpen(true)}
           onSos={() => setSosOpen(true)}
-          onEyeTracking={() => addToast('Eye tracking is coming soon')}
+          onEyeTracking={toggles.eyeTracking}
         />
 
-        <main id="content" ref={scrollRef} className={`min-h-0 flex-1 ${chatOpen ? 'flex flex-col' : 'overflow-y-auto'}`}>
+        <main id="content" aria-labelledby="page-title" ref={scrollRef} className={`min-h-0 flex-1 ${chatOpen ? 'flex flex-col' : 'overflow-y-auto'}`}>
           {chatOpen ? (
             <Outlet />
           ) : (
@@ -92,7 +113,6 @@ export function AppShell() {
         {!chatOpen && <AccessBar onScroll={scroll} onVoice={() => setVoiceOpen(true)} />}
       </div>
 
-      <Toasts />
       {!chatOpen && <HelpButton />}
       {calling && (
         <CallScreen

@@ -9,5 +9,7 @@ afterEach(() => {
   cleanup()
   localStorage.clear()
   delete document.documentElement.dataset.theme
+  delete document.documentElement.dataset.focusIndicator
+  document.documentElement.style.removeProperty('--zoom')
   vi.useRealTimers()
 })

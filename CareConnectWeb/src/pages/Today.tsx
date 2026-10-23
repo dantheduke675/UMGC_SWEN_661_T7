@@ -61,13 +61,16 @@ export function Today() {
         </ul>
       </section>
 
-      <Link to="/schedule.html" className="mt-3 flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 hover:bg-surface-2">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo/15 text-xl" aria-hidden="true">🏥</div>
-        <div>
-          <p className="text-[15px] font-bold text-ink">Dr. Chen — Follow-up</p>
-          <p className="text-[13px] text-sub">Today at 2:30 PM · 45 min</p>
-        </div>
-      </Link>
+      <section aria-labelledby="today-next" className="mt-3">
+        <h2 id="today-next" className="sr-only">Next appointment</h2>
+        <Link to="/schedule.html" className="flex items-center gap-4 rounded-2xl border border-line bg-surface p-4 hover:bg-surface-2">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo/15 text-xl" aria-hidden="true">🏥</div>
+          <div>
+            <p className="text-[15px] font-bold text-ink">Dr. Chen — Follow-up</p>
+            <p className="text-[13px] text-sub">Today at 2:30 PM · 45 min</p>
+          </div>
+        </Link>
+      </section>
     </>
   )
 }

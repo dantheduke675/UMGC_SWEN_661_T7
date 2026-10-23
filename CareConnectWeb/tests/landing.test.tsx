@@ -45,7 +45,9 @@ describe('Landing page (index.html)', () => {
       expect(link).toHaveAttribute('href', `#${id}`)
       expect(document.getElementById(id)).not.toBeNull()
     }
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3)
+    // One section heading, with a level-3 heading per feature
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(1)
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)
   })
 
   it('describes the hero photo', () => {

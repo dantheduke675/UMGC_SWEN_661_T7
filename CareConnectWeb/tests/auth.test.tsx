@@ -46,7 +46,7 @@ describe('Sign in (signin.html)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Yes, use Face ID' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Welcome back, Maddy' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Looking for your face…')
+    expect(screen.getByText('Looking for your face…').closest('[role="status"]')).toBeInTheDocument()
     expect(currentPath()).toBe('/signin.html')
 
     await waitFor(() => expect(currentPath()).toBe('/today.html'), { timeout: 4000 })

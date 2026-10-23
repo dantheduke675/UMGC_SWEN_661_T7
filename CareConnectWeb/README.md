@@ -85,13 +85,56 @@ Every size has a floating **?** button that opens a short guide to the controls.
 The sign-in screens show a brand panel beside the form on tablet and desktop,
 and the form alone on phones. The landing page hero stacks below 900px.
 
+## Keyboard and screen reader support
+
+Every feature works from the keyboard. The shortcuts are defined in
+`src/shortcuts.ts`, handled in `src/layouts/RootLayout.tsx` (voice and SOS in
+`AppShell.tsx`), and listed in the **?** Help dialog.
+
+| Keys              | Action                                                        |
+| ----------------- | ------------------------------------------------------------- |
+| Ctrl + =          | Focus indicator on / off (off by default; remembered)         |
+| Arrow keys        | Move the focus indicator to the next / previous control (only while it is on; stays inside an open dialog) |
+| Enter             | Press the focused button; submits the sign-in form            |
+| Tab / Shift + Tab | Move between controls; trapped inside open dialogs, focus returns to the opener on close |
+| Ctrl + + / Ctrl + − / Ctrl + 0 | Zoom in / out (80–200%) / reset                  |
+| Ctrl + L          | Light / dark mode                                             |
+| Ctrl + \          | Voice commands                                                |
+| Ctrl + I          | Eye tracking on / off (simulated)                             |
+| Ctrl + O          | Mouse lock on / off (simulated)                               |
+| Ctrl + U          | Undo the last action                                          |
+| Ctrl + H          | Action history (undo any action)                              |
+| Ctrl + S          | Emergency call (asks first)                                   |
+| Ctrl + F          | Face ID on / off                                              |
+| Ctrl + R          | Refresh the page                                              |
+| Ctrl + N          | Medication reminders on / off                                 |
+
+Ctrl + = replaces the browser's own Ctrl + = zoom; use Ctrl + + (Shift + =, or
+the numpad +) to zoom. Chrome and Edge reserve Ctrl + N for a new window in a
+normal tab, so that shortcut only reaches the app when it is installed (PWA
+window) or in browsers that pass it through. Ctrl + Shift + letter is left to
+the browser (developer tools and so on).
+
+The focus indicator, eye tracking, mouse lock and the action history are also
+on the Account page (Accessibility).
+
+**Structure.** Each layout uses landmarks with names: `banner` (top bar, with
+the page's `h1`), `main` (named by that heading), `complementary` (Sidebar),
+`navigation` (Primary, Skip links), and a `region` for the scroll and voice
+controls. Sections are named by their headings (`aria-labelledby`), and
+headings go in order (h1 page title, h2 sections, h3 cards). Every page starts
+with skip links (shown only while focused): content, navigation and page tools
+in the app; form and help on sign-in; main content and sign in on the landing
+page.
+
 ## Data and privacy
 
 As in the other CareConnect apps, all data is fictional and lives in memory
-(`src/data.ts`, `src/AppState.tsx`). Only the light/dark theme preference is
-stored in `localStorage`. Messages you send, symptoms you log and Account
-switches also stay in memory. SOS, calls, eye tracking and voice
-commands are demo UI only: no call is placed and no microphone or camera is used.
+(`src/data.ts`, `src/AppState.tsx`). Only UI preferences (theme, focus
+indicator, zoom) are stored in `localStorage`. Messages you send, symptoms you
+log, Account switches and the action history also stay in memory. SOS, calls,
+eye tracking, mouse lock and voice commands are demo UI only: no call is placed
+and no microphone or camera is used.
 
 Network: the app loads the DM Sans and Inter fonts from Google Fonts (cached by
 the service worker for offline use). The landing photo is bundled from Unsplash

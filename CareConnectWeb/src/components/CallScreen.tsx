@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Conversation } from '../data'
+import { useFocusTrap } from '../focus'
 
 const mmss = (secs: number) => `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`
 
@@ -8,6 +9,7 @@ export function CallScreen({ c, onEnd }: { c: Conversation; onEnd: (duration: st
   const [secs, setSecs] = useState(0)
   const [muted, setMuted] = useState(false)
   const [speaker, setSpeaker] = useState(false)
+  const ref = useFocusTrap<HTMLDivElement>()
 
   useEffect(() => {
     const id = setInterval(() => setSecs(s => s + 1), 1000)
@@ -26,6 +28,7 @@ export function CallScreen({ c, onEnd }: { c: Conversation; onEnd: (duration: st
 
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-modal="true"
       aria-labelledby="call-title"

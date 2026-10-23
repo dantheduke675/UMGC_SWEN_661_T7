@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useFocusTrap } from '../focus'
 
 const VOICE_COMMANDS = ['Scroll down', 'Scroll up', 'Go home', 'Go to medications', 'Open schedule', 'Open messages', 'Log a symptom'] as const
 export type VoiceCommand = (typeof VOICE_COMMANDS)[number]
@@ -6,6 +7,7 @@ export type VoiceCommand = (typeof VOICE_COMMANDS)[number]
 // Simulated voice control: no microphone is used; the commands are buttons
 export function VoiceModal({ onClose, onCommand }: { onClose: () => void; onCommand: (c: VoiceCommand) => void }) {
   const [listening, setListening] = useState(true)
+  const ref = useFocusTrap<HTMLDivElement>()
 
   useEffect(() => {
     const id = setTimeout(() => setListening(false), 2500)
@@ -19,6 +21,7 @@ export function VoiceModal({ onClose, onCommand }: { onClose: () => void; onComm
 
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-modal="true"
       aria-label="Voice commands"

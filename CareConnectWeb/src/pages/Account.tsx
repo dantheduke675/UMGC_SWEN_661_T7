@@ -35,7 +35,7 @@ function Row({ icon, title, value, onClick, checked }: { icon: string; title: st
 }
 
 export function Account() {
-  const { theme, toggleTheme, prefs, togglePref, addToast } = useAppState()
+  const { theme, toggleTheme, focusIndicator, toggleFocusIndicator, prefs, togglePref, addToast, setHistoryOpen } = useAppState()
   const navigate = useNavigate()
 
   return (
@@ -50,7 +50,7 @@ export function Account() {
         </div>
       </div>
 
-      {/* Profile and Preferences side by side on desktop; Care team under Profile */}
+      {/* Profile and Preferences side by side on desktop; Care team and Accessibility under them */}
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <Group title="Profile">
           <Row icon="👤" title={patient.full} value={patient.email} onClick={() => addToast('Editing your profile is coming soon')} />
@@ -82,6 +82,30 @@ export function Account() {
           {careTeam.map(p => (
             <Row key={p.name} icon={p.icon} title={p.name} value={p.role} onClick={() => navigate(`/messages.html?c=${p.conversation}`)} />
           ))}
+        </Group>
+        <Group title="Accessibility">
+          <Row
+            icon="🔲"
+            title="Focus indicator"
+            value={focusIndicator ? 'Shown · arrow keys move it · Ctrl + = to hide' : 'Hidden · Ctrl + = to show'}
+            checked={focusIndicator}
+            onClick={toggleFocusIndicator}
+          />
+          <Row
+            icon="👁"
+            title="Eye tracking"
+            value={prefs.eyeTracking ? 'On (simulated, no camera is used)' : 'Off'}
+            checked={prefs.eyeTracking}
+            onClick={() => togglePref('eyeTracking')}
+          />
+          <Row
+            icon="🖱"
+            title="Mouse lock"
+            value={prefs.mouseLock ? 'On (simulated)' : 'Off'}
+            checked={prefs.mouseLock}
+            onClick={() => togglePref('mouseLock')}
+          />
+          <Row icon="🕘" title="Action history" value="See and undo what you have done · Ctrl + H" onClick={() => setHistoryOpen(true)} />
         </Group>
       </div>
 

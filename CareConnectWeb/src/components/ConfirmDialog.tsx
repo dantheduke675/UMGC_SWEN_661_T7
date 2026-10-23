@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useFocusTrap } from '../focus'
 
 interface Props {
   message: string
@@ -9,6 +10,7 @@ interface Props {
 
 export function ConfirmDialog({ message, confirmLabel, onConfirm, onCancel }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const ref = useFocusTrap<HTMLDivElement>()
 
   // Start on the safe choice; Escape cancels
   useEffect(() => {
@@ -21,6 +23,7 @@ export function ConfirmDialog({ message, confirmLabel, onConfirm, onCancel }: Pr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">
       <div
+        ref={ref}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-msg"
