@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-const VOICE_COMMANDS = ['Scroll down', 'Scroll up', 'Go home', 'Go to medications', 'Open schedule'] as const
+const VOICE_COMMANDS = ['Scroll down', 'Scroll up', 'Go home', 'Go to medications', 'Open schedule', 'Open messages', 'Log a symptom'] as const
 export type VoiceCommand = (typeof VOICE_COMMANDS)[number]
 
 // Simulated voice control: no microphone is used; the commands are buttons

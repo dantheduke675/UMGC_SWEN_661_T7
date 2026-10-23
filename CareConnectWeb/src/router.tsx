@@ -1,12 +1,15 @@
 import { createBrowserRouter, type RouteObject } from 'react-router'
 import { AppShell } from './layouts/AppShell'
 import { AuthLayout } from './layouts/AuthLayout'
+import { Account } from './pages/Account'
 import { CreateAccount } from './pages/CreateAccount'
 import { Landing } from './pages/Landing'
 import { Medications } from './pages/Medications'
+import { Messages } from './pages/Messages'
 import { NotFound } from './pages/NotFound'
 import { Schedule } from './pages/Schedule'
 import { SignIn } from './pages/SignIn'
+import { Symptoms } from './pages/Symptoms'
 import { Today } from './pages/Today'
 
 /*
@@ -33,7 +36,10 @@ export const routes: RouteObject[] = [
     children: [
       { path: '/today.html', element: <Today /> },
       { path: '/medications.html', element: <Medications /> },
+      { path: '/messages.html', element: <Messages /> },
       { path: '/schedule.html', element: <Schedule /> },
+      { path: '/symptoms.html', element: <Symptoms /> },
+      { path: '/account.html', element: <Account /> },
     ],
   },
   { path: '*', element: <NotFound /> },

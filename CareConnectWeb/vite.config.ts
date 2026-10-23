@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // One HTML file per page; each is built into dist/ alongside the shared JS and CSS
-const pages = ['index', 'signin', 'create-account', 'today', 'medications', 'schedule', '404']
+const pages = ['index', 'signin', 'create-account', 'today', 'medications', 'messages', 'schedule', 'symptoms', 'account', '404']
 
 // https://vite.dev/config/
 export default defineConfig({
