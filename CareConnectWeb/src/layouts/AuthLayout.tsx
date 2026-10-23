@@ -1,5 +1,12 @@
 import { Outlet } from 'react-router'
 import { useAppState } from '../appStateContext'
+import { HelpButton, type HelpItem } from './ShellParts'
+
+const AUTH_HELP: HelpItem[] = [
+  ['✉️', 'Email and password', 'Your password manager can fill both in for you.'],
+  ['👤', 'Face ID', 'Sign in just by looking at your device. A failed attempt never locks your account.'],
+  ['☀️', 'Theme button', 'The round button in the top corner switches between light and dark.'],
+]
 
 /*
   Sign-in and create-account screens: a brand panel beside the form on tablet
@@ -41,6 +48,7 @@ export function AuthLayout() {
         </button>
         <Outlet />
       </main>
+      <HelpButton items={AUTH_HELP} position="bottom-5 md:right-5" />
     </div>
   )
 }
