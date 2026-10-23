@@ -11,9 +11,13 @@ export interface Toast {
 
 export interface Prefs {
   notifications: boolean
+  // Medication reminders, 15 minutes before each dose
+  reminders: boolean
   biometrics: boolean
-  // Simulated: no camera is used and the pointer is never captured
+  shareData: boolean
+  // Simulated: no camera is used
   eyeTracking: boolean
+  // The focus indicator snaps to the control nearest the pointer (see useMouseLock)
   mouseLock: boolean
 }
 

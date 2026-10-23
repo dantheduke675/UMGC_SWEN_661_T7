@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { SkipLinks, type SkipLink } from '../components/SkipLinks'
 import { VoiceModal, type VoiceCommand } from '../components/VoiceModal'
 import { emergencyContact } from '../data'
+import { useEscapeKey, useMediaQuery } from '../hooks'
 import { NAV_ITEMS } from '../nav'
 import { matchShortcut } from '../shortcuts'
 import { AccessBar, HelpButton, Sidebar, TopBar } from './ShellParts'
@@ -18,7 +19,6 @@ import { AccessBar, HelpButton, Sidebar, TopBar } from './ShellParts'
   - Desktop (>= 1024px):  full sidebar, top bar, two card columns
 */
 const PHONE = '(max-width: 767px)'
-const isPhone = () => typeof window.matchMedia === 'function' && window.matchMedia(PHONE).matches
 
 const SKIP_LINKS: SkipLink[] = [
   ['content', 'Skip to content'],
@@ -33,7 +33,14 @@ export function AppShell() {
   const { pathname } = useLocation()
   const [params] = useSearchParams()
   const scrollRef = useRef<HTMLElement>(null)
-  const [collapsed, setCollapsed] = useState(isPhone)
+  const phone = useMediaQuery(PHONE)
+  // Phones start with the rail; crossing the phone breakpoint resets the sidebar
+  const [collapsed, setCollapsed] = useState(phone)
+  const [wasPhone, setWasPhone] = useState(phone)
+  if (phone !== wasPhone) {
+    setWasPhone(phone)
+    setCollapsed(phone)
+  }
   const [voiceOpen, setVoiceOpen] = useState(false)
   const [sosOpen, setSosOpen] = useState(false)
   // An open conversation fills the page with its own scrolling and reply box (no scroll bar or help button)
@@ -45,23 +52,9 @@ export function AppShell() {
   const closeVoice = useCallback(() => setVoiceOpen(false), [])
   const closeSos = useCallback(() => setSosOpen(false), [])
 
-  // Phones start with the rail; crossing the phone breakpoint resets the sidebar
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return
-    const mq = window.matchMedia(PHONE)
-    const onChange = () => setCollapsed(mq.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-
   // On phones the expanded sidebar covers the page: Escape or picking a page closes it
-  const expandedOnPhone = !collapsed && isPhone()
-  useEffect(() => {
-    if (!expandedOnPhone) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setCollapsed(true)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [expandedOnPhone])
+  const expandedOnPhone = !collapsed && phone
+  useEscapeKey(() => setCollapsed(true), expandedOnPhone)
 
   // Ctrl + \ opens voice commands and Ctrl + S the emergency call. Capture runs
   // before RootLayout's handler, which answers these keys outside the shell.

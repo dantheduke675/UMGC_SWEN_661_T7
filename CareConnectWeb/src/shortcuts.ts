@@ -24,13 +24,13 @@ export const CTRL_SHORTCUTS: { id: ShortcutId; key: string; label: string; does:
   { id: 'theme', key: 'l', label: 'Ctrl + L', does: 'Switch light / dark mode' },
   { id: 'voice', key: '\\', label: 'Ctrl + \\', does: 'Voice commands' },
   { id: 'eye-tracking', key: 'i', label: 'Ctrl + I', does: 'Eye tracking on or off' },
-  { id: 'mouse-lock', key: 'o', label: 'Ctrl + O', does: 'Mouse lock on or off' },
+  { id: 'mouse-lock', key: 'o', label: 'Ctrl + O', does: 'Mouse lock on or off (focus snaps to the nearest control)' },
   { id: 'undo', key: 'u', label: 'Ctrl + U', does: 'Undo the last action' },
   { id: 'history', key: 'h', label: 'Ctrl + H', does: 'Open the action history' },
   { id: 'sos', key: 's', label: 'Ctrl + S', does: 'Emergency call (asks first)' },
   { id: 'biometrics', key: 'f', label: 'Ctrl + F', does: 'Face ID on or off' },
   { id: 'refresh', key: 'r', label: 'Ctrl + R', does: 'Refresh the page' },
-  { id: 'notifications', key: 'n', label: 'Ctrl + N', does: 'Medication reminders on or off' },
+  { id: 'notifications', key: 'n', label: 'Ctrl + N', does: 'Notifications on or off' },
 ]
 
 export const OTHER_KEYS: { label: string; does: string }[] = [

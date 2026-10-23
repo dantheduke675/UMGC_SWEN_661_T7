@@ -12,7 +12,9 @@ npm install
 npm run dev       # development server at http://localhost:5173
 npm run build     # type-check and production build into dist/
 npm run preview   # serve the production build (service worker active)
-npm run lint
+npm run lint      # ESLint (typescript-eslint + react-hooks + react-refresh), zero warnings allowed
+npm run lint:oxlint
+npx tsc -b        # type-check the app and the tests
 npm test          # tests in watch mode
 npm run test:run  # all tests once
 npm run test:a11y # accessibility tests only
@@ -28,6 +30,13 @@ router (`renderApp('/today.html')`). It also runs axe at a chosen device size:
 desktop, because jsdom loads no CSS. Colour contrast is not checked in jsdom;
 check it in a browser with axe DevTools or Lighthouse.
 
+`tests/setup.ts` fails any test that logs a console error or warning (React
+key or `act()` warnings, caught render errors and so on), so the suite also
+guards "no console errors". jsdom's own "Not implemented: canvas" notices,
+triggered by axe-core, are ignored because they do not come from the app.
+
+As of 2026-10-23: 14 files, 260 tests, all passing; about 98% line coverage of `src/`.
+
 ## Stack
 
 | Concern | Choice                                                                    |
@@ -36,7 +45,14 @@ check it in a browser with axe DevTools or Lighthouse.
 | Pages   | One HTML file per page (Vite multi-page build, see `vite.config.ts`)      |
 | Routing | React Router (`createBrowserRouter`, layout routes for auth and the app)  |
 | Styling | Tailwind CSS 4 via `@tailwindcss/vite`; theme tokens in `src/index.css`   |
-| PWA     | `vite-plugin-pwa`: manifest, auto-updating service worker, icons, offline |
+| State   | React Context (`src/AppState.tsx`, `src/appStateContext.ts`)              |
+| Forms   | Controlled checks in `src/validation.ts`; errors under each field, `role="alert"`, first bad field focused |
+| PWA     | `vite-plugin-pwa`: `manifest.json`, auto-updating service worker, icons, offline |
+| Lint    | ESLint (`eslint.config.js`, the Vite `react-ts` rules) and oxlint         |
+
+Shared hooks: `useFocusTrap` (`src/focus.ts`), `useEscapeKey`,
+`useClickOutside`, `useMediaQuery`, `useOnlineStatus`, `useMouseLock`
+(`src/hooks.ts`) and `useToggleActions` (`src/actions.ts`).
 
 ## Pages
 
@@ -56,7 +72,7 @@ in-memory dose log.
 | `messages.html`       | Messages       | Conversations with the care team; open one (`?c=<id>`) full-page to read, reply (typed or one-tap quick replies) and call |
 | `schedule.html`       | Schedule       | Week strip and today's plan                              |
 | `symptoms.html`       | Symptoms       | Today's symptoms with a 1-5 severity bar; log a new one  |
-| `account.html`        | Account        | Profile, preferences (theme, reminders, Face ID), care team, sign out |
+| `account.html`        | Account        | Profile; preferences (theme, notifications, medication reminders, Face ID, share health data); accessibility (focus indicator, zoom, eye tracking, mouse lock, action history); care team; app version and privacy; sign out |
 | `404.html`            | Not found      | Shown for unknown URLs (and offline by the service worker) |
 
 To add a page: create its HTML file here, add it to `pages` in
@@ -72,9 +88,19 @@ JavaScript and CSS in `dist/assets/`. Open them through a web server
 
 | Device  | Width      | Signed-in layout                                                                 |
 | ------- | ---------- | -------------------------------------------------------------------------------- |
-| Phone   | < 768px    | Same as tablet, scaled down: sidebar starts as an icon rail and expands over the page, top bar (SOS, profile menu), scroll + voice bar |
-| Tablet  | 768–1023px | Collapsible sidebar, top bar (voice, eye tracking, SOS, profile menu), scroll + voice bar |
-| Desktop | ≥ 1024px   | Full sidebar, top bar, two-column cards                                          |
+| Phone   | < 768px    | Same as tablet, scaled down: sidebar starts as an icon rail and expands over the page, top bar (notifications, SOS, profile menu), scroll + voice bar |
+| Tablet  | 768–1023px | Collapsible sidebar, top bar (notifications, SOS, profile menu; history, voice and eye tracking from 861px), scroll + voice bar |
+| Desktop | ≥ 1024px   | Full sidebar, top bar (history, voice, eye tracking, notifications, SOS, profile menu), two-column cards |
+
+Checked at 375px, 768px and 1440px. On touch screens (`pointer: coarse`) the
+smaller controls grow to at least 48px (top bar buttons, Help, the toast's
+Undo) and the 30px sidebar arrow grows to 44px; with a mouse they keep the
+design's sizes. The dose, sign-in and scroll / voice buttons are 52–80px
+everywhere, for people with a tremor.
+
+The top bar bell opens a Notifications panel built from the live data (next
+dose due, today's appointment, unread messages); each one links to its page.
+When the connection drops, a notice says the app keeps working offline.
 
 An open conversation fills the page with its own reply box, so it hides the
 scroll + voice bar. Calls (from a conversation, or SOS after confirming) open a
@@ -101,13 +127,13 @@ Every feature works from the keyboard. The shortcuts are defined in
 | Ctrl + L          | Light / dark mode                                             |
 | Ctrl + \          | Voice commands                                                |
 | Ctrl + I          | Eye tracking on / off (simulated)                             |
-| Ctrl + O          | Mouse lock on / off (simulated)                               |
+| Ctrl + O          | Mouse lock on / off: focus snaps to the control nearest the pointer, and a click on empty space presses it |
 | Ctrl + U          | Undo the last action                                          |
 | Ctrl + H          | Action history (undo any action)                              |
 | Ctrl + S          | Emergency call (asks first)                                   |
 | Ctrl + F          | Face ID on / off                                              |
 | Ctrl + R          | Refresh the page                                              |
-| Ctrl + N          | Medication reminders on / off                                 |
+| Ctrl + N          | Notifications on / off                                        |
 
 Ctrl + = replaces the browser's own Ctrl + = zoom; use Ctrl + + (Shift + =, or
 the numpad +) to zoom. Chrome and Edge reserve Ctrl + N for a new window in a
@@ -115,8 +141,9 @@ normal tab, so that shortcut only reaches the app when it is installed (PWA
 window) or in browsers that pass it through. Ctrl + Shift + letter is left to
 the browser (developer tools and so on).
 
-The focus indicator, eye tracking, mouse lock and the action history are also
-on the Account page (Accessibility).
+The focus indicator, zoom, eye tracking, mouse lock and the action history are
+also on the Account page (Accessibility). The action history also has a button
+in the top bar.
 
 **Structure.** Each layout uses landmarks with names: `banner` (top bar, with
 the page's `h1`), `main` (named by that heading), `complementary` (Sidebar),
@@ -133,8 +160,9 @@ As in the other CareConnect apps, all data is fictional and lives in memory
 (`src/data.ts`, `src/AppState.tsx`). Only UI preferences (theme, focus
 indicator, zoom) are stored in `localStorage`. Messages you send, symptoms you
 log, Account switches and the action history also stay in memory. SOS, calls,
-eye tracking, mouse lock and voice commands are demo UI only: no call is placed
-and no microphone or camera is used.
+eye tracking, voice commands and data sharing are demo UI only: no call is
+placed, nothing is shared, and no microphone or camera is used. Mouse lock only
+moves focus within the page; it never captures the pointer.
 
 Network: the app loads the DM Sans and Inter fonts from Google Fonts (cached by
 the service worker for offline use). The landing photo is bundled from Unsplash

@@ -1,19 +1,23 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { AuthButton, AuthField } from '../components/AuthControls'
+import { checkEmail, checkNewPassword, checkRequired, collectErrors, focusFirstError, type FieldErrors } from '../validation'
 
 // Simulated sign-up: nothing is stored or sent; choosing a role opens the app
 export function CreateAccount() {
   const navigate = useNavigate()
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState<FieldErrors<'name' | 'email' | 'password'>>({})
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
-    if (String(data.get('password')).length < 8) {
-      setError('Use at least 8 characters.')
-      return
-    }
+    const found = collectErrors({
+      name: checkRequired(String(data.get('name')), 'Enter your full name.'),
+      email: checkEmail(String(data.get('email'))),
+      password: checkNewPassword(String(data.get('password'))),
+    })
+    setErrors(found)
+    if (Object.keys(found).length) return focusFirstError(e.currentTarget, found)
     navigate('/today.html')
   }
 
@@ -33,8 +37,8 @@ export function CreateAccount() {
         <h1 id="ca-title" className="text-2xl font-bold text-ink md:text-[30px]">
           Create your account
         </h1>
-        <AuthField id="ca-name" name="name" label="Full name" autoComplete="name" defaultValue="Maddy Chen" />
-        <AuthField id="ca-email" name="email" label="Email address" type="email" autoComplete="email" defaultValue="maddy@example.com" />
+        <AuthField id="ca-name" name="name" label="Full name" autoComplete="name" defaultValue="Maddy Chen" error={errors.name} />
+        <AuthField id="ca-email" name="email" label="Email address" type="email" autoComplete="email" defaultValue="maddy@example.com" error={errors.email} />
         <AuthField
           id="ca-pass"
           name="password"
@@ -43,7 +47,7 @@ export function CreateAccount() {
           autoComplete="new-password"
           defaultValue="password12"
           helper="At least 8 characters."
-          error={error}
+          error={errors.password}
         />
       </div>
       <fieldset className="flex flex-col gap-4 md:gap-6">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAppState } from '../appStateContext'
 import { useFocusTrap } from '../focus'
+import { useEscapeKey } from '../hooks'
 
 const SEVERITY_LABELS = ['Very mild', 'Mild', 'Moderate', 'Severe', 'Very severe']
 
@@ -57,12 +58,8 @@ function AddSymptomDialog({ onClose }: { onClose: () => void }) {
   const nameRef = useRef<HTMLInputElement>(null)
   const ref = useFocusTrap<HTMLDivElement>()
 
-  useEffect(() => {
-    nameRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEffect(() => nameRef.current?.focus(), [])
+  useEscapeKey(onClose)
 
   function save(e: FormEvent) {
     e.preventDefault()

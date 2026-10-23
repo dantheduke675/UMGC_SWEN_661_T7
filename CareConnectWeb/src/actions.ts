@@ -18,8 +18,8 @@ export function useToggleActions() {
     focusIndicator: () => flip(focusIndicator ? 'Focus indicator off' : 'Focus indicator on. Move it with the arrow keys or Tab.', toggleFocusIndicator),
     theme: () => flip(theme === 'dark' ? 'Light mode on' : 'Dark mode on', toggleTheme),
     eyeTracking: pref('eyeTracking', 'Eye tracking on (simulated, no camera is used)', 'Eye tracking off'),
-    mouseLock: pref('mouseLock', 'Mouse lock on (simulated)', 'Mouse lock off'),
+    mouseLock: pref('mouseLock', 'Mouse lock on. Focus snaps to the nearest control; click anywhere to press it.', 'Mouse lock off'),
     biometrics: pref('biometrics', 'Face ID on', 'Face ID off'),
-    notifications: pref('notifications', 'Medication reminders on', 'Medication reminders off'),
+    notifications: pref('notifications', 'Notifications on', 'Notifications off'),
   }
 }

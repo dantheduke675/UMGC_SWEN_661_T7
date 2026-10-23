@@ -1,17 +1,13 @@
-import { useEffect } from 'react'
 import { useAppState } from '../appStateContext'
 import { useFocusTrap } from '../focus'
+import { useEscapeKey } from '../hooks'
 
 // Ctrl + H: every undoable action this visit, newest first
 export function HistoryDialog({ onClose }: { onClose: () => void }) {
   const { history, undo } = useAppState()
   const ref = useFocusTrap<HTMLDivElement>()
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEscapeKey(onClose)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">

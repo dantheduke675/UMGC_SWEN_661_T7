@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useFocusTrap } from '../focus'
+import { useEscapeKey } from '../hooks'
 
 interface Props {
   message: string
@@ -13,12 +14,8 @@ export function ConfirmDialog({ message, confirmLabel, onConfirm, onCancel }: Pr
   const ref = useFocusTrap<HTMLDivElement>()
 
   // Start on the safe choice; Escape cancels
-  useEffect(() => {
-    cancelRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCancel()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
+  useEffect(() => cancelRef.current?.focus(), [])
+  useEscapeKey(onCancel)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6 backdrop-blur-sm">

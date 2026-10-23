@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import { useAppState } from '../appStateContext'
 import { patient } from '../data'
 import { useFocusTrap } from '../focus'
+import { NotificationsButton } from '../components/NotificationsPanel'
+import { useClickOutside, useEscapeKey } from '../hooks'
 import { NAV_ITEMS } from '../nav'
 import { CTRL_SHORTCUTS, OTHER_KEYS } from '../shortcuts'
 
@@ -25,7 +27,7 @@ function IconBtn({ icon, label, onClick, pressed, className = '' }: { icon: stri
       aria-label={label}
       aria-pressed={pressed}
       title={label}
-      className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-lg transition-all active:scale-90 ${pressed ? 'bg-brand/25 ring-2 ring-brand' : 'bg-surface-2'} ${className}`}
+      className={`flex size-11 shrink-0 items-center justify-center rounded-xl text-lg transition-all active:scale-90 pointer-coarse:size-12 ${pressed ? 'bg-brand/25 ring-2 ring-brand' : 'bg-surface-2'} ${className}`}
     >
       <span aria-hidden="true">{icon}</span>
     </button>
@@ -66,7 +68,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="absolute top-6 -right-[15px] z-10 size-[30px] rounded-[10px] border border-line bg-surface-2 text-xl font-extrabold text-sub lg:hidden"
+          className="absolute top-6 -right-[15px] z-10 size-[30px] rounded-[10px] pointer-coarse:top-5 pointer-coarse:-right-[22px] pointer-coarse:size-11 border border-line bg-surface-2 text-xl font-extrabold text-sub lg:hidden"
         >
           {collapsed ? '›' : '‹'}
         </button>
@@ -119,16 +121,13 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
 
 /* ---------- Top bar (every size) ---------- */
 export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string; onVoice: () => void; onSos: () => void; onEyeTracking: () => void }) {
-  const { theme, toggleTheme, prefs } = useAppState()
+  const { theme, toggleTheme, prefs, history, setHistoryOpen } = useAppState()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const menuRef = useClickOutside<HTMLDivElement>(() => setOpen(false), open)
+  const undoable = history.filter(h => !h.undone).length
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  useEscapeKey(() => setOpen(false), open)
 
   return (
     <header className="flex min-h-[68px] items-center gap-2 border-b border-line bg-surface py-2.5 pr-3 pl-6 md:gap-3.5 md:pr-[18px] lg:min-h-[76px] lg:px-8">
@@ -137,8 +136,15 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
         <h1 id="page-title" className="truncate text-xl leading-tight font-extrabold text-ink lg:text-[23px]">{title}</h1>
       </div>
       <div id="page-tools" role="group" aria-label="Voice, SOS and account" className="flex items-center gap-2">
+        <IconBtn
+          icon="🕘"
+          label={undoable ? `Action history, ${undoable} can be undone` : 'Action history'}
+          onClick={() => setHistoryOpen(true)}
+          className="max-[860px]:hidden"
+        />
         <IconBtn icon="🎤" label="Voice commands" onClick={onVoice} className="max-[860px]:hidden" />
         <IconBtn icon="👁" label="Eye tracking" pressed={prefs.eyeTracking} onClick={onEyeTracking} className="max-[860px]:hidden" />
+        <NotificationsButton />
         <button
           onClick={onSos}
           title="Call emergency contact"
@@ -147,7 +153,7 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
         >
           SOS
         </button>
-        <div className="relative">
+        <div ref={menuRef} className="relative">
           <button
             onClick={() => setOpen(o => !o)}
             aria-haspopup="menu"
@@ -262,7 +268,7 @@ export function HelpButton({ id, items = APP_HELP, position = 'bottom-[104px] lg
         onClick={() => setOpen(true)}
         aria-label="Help"
         title="Help"
-        className={`fixed right-4 z-20 grid size-11 place-items-center rounded-full border border-line bg-surface-2 text-xl font-bold text-ink shadow-lg ${position}`}
+        className={`fixed right-4 z-20 grid size-11 place-items-center pointer-coarse:size-12 rounded-full border border-line bg-surface-2 text-xl font-bold text-ink shadow-lg ${position}`}
       >
         ?
       </button>
@@ -274,11 +280,7 @@ export function HelpButton({ id, items = APP_HELP, position = 'bottom-[104px] lg
 function HelpDialog({ items, onClose }: { items: HelpItem[]; onClose: () => void }) {
   const ref = useFocusTrap<HTMLDivElement>()
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEscapeKey(onClose)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">

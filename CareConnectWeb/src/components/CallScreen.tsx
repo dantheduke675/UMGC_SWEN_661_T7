@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Conversation } from '../data'
 import { useFocusTrap } from '../focus'
+import { useEscapeKey } from '../hooks'
 
 const mmss = (secs: number) => `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`
 
@@ -17,11 +18,7 @@ export function CallScreen({ c, onEnd }: { c: Conversation; onEnd: (duration: st
   }, [])
 
   // Escape hangs up, like the other dialogs' Escape
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onEnd(mmss(secs))
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onEnd, secs])
+  useEscapeKey(() => onEnd(mmss(secs)))
 
   const toggle = (on: boolean) =>
     `grid size-20 place-items-center rounded-full text-3xl transition-all active:scale-95 ${on ? 'bg-brand ring-2 ring-[#59ad9e]' : 'bg-[#2a3142]'}`

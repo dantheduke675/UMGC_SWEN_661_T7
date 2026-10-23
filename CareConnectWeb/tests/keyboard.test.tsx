@@ -100,10 +100,10 @@ describe('Keyboard shortcuts', () => {
   })
 
   it.each([
-    ['n', /Notifications/, 'Medication reminders off'],
+    ['n', /^Notifications/, 'Notifications off'],
     ['f', /Biometrics/, 'Face ID off'],
     ['i', /Eye tracking/, 'Eye tracking on (simulated, no camera is used)'],
-    ['o', /Mouse lock/, 'Mouse lock on (simulated)'],
+    ['o', /Mouse lock/, 'Mouse lock on. Focus snaps to the nearest control; click anywhere to press it.'],
   ])('switches a setting with Ctrl + %s', async (key, row, message) => {
     const { user } = renderApp('/account.html')
     const before = screen.getByRole('switch', { name: row }).getAttribute('aria-checked')
@@ -167,7 +167,7 @@ describe('Undo and action history', () => {
     const dialog = screen.getByRole('dialog', { name: 'Action history' })
     expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveFocus()
     const items = within(dialog).getAllByRole('listitem')
-    expect(items.map(li => li.querySelector('p')?.textContent)).toEqual(['Medication reminders off', 'Marked as taken'])
+    expect(items.map(li => li.querySelector('p')?.textContent)).toEqual(['Notifications off', 'Marked as taken'])
 
     await user.click(within(dialog).getByRole('button', { name: 'Undo: Marked as taken' }))
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '2 of 9 taken')
@@ -180,7 +180,7 @@ describe('Undo and action history', () => {
 
   it('opens from the Account page and has no axe violations', async () => {
     const { user } = renderApp('/account.html')
-    await user.click(screen.getByRole('button', { name: /Action history/ }))
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: /Action history/ }))
     expect(screen.getByRole('dialog', { name: 'Action history' })).toHaveTextContent('No actions yet.')
     expect(await axeViolations('desktop')).toEqual([])
   })

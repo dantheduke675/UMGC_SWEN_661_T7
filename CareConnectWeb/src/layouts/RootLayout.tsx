@@ -5,16 +5,19 @@ import { nextZoom, useAppState } from '../appStateContext'
 import { HistoryDialog } from '../components/HistoryDialog'
 import { Toasts } from '../components/Toasts'
 import { moveFocusWithArrow } from '../focus'
+import { useMouseLock, useOnlineStatus } from '../hooks'
 import { matchShortcut } from '../shortcuts'
 
 /*
   Wraps every page: the keyboard shortcuts that work everywhere (see
   shortcuts.ts), arrow-key focus movement once the focus indicator is on,
-  messages and the action history.
+  mouse lock-on, the offline notice, messages and the action history.
 */
 export function RootLayout() {
-  const { focusIndicator, zoom, zoomBy, undo, addToast, historyOpen, setHistoryOpen } = useAppState()
+  const { focusIndicator, zoom, zoomBy, undo, addToast, historyOpen, setHistoryOpen, prefs } = useAppState()
   const toggles = useToggleActions()
+  const online = useOnlineStatus()
+  useMouseLock(prefs.mouseLock)
 
   useEffect(() => {
     const zoomTo = (step: 1 | -1 | 0) => {
@@ -71,6 +74,14 @@ export function RootLayout() {
   return (
     <>
       <Outlet />
+      {/* The service worker keeps every page working offline; say so rather than fail quietly */}
+      <div aria-live="polite" className="pointer-events-none fixed top-2 left-1/2 z-40 -translate-x-1/2">
+        {!online && (
+          <p className="rounded-full bg-[#1d2534] px-4 py-2 text-sm font-bold text-[#f5f7fa] shadow-lg">
+            <span aria-hidden="true">📴 </span>You're offline. CareConnect still works; changes stay on this device.
+          </p>
+        )}
+      </div>
       <Toasts />
       {historyOpen && <HistoryDialog onClose={() => setHistoryOpen(false)} />}
     </>

@@ -43,7 +43,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations)
   const [symptoms, setSymptoms] = useState<Symptom[]>(initialSymptoms)
   const nextSymptomId = useRef(Math.max(0, ...initialSymptoms.map(s => s.id)) + 1)
-  const [prefs, setPrefs] = useState<Prefs>({ notifications: true, biometrics: true, eyeTracking: false, mouseLock: false })
+  const [prefs, setPrefs] = useState<Prefs>({ notifications: true, reminders: true, biometrics: true, shareData: true, eyeTracking: false, mouseLock: false })
   const [callWith, setCallWith] = useState<string | null>(null)
 
   useEffect(() => {
