@@ -1103,23 +1103,26 @@ Maestro can have issues specifically test 6 which uses the call button can have 
 
 # Web App:
 
-The web front end is a responsive, installable Progressive Web App (PWA) built with [Vite](https://vite.dev/), React 19, [React Router](https://reactrouter.com/) and [Tailwind CSS](https://tailwindcss.com/) 4, written in TypeScript. Its layout follows the team's Figma Make design and adapts to the three device sizes in that design: phone, tablet and desktop.
+The web front end is a responsive, installable Progressive Web App (PWA) built with [Vite](https://vite.dev/), React 19, [React Router](https://reactrouter.com/) and [Tailwind CSS](https://tailwindcss.com/) 4, written in TypeScript. Its layout follows the team's Figma Make design and adjusts automatically to the screen size of the device it is opened on: phone, tablet or desktop. There is no switch to pick a layout; resizing the window or rotating a device changes it straight away.
 
 ## HTML Pages
 
 Every page of the web app is its own HTML file, so each one can be opened, bookmarked, refreshed or hosted directly by any static web server:
 
-| HTML file             | Page           |
-| --------------------- | -------------- |
-| `index.html`          | Landing page   |
-| `signin.html`         | Sign in        |
-| `create-account.html` | Create account |
-| `today.html`          | Today          |
-| `medications.html`    | Medications    |
-| `schedule.html`       | Schedule       |
-| `404.html`            | Page not found |
+| HTML file             | Page           | What it does                                                                                              |
+| --------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| `index.html`          | Landing page   | The marketing page the app always starts on, with links to sign in and create an account. Signing out of the app returns here |
+| `signin.html`         | Sign in        | Email and password sign-in, or **Use Face ID instead**: a "Sign in with your face?" question, then a short simulated face scan that opens Today |
+| `create-account.html` | Create account | Sign-up form with the Care recipient / Caregiver role buttons                                             |
+| `today.html`          | Today          | Greeting, today's medication progress, next doses and the next appointment                                |
+| `medications.html`    | Medications    | Every dose today; mark each one taken or missed, with Undo                                                 |
+| `messages.html`       | Messages       | Conversations with the care team, with an unread badge. Opening one (`messages.html?c=<id>`) shows the full conversation, quick replies, a reply box and a call button |
+| `schedule.html`       | Schedule       | Week strip and today's plan                                                                                |
+| `symptoms.html`       | Symptoms       | Symptoms logged today with a 1–5 colour-coded severity bar; **+ Add** logs a new one                      |
+| `account.html`        | Account        | Profile, emergency contact, preferences (appearance, medication reminders, Face ID), care team and Sign out |
+| `404.html`            | Page not found | Shown for any page that does not exist                                                                    |
 
-The HTML files live in the root of `CareConnectWeb/`. Each one loads the shared React code in `src/`, and React Router shows the matching page. Once a page is open, links to the other pages switch instantly without a full reload, which keeps the medication check-ins made during the visit.
+The HTML files live in the root of `CareConnectWeb/`. Each one loads the shared React code in `src/`, and React Router shows the matching page. Once a page is open, links to the other pages switch instantly without a full reload, which keeps the medication check-ins, messages and symptoms entered during the visit.
 
 ## Navigation
 
@@ -1145,7 +1148,15 @@ Next use
 npm run dev
 ```
 
-to start the development server, then open http://localhost:5173 in your browser. Any page can be opened directly by its HTML file, for example http://localhost:5173/today.html or http://localhost:5173/medications.html. The page reloads automatically whenever a source file is saved. Stop the server with `Ctrl + C`.
+to start the development server, then open http://localhost:5173 in your browser. The app always starts on the landing page (`index.html`). Any page can also be opened directly by its HTML file, for example http://localhost:5173/today.html or http://localhost:5173/messages.html. The page reloads automatically whenever a source file is saved. Stop the server with `Ctrl + C`.
+
+To try the app on a real phone or tablet, start the server with
+
+```
+npm run dev -- --host
+```
+
+which also prints a **Network** address such as `http://192.168.1.206:5173`. Open that address on a phone or tablet connected to the same Wi-Fi network. If the page does not load, allow Node.js through the Windows firewall on private networks.
 
 ## Building the Application
 
@@ -1155,7 +1166,7 @@ To type-check the code and create a production build use
 npm run build
 ```
 
-this writes a static HTML site to `dist/`: one HTML file per page (`index.html`, `signin.html`, `create-account.html`, `today.html`, `medications.html`, `schedule.html` and `404.html`), plus the shared JavaScript and CSS in `dist/assets/`. Upload the contents of `dist/` to any static web server to host it; no server-side code or URL rewrite rules are needed. The build also generates the PWA web manifest, the service worker and the app icons.
+this writes a static HTML site to `dist/`: one HTML file per page (`index.html`, `signin.html`, `create-account.html`, `today.html`, `medications.html`, `messages.html`, `schedule.html`, `symptoms.html`, `account.html` and `404.html`), plus the shared JavaScript and CSS in `dist/assets/`. Upload the contents of `dist/` to any static web server to host it; no server-side code or URL rewrite rules are needed. The build also generates the PWA web manifest, the service worker and the app icons.
 
 ### Note 1. Open the built pages through a web server (such as `npm run preview` below) rather than by double-clicking the files, because browsers block the JavaScript modules on `file://` pages.
 
@@ -1201,17 +1212,20 @@ All tests live in `CareConnectWeb/tests/`:
 
 | Test file                 | Tests | What it covers                                                                                                     |
 | ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
-| `accessibility.test.tsx`  | 61    | axe-core scans of every page at phone, tablet and desktop sizes, in both themes and with dialogs, menus and errors open; landmarks, headings, skip link, live regions, labels; keyboard-only use and focus handling; large tremor-friendly targets |
-| `shell.test.tsx`          | 28    | Sidebar, tab bar and phone menu navigation; current-page marking; collapsing the sidebar; theme switching and saving; profile menu; sign out; SOS / Call confirmation; Alerts, Video and eye-tracking messages; Scroll up / down; voice commands; Page not found |
-| `html-pages.test.ts`      | 16    | Every HTML page file is a complete document (language, charset, viewport, root element, script), has a route, the right title and its own description, and is built by `vite.config.ts` |
-| `auth.test.tsx`           | 14    | Sign in and Create account: fields, validation errors, Face ID, Back, Enter key, role buttons, theme toggle         |
+| `accessibility.test.tsx`  | 89    | axe-core scans of every page at phone, tablet and desktop sizes, in both themes and with dialogs, menus, errors, the collapsed sidebar, the help guide, an open conversation, the call screen and the Face ID screens; landmarks, headings, skip link, live regions, labels; keyboard-only use and focus handling; large tremor-friendly targets |
+| `shell.test.tsx`          | 31    | Sidebar navigation and current-page marking for all six pages; the Messages unread badge; the phone sidebar (starts as an icon rail, expands, closes after picking a page or with Escape); collapsing the tablet sidebar; theme switching and saving; profile menu (Account, theme, sign out); signing out to the landing page; SOS confirmation opening the call screen; eye tracking; help guide; Scroll up / down; voice commands |
+| `html-pages.test.ts`      | 22    | Every HTML page file is a complete document (language, charset, viewport, root element, script), has a route, the right title and its own description, and is built by `vite.config.ts` |
+| `auth.test.tsx`           | 16    | Sign in and Create account: fields, validation errors, Back, Enter key, role buttons, theme toggle; the Face ID question, "No, use my password", the face scan opening Today and "Use my password instead" |
 | `today.test.tsx`          | 12    | Greeting by time of day, progress bar, marking doses taken / missed, confirmation dialog, Undo, the undo message hiding after 5 seconds, links |
 | `landing.test.tsx`        | 7     | Hero content, links to the sign-in and sign-up pages, in-page section links, photo description                    |
 | `medications.test.tsx`    | 7     | All 9 doses, categories, taken / missed states and card colours, dose status shared with Today                    |
+| `messages.test.tsx`       | 6     | Conversation list, opening a conversation full-page and marking it read, typed and quick replies, the call screen (timer, Mute, Speaker, End call, Escape) |
+| `account.test.tsx`        | 6     | Profile, emergency contact and care team; Appearance theme switch; reminder and Face ID switches; care team opening a conversation; sign out to the landing page |
 | `schedule.test.tsx`       | 6     | Month and week strip (including weeks that cross into the next month), selecting a day, schedule items and Done markers |
+| `symptoms.test.tsx`       | 4     | Symptom list and severity bars, logging a new symptom, the missing-name error, closing the form without saving    |
 | `data.test.ts`            | 4     | The demo data: dose count, unique keys, starting state, schedule                                                   |
 
-As of 2026-10-20 the suite is 9 files / 155 tests, all passing, with 98% line coverage of `src/`.
+As of 2026-10-22 the suite is 12 files / 210 tests, all passing, with 99% line coverage of `src/`.
 
 ### Note 1. jsdom loads no CSS, so `tests/utils.tsx` applies the app's Tailwind visibility classes for a chosen device size before each axe scan. This way each scan sees only what a phone, tablet or desktop browser would show. jsdom also cannot measure colours, so colour contrast is checked in a real browser (see Accessibility testing below).
 
@@ -1231,25 +1245,34 @@ npx tsc -b
 
 ### Testing the responsive layouts
 
-With the application running, open it in Chrome or Edge, press `F12` to open DevTools, then press `Ctrl + Shift + M` to turn on device mode. Choose a device or type a width to test each layout:
+The layout follows the screen width automatically. With the application running, open it in Chrome or Edge, press `F12` to open DevTools, then press `Ctrl + Shift + M` to turn on device mode. Choose a device or type a width to test each layout:
 
 | Device  | Width to test               | What to check                                                                                   |
 | ------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
-| Phone   | 390px (iPhone 12 Pro)       | Header with Call / Alerts / Video / theme buttons, bottom tab bar, Scroll up / Voice / Scroll down bar, ☰ menu |
-| Tablet  | 820px (iPad Air)            | Sidebar that collapses with the ‹ button, top bar with SOS and profile menu, scroll / voice bar  |
-| Desktop | 1024px or wider             | Full sidebar, top bar, medication and schedule cards in two columns                              |
+| Phone   | 390px (iPhone 12 Pro)       | Same pieces as the tablet, scaled down: the sidebar starts as a narrow column of icons and the › arrow slides the full sidebar over the page; top bar with SOS and the profile menu; Scroll up / Voice / Scroll down bar; one column of cards |
+| Tablet  | 820px (iPad Air)            | Sidebar that collapses with the ‹ button, top bar with SOS and profile menu, scroll / voice bar, one column of cards |
+| Desktop | 1024px or wider             | Full sidebar, top bar with voice and eye-tracking buttons, cards in two columns                  |
+
+On every size a floating **?** button opens a short guide to the controls. An open conversation fills the page with its own reply box, so the scroll / voice bar and the **?** button are hidden there.
 
 ### Manual test flow
 
-1. On the landing page (`index.html`), select **I already have an account**, then **Sign in**. The Today page (`today.html`) opens.
-2. On Today or Medications, select **I took this**. The progress bar goes from 2 of 9 to 3 of 9 and a message with **Undo** appears. Select **Undo** to reverse it.
-3. Select **I missed this**. A confirmation dialog appears; confirm it and the card shows **✗ Missed**.
-4. Switch between light and dark themes (the sun / moon button). The choice is remembered after a page reload.
-5. Move between Today, Medications and Schedule using the sidebar, the bottom tab bar or the phone ☰ menu.
-6. Select **SOS** (tablet / desktop) or **Call** (phone). A confirmation dialog asks before "calling" (no call is placed).
-7. Select **Voice** and choose a command such as **Go to medications** or **Scroll down**.
-8. Use only the keyboard (`Tab`, `Shift + Tab`, `Enter`, `Esc`) to repeat the steps above. Every control shows a visible focus outline and `Esc` closes dialogs and menus.
-9. Open each HTML file directly (for example http://localhost:5173/schedule.html) and refresh it. The matching page loads and the browser tab shows its title, such as **Schedule · CareConnect**. A file that does not exist, such as `nope.html`, shows the **Page not found** page.
+1. Open http://localhost:5173. The landing page (`index.html`) appears. Select **I already have an account**, then **Sign in**. The Today page (`today.html`) opens.
+2. Sign out, return to the sign-in page and select **Use Face ID instead**. Choose **Yes, use Face ID**: the "Welcome back, Maddy" screen scans for about 2.5 seconds, then Today opens. **No, use my password** and **Use my password instead** return to the password form.
+3. On Today or Medications, select **I took this**. The progress bar goes from 2 of 9 to 3 of 9 and a message with **Undo** appears. Select **Undo** to reverse it.
+4. Select **I missed this**. A confirmation dialog appears; confirm it and the card shows **✗ Missed**.
+5. Open **Messages**. Aunt Joyce shows a red unread dot and the sidebar shows a **1** badge. Open her conversation: the badge clears. Send a quick reply such as **I took my medications**, type a message and press the ↑ button, then select **←** to go back to the list.
+6. In a conversation, select the green call button. The call screen shows the timer, **Mute**, **Speaker** and **End call**. End the call; a message shows how long it lasted.
+7. Select **SOS** in the top bar and confirm. The call screen opens for Aunt Joyce, the emergency contact.
+8. Open **Symptoms**, select **+ Add**, enter a symptom, choose a severity from 1 to 5 and save. It appears at the top of the list and the count goes up.
+9. Open **Account**. Select **Appearance** to switch theme, and **Notifications** and **Biometrics** to turn them off and on. Select a care team member to open their conversation.
+10. Switch between light and dark themes (the sun / moon button). The choice is remembered after a page reload.
+11. Move between all six pages with the sidebar. On a phone width, select **›** to expand the sidebar, then pick a page; the sidebar closes again.
+12. Select **Voice** and choose a command such as **Go to medications**, **Open messages**, **Log a symptom** or **Scroll down**.
+13. Select **?** to open the help guide.
+14. Sign out from the sidebar, the profile menu or the red button on Account. Each one returns to the landing page.
+15. Use only the keyboard (`Tab`, `Shift + Tab`, `Enter`, `Esc`) to repeat the steps above. Every control shows a visible focus outline and `Esc` closes dialogs, menus, the expanded phone sidebar and the call screen.
+16. Open each HTML file directly (for example http://localhost:5173/symptoms.html) and refresh it. The matching page loads and the browser tab shows its title, such as **Symptoms · CareConnect**. A file that does not exist, such as `nope.html`, shows the **Page not found** page.
 
 ### Testing the PWA
 
@@ -1262,20 +1285,20 @@ With the application running, open it in Chrome or Edge, press `F12` to open Dev
 
 The automated accessibility tests (`npm run test:a11y`) scan every page with axe-core against WCAG 2.2 A / AA and axe's best-practice rules, at phone, tablet and desktop sizes. They also check keyboard use, focus handling, labels and live announcements.
 
-Colour contrast needs a real browser. With the application running, scan each page with the [axe DevTools](https://www.deque.com/axe/devtools/) browser extension or the **Lighthouse** tab in Chrome DevTools. Do this at the phone, tablet and desktop widths, in both light and dark themes. As of 2026-10-20, axe-core's colour-contrast rule reports no violations on any page at the three widths in either theme.
+Colour contrast needs a real browser. With the application running, scan each page with the [axe DevTools](https://www.deque.com/axe/devtools/) browser extension or the **Lighthouse** tab in Chrome DevTools. Do this at the phone, tablet and desktop widths, in both light and dark themes.
 
 ## Security Notes
 
-- **No real data.** All medications and schedule items are fictional and live in memory (`src/data.ts`); changes are lost when a page is reloaded or opened from its HTML file directly.
-- **Simulated sign-in.** Sign in and create account do not check, store or send any credential.
-- **Only the theme is stored.** The light / dark choice is the only value saved in `localStorage`.
-- **Demo-only features.** SOS / Call, Video, Alerts, eye tracking and voice commands only show a message. No call is placed and no microphone or camera is used.
+- **No real data.** All medications, schedule items, messages, symptoms and care team details are fictional and live in memory (`src/data.ts`, `src/AppState.tsx`); changes are lost when a page is reloaded or opened from its HTML file directly.
+- **Simulated sign-in.** Sign in, Face ID and create account do not check, store or send any credential, and the Face ID screens never use the camera.
+- **Only the theme is stored.** The light / dark choice is the only value saved in `localStorage`. Messages you send, symptoms you log and the Account switches stay in memory.
+- **Demo-only features.** SOS, calls, eye tracking and voice commands are simulated. The call screen places no call, and no microphone, speaker or camera is used.
 - **Network.** The app loads the DM Sans and Inter fonts from Google Fonts (cached by the service worker for offline use); it makes no other network requests.
 
 ## Known Issues / Limitations
 
-- No backend/API integration. All data is static/in-memory.
-- Only the Today, Medications and Schedule pages are implemented; Messages, Symptoms and Account from the design are not yet built.
+- No backend/API integration. All data is static/in-memory, so sent messages, logged symptoms and Account changes reset on reload.
+- Profile and emergency contact editing on the Account page are not built yet; they show a "coming soon" message.
 - No browser-based end-to-end tests yet. The automated tests run in jsdom, so layout and colour contrast are checked manually in a browser.
 
 # Weekly Contributions 09/02-09/08
