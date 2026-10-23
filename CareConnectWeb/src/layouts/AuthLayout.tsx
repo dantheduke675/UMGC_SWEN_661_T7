@@ -1,11 +1,17 @@
 import { Outlet } from 'react-router'
 import { useAppState } from '../appStateContext'
+import { SkipLinks, type SkipLink } from '../components/SkipLinks'
 import { HelpButton, type HelpItem } from './ShellParts'
 
 const AUTH_HELP: HelpItem[] = [
   ['✉️', 'Email and password', 'Your password manager can fill both in for you.'],
   ['👤', 'Face ID', 'Sign in just by looking at your device. A failed attempt never locks your account.'],
   ['☀️', 'Theme button', 'The round button in the top corner switches between light and dark.'],
+]
+
+const SKIP_LINKS: SkipLink[] = [
+  ['auth-form', 'Skip to form'],
+  ['auth-help', 'Skip to help'],
 ]
 
 /*
@@ -17,8 +23,9 @@ export function AuthLayout() {
   const dark = theme === 'dark'
 
   return (
-    <div className="h-dvh bg-bg md:grid md:grid-cols-[minmax(250px,0.7fr)_minmax(480px,1.3fr)] lg:grid-cols-[minmax(300px,0.8fr)_minmax(480px,1.2fr)]">
-      <aside className="hidden flex-col justify-between border-r border-line px-8 pt-[72px] pb-12 text-ink md:flex lg:px-[clamp(36px,5vw,80px)]">
+    <div className="h-full bg-bg md:grid md:grid-cols-[minmax(250px,0.7fr)_minmax(480px,1.3fr)] lg:grid-cols-[minmax(300px,0.8fr)_minmax(480px,1.2fr)]">
+      <SkipLinks links={SKIP_LINKS} />
+      <aside aria-label="About CareConnect" className="hidden flex-col justify-between border-r border-line px-8 pt-[72px] pb-12 text-ink md:flex lg:px-[clamp(36px,5vw,80px)]">
         <div className="flex items-center gap-2.5 text-[19px] font-extrabold tracking-[-0.03em]">
           <span className="grid size-[38px] place-items-center rounded-xl bg-brand text-lg text-white" aria-hidden="true">✚</span>
           CareConnect
@@ -38,7 +45,7 @@ export function AuthLayout() {
         </div>
       </aside>
 
-      <main className="relative h-full min-w-0 overflow-auto">
+      <main id="auth-form" className="relative h-full min-w-0 overflow-auto">
         <button
           onClick={toggleTheme}
           aria-label={`Switch to ${dark ? 'light' : 'dark'} theme`}
@@ -48,7 +55,7 @@ export function AuthLayout() {
         </button>
         <Outlet />
       </main>
-      <HelpButton items={AUTH_HELP} position="bottom-5 md:right-5" />
+      <HelpButton id="auth-help" items={AUTH_HELP} position="bottom-5 md:right-5" />
     </div>
   )
 }

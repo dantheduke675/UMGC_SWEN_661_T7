@@ -158,10 +158,15 @@ describe('App shell: SOS and quick actions', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
-  it('shows a message for eye tracking', async () => {
+  it('switches (simulated) eye tracking on and off', async () => {
     const { user } = renderApp('/today.html')
-    await user.click(screen.getByRole('button', { name: 'Eye tracking (coming soon)' }))
-    expect(statusMessages().getByText('Eye tracking is coming soon')).toBeInTheDocument()
+    const eye = screen.getByRole('button', { name: 'Eye tracking' })
+    expect(eye).toHaveAttribute('aria-pressed', 'false')
+    await user.click(eye)
+    expect(eye).toHaveAttribute('aria-pressed', 'true')
+    expect(statusMessages().getByText('Eye tracking on (simulated, no camera is used)')).toBeInTheDocument()
+    await user.click(eye)
+    expect(eye).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('opens the help guide and closes it with Got it or Escape', async () => {

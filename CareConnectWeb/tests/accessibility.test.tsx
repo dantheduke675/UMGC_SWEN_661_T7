@@ -183,6 +183,8 @@ describe('Accessibility: page structure', () => {
 describe('Accessibility: keyboard', () => {
   it('reaches the sign-in fields and button with Tab and submits with Enter', async () => {
     const { user, currentPath } = renderApp('/signin.html')
+    await user.tab() // Skip to form
+    await user.tab() // Skip to help
     await user.tab() // theme switch
     await user.tab() // Back
     await user.tab()

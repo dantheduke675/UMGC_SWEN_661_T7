@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router'
 import { useAppState } from '../appStateContext'
 import { careTeam, emergencyContact, patient } from '../data'
 
+const APP_VERSION = '1.0.0'
+
 function Group({ title, children }: { title: string; children: ReactNode }) {
   const id = `account-${title.toLowerCase().replace(/\s+/g, '-')}`
   return (
@@ -34,8 +36,33 @@ function Row({ icon, title, value, onClick, checked }: { icon: string; title: st
   )
 }
 
+// Zoom level with - / + buttons (also Ctrl + - and Ctrl + +)
+function ZoomRow() {
+  const { zoom, zoomBy } = useAppState()
+  const pct = Math.round(zoom * 100)
+  const btn = 'grid size-12 place-items-center rounded-xl border border-line bg-surface-2 text-2xl font-bold text-ink disabled:opacity-40'
+  return (
+    <li className="flex min-h-[80px] items-center gap-4 px-5 py-3">
+      <span className="w-7 shrink-0 text-center text-2xl leading-none" aria-hidden="true">🔍</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-bold text-ink">Zoom</span>
+        <span id="zoom-level" className="block text-sm text-sub">
+          <span className="sr-only">Current zoom </span>
+          {pct}%
+        </span>
+      </span>
+      <button onClick={() => zoomBy(-1)} disabled={pct <= 80} aria-label="Zoom out" aria-describedby="zoom-level" aria-keyshortcuts="Control+-" className={btn}>
+        <span aria-hidden="true">−</span>
+      </button>
+      <button onClick={() => zoomBy(1)} disabled={pct >= 200} aria-label="Zoom in" aria-describedby="zoom-level" aria-keyshortcuts="Control+Plus" className={btn}>
+        <span aria-hidden="true">+</span>
+      </button>
+    </li>
+  )
+}
+
 export function Account() {
-  const { theme, toggleTheme, prefs, togglePref, addToast } = useAppState()
+  const { theme, toggleTheme, focusIndicator, toggleFocusIndicator, prefs, togglePref, addToast, setHistoryOpen } = useAppState()
   const navigate = useNavigate()
 
   return (
@@ -50,7 +77,7 @@ export function Account() {
         </div>
       </div>
 
-      {/* Profile and Preferences side by side on desktop; Care team under Profile */}
+      {/* Profile and Preferences side by side on desktop; Care team and Accessibility under them */}
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <Group title="Profile">
           <Row icon="👤" title={patient.full} value={patient.email} onClick={() => addToast('Editing your profile is coming soon')} />
@@ -66,9 +93,16 @@ export function Account() {
           <Row
             icon="🔔"
             title="Notifications"
-            value={prefs.notifications ? 'Medication reminders on' : 'Medication reminders off'}
+            value={prefs.notifications ? 'On · Ctrl + N' : 'Off · Ctrl + N'}
             checked={prefs.notifications}
             onClick={() => togglePref('notifications')}
+          />
+          <Row
+            icon="⏰"
+            title="Medication reminders"
+            value={prefs.reminders ? 'On · 15 min before each dose' : 'Off'}
+            checked={prefs.reminders}
+            onClick={() => togglePref('reminders')}
           />
           <Row
             icon="🔒"
@@ -77,11 +111,56 @@ export function Account() {
             checked={prefs.biometrics}
             onClick={() => togglePref('biometrics')}
           />
+          <Row
+            icon="🔗"
+            title="Share health data"
+            value={prefs.shareData ? 'With your care team' : 'Not shared'}
+            checked={prefs.shareData}
+            onClick={() => togglePref('shareData')}
+          />
         </Group>
         <Group title="Care team">
           {careTeam.map(p => (
             <Row key={p.name} icon={p.icon} title={p.name} value={p.role} onClick={() => navigate(`/messages.html?c=${p.conversation}`)} />
           ))}
+        </Group>
+        <Group title="Accessibility">
+          <Row
+            icon="🔲"
+            title="Focus indicator"
+            value={focusIndicator ? 'Shown · arrow keys move it · Ctrl + = to hide' : 'Hidden · Ctrl + = to show'}
+            checked={focusIndicator}
+            onClick={toggleFocusIndicator}
+          />
+          <ZoomRow />
+          <Row
+            icon="👁"
+            title="Eye tracking"
+            value={prefs.eyeTracking ? 'On (simulated, no camera is used)' : 'Off'}
+            checked={prefs.eyeTracking}
+            onClick={() => togglePref('eyeTracking')}
+          />
+          <Row
+            icon="🖱"
+            title="Mouse lock"
+            value={prefs.mouseLock ? 'On · focus snaps to the nearest control' : 'Off · Ctrl + O'}
+            checked={prefs.mouseLock}
+            onClick={() => togglePref('mouseLock')}
+          />
+          <Row icon="🕘" title="Action history" value="See and undo what you have done · Ctrl + H" onClick={() => setHistoryOpen(true)} />
+        </Group>
+        <Group title="App information">
+          <li className="flex min-h-[80px] items-center gap-4 px-5 py-3">
+            <span className="w-7 shrink-0 text-center text-2xl leading-none" aria-hidden="true">ℹ️</span>
+            <span className="flex-1 text-[17px] font-bold text-ink">CareConnect version</span>
+            <span className="text-sub">{APP_VERSION}</span>
+          </li>
+          <Row
+            icon="📄"
+            title="Privacy and data"
+            value="Review the policy"
+            onClick={() => addToast('Your data is encrypted and only shared with your care team.')}
+          />
         </Group>
       </div>
 

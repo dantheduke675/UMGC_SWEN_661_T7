@@ -20,6 +20,7 @@
   --taken-text: #2f7a6b;
   --missed-text: #c53030;
   --signout: #c53030;
+  --focus: #2f7a6b;
   color-scheme: light;
 }
 
@@ -38,6 +39,7 @@
   --taken-text: #59ad9e;
   --missed-text: #ef7777;
   --signout: #ef7777;
+  --focus: #59ad9e;
   color-scheme: dark;
 }
 
@@ -71,16 +73,20 @@
   #root {
     height: 100%;
   }
+  /* Ctrl + / Ctrl - zoom the page (--zoom is set by AppState). The layouts use
+     h-full, not dvh units, because zoom would scale those past the window. */
+  html {
+    height: 100dvh;
+  }
+  body {
+    zoom: var(--zoom, 1);
+  }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-  :focus-visible {
-    outline: 3px solid #59ad9e;
-    outline-offset: 2px;
   }
   button {
     cursor: pointer;
@@ -89,6 +95,7 @@
 
 /* ---------- Marketing landing page (always light) ---------- */
 .website-landing {
+  --focus: #2f7a6b;
   color: #1a2133;
   background: #f6f7f9;
   min-height: 100%;
@@ -321,7 +328,7 @@
   background: #141a27;
   color: #fff;
 }
-.website-proof > p {
+.website-proof > h2 {
   margin: 0 0 32px;
   color: #59ad9e;
   font-size: 12px;
@@ -339,7 +346,7 @@
   font-family: var(--font-serif);
   font-size: 18px;
 }
-.website-feature-grid h2 {
+.website-feature-grid h3 {
   margin: 15px 0 10px;
   font-family: var(--font-serif);
   font-size: 23px;
@@ -350,11 +357,6 @@
   color: #9ea8bd;
   font-size: 14px;
   line-height: 1.65;
-}
-.website-button:focus-visible,
-.website-nav-links a:focus-visible {
-  outline: 3px solid #59ad9e;
-  outline-offset: 3px;
 }
 
 /* Tablet: the hero stacks below 900px */
@@ -451,7 +453,7 @@
     grid-template-columns: 1fr;
     gap: 34px;
   }
-  .website-feature-grid h2 {
+  .website-feature-grid h3 {
     font-size: 21px;
   }
 }
@@ -466,4 +468,21 @@
 .auth-input:focus {
   border-color: #59ad9e;
   box-shadow: 0 0 0 4px #59ad9e29;
+}
+
+/*
+  Focus indicator: hidden until the user turns it on (Ctrl + = or Account >
+  Focus indicator); AppState sets data-focus-indicator on <html>. Not in a
+  layer, so it wins over component styles such as .auth-input.
+*/
+:focus-visible {
+  outline: none;
+}
+[data-focus-indicator='on'] :focus-visible {
+  outline: 4px solid var(--focus);
+  outline-offset: 2px;
+}
+/* Skip-link targets and dialogs that take focus: draw inside their edge */
+[data-focus-indicator='on'] [tabindex='-1']:focus-visible {
+  outline-offset: -4px;
 }
