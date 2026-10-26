@@ -1,12 +1,12 @@
 import { act, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { renderApp, statusMessages } from './utils'
+import { findDialog, renderApp, statusMessages } from './utils'
 
 const thread = (name: string) => screen.getByRole('list', { name: `Messages with ${name}` })
 
 describe('Messages page', () => {
-  it('lists each conversation with role, last message and time', () => {
-    renderApp('/messages.html')
+  it('lists each conversation with role, last message and time', async () => {
+    await renderApp('/messages.html')
     const joyce = screen.getByRole('button', { name: /^Aunt Joyce, unread/ })
     expect(joyce).toHaveTextContent('Caregiver')
     expect(joyce).toHaveTextContent('We thank you. I have everything I need.')
@@ -17,7 +17,7 @@ describe('Messages page', () => {
   })
 
   it('opens a conversation full-page, marks it read and goes back', async () => {
-    const { user } = renderApp('/messages.html')
+    const { user } = await renderApp('/messages.html')
     await user.click(screen.getByRole('button', { name: /^Aunt Joyce/ }))
     expect(screen.getByRole('heading', { level: 1, name: 'Conversation' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Aunt Joyce' })).toBeInTheDocument()
@@ -32,7 +32,7 @@ describe('Messages page', () => {
   })
 
   it('sends a typed reply and ignores an empty one', async () => {
-    const { user } = renderApp('/messages.html?c=chen')
+    const { user } = await renderApp('/messages.html?c=chen')
     const before = within(thread('Dr. Sarah Chen')).getAllByRole('listitem').length
     await user.click(screen.getByRole('button', { name: 'Send' }))
     expect(within(thread('Dr. Sarah Chen')).getAllByRole('listitem')).toHaveLength(before)
@@ -43,7 +43,7 @@ describe('Messages page', () => {
   })
 
   it('sends a quick reply with one tap', async () => {
-    const { user } = renderApp('/messages.html?c=james')
+    const { user } = await renderApp('/messages.html?c=james')
     const quick = screen.getByRole('group', { name: 'Quick replies' })
     await user.click(within(quick).getByRole('button', { name: 'I took my medications' }))
     expect(within(thread('James Rivera')).getAllByRole('listitem').at(-1)).toHaveTextContent('You said:I took my medications')
@@ -54,9 +54,9 @@ describe('Call screen', () => {
   it('calls from a conversation, counts the time, mutes and hangs up', async () => {
     // Only the call clock is faked; everything else runs normally
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
-    const { user } = renderApp('/messages.html?c=joyce')
+    const { user } = await renderApp('/messages.html?c=joyce')
     await user.click(screen.getByRole('button', { name: 'Call Aunt Joyce' }))
-    const call = screen.getByRole('dialog', { name: 'Aunt Joyce' })
+    const call = await findDialog('Aunt Joyce')
     expect(call).toHaveTextContent('Calling')
     expect(call).toHaveTextContent('Caregiver')
     expect(within(call).getByRole('button', { name: 'End call' })).toHaveFocus()
@@ -77,7 +77,7 @@ describe('Call screen', () => {
   })
 
   it('hangs up with Escape', async () => {
-    const { user } = renderApp('/messages.html?c=chen')
+    const { user } = await renderApp('/messages.html?c=chen')
     await user.click(screen.getByRole('button', { name: 'Call Dr. Sarah Chen' }))
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

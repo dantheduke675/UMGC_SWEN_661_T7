@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router'
 import { useAppState } from './appStateContext'
 
 /*
@@ -21,5 +22,15 @@ export function useToggleActions() {
     mouseLock: pref('mouseLock', 'Mouse lock on. Focus snaps to the nearest control; click anywhere to press it.', 'Mouse lock off'),
     biometrics: pref('biometrics', 'Face ID on', 'Face ID off'),
     notifications: pref('notifications', 'Notifications on', 'Notifications off'),
+  }
+}
+
+// Every Sign out button: clears the health data saved on this device, then goes to the start page
+export function useSignOut() {
+  const { signOut } = useAppState()
+  const navigate = useNavigate()
+  return () => {
+    signOut()
+    navigate('/')
   }
 }

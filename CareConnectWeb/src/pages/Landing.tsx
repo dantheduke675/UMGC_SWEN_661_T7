@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { SkipLinks, type SkipLink } from '../components/SkipLinks'
+import { installApp, useInstallStatus } from '../install'
 
 const SKIP_LINKS: SkipLink[] = [
   ['main', 'Skip to main content'],
@@ -8,6 +9,8 @@ const SKIP_LINKS: SkipLink[] = [
 
 // Marketing page from the Figma design; layout rules are in index.css (.website-*)
 export function Landing() {
+  const install = useInstallStatus()
+
   return (
     <div className="website-landing">
       <SkipLinks links={SKIP_LINKS} />
@@ -22,6 +25,12 @@ export function Landing() {
           <a href="#accessibility">Accessibility</a>
         </nav>
         <div id="site-actions" className="website-nav-actions">
+          {/* Only where the browser can install the app (Chrome, Edge, Android) */}
+          {install === 'available' && (
+            <button type="button" onClick={() => void installApp()} className="website-button website-button-quiet website-install">
+              Install app
+            </button>
+          )}
           <Link to="/signin.html" className="website-button website-button-quiet">Sign in</Link>
           <Link to="/create-account.html" className="website-button website-button-primary">Create account</Link>
         </div>
@@ -53,7 +62,21 @@ export function Landing() {
           </div>
 
           <div className="website-hero-visual">
-            <img src="/landing-photo.jpg" alt="A caregiver sharing a reassuring moment with an older adult at home" />
+            {/* WebP in three widths (the JPEG is the fallback); the photo fills a 350-550px-tall box, so it needs about 780px of width on desktop */}
+            <picture>
+              <source
+                type="image/webp"
+                srcSet="/landing-photo-540.webp 540w, /landing-photo-800.webp 800w, /landing-photo-1080.webp 1080w"
+                sizes="(max-width: 1023px) 100vw, 780px"
+              />
+              <img
+                src="/landing-photo.jpg"
+                width={1080}
+                height={764}
+                fetchPriority="high"
+                alt="A caregiver sharing a reassuring moment with an older adult at home"
+              />
+            </picture>
             <div className="website-image-shade" />
             <div className="website-floating-card website-dose-card">
               <span className="website-card-icon" aria-hidden="true">✓</span>

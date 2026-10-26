@@ -14,7 +14,8 @@ function skipTo(e: MouseEvent<HTMLAnchorElement>, id: string) {
 // The first thing Tab reaches on a page; each link shows only while focused
 export function SkipLinks({ links }: { links: SkipLink[] }) {
   return (
-    <nav aria-label="Skip links">
+    // Out of the layout flow, so it never takes a cell of the page's grid (as on sign-in)
+    <nav aria-label="Skip links" className="absolute">
       <ul>
         {links.map(([id, label]) => (
           <li key={id}>

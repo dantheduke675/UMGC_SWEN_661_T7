@@ -29,7 +29,7 @@ export function Today() {
 
       <div className="mt-5 mb-5 flex items-center gap-4 rounded-2xl bg-brand p-5">
         <div className="flex-1">
-          <p className="text-[11px] font-bold tracking-wide text-white/80 uppercase">Today's medications</p>
+          <p className="text-[11px] font-bold tracking-wide text-white uppercase">Today's medications</p>
           <p className="mt-1 text-xl font-bold text-white">
             {taken} of {doses.length} taken
           </p>

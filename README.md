@@ -63,9 +63,14 @@ from that.
 **What protects user data today**
 
 - **No real data.** All data is fictional and ships inside the app.
-- **Nothing persists.** Health data lives in memory only. No app writes
-  medications, symptoms or messages to disk, `localStorage`, AsyncStorage or
-  shared preferences.
+- **Nothing persists, except in the web app.** In the mobile and desktop apps
+  health data lives in memory only; neither writes medications, symptoms or
+  messages to disk, AsyncStorage or shared preferences. The web app (a PWA
+  that has to work offline) saves today's doses, messages, symptoms and
+  settings in the browser's `localStorage` and resets them to the demo data
+  on sign-out. `localStorage` is not encrypted: anyone with access to the
+  browser profile can read it, so a production build would need encrypted
+  storage or a server.
 - **Nothing is sent over the network.** No app makes API calls. (The one
   exception is font loading in the Flutter app; see its notes.)
 - **Nothing is logged.** There are no `print`, `debugPrint` or `console.*`
@@ -1112,8 +1117,8 @@ Every page of the web app is its own HTML file, so each one can be opened, bookm
 | HTML file             | Page           | What it does                                                                                              |
 | --------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
 | `index.html`          | Landing page   | The marketing page the app always starts on, with links to sign in and create an account. Signing out of the app returns here |
-| `signin.html`         | Sign in        | Email and password sign-in, or **Use Face ID instead**: a "Sign in with your face?" question, then a short simulated face scan that opens Today |
-| `create-account.html` | Create account | Sign-up form (name, email and password are checked) with the Care recipient / Caregiver role buttons     |
+| `signin.html`         | Sign in        | Email and password sign-in, or **Use Face ID instead**, which goes straight to the device's real biometric prompt (Windows Hello, Touch ID / Face ID or fingerprint, through WebAuthn passkeys) and opens Today |
+| `create-account.html` | Create account | Sign-up form (name, email and password are checked) with the Care recipient / Caregiver role buttons; choosing a role asks "Sign in with your face?", and **Yes, use Face ID** sets up Face ID with the device's prompt (a new passkey) before Today opens |
 | `today.html`          | Today          | Greeting, today's medication progress, next doses and the next appointment                                |
 | `medications.html`    | Medications    | Every dose today; mark each one taken or missed, with Undo                                                 |
 | `messages.html`       | Messages       | Conversations with the care team, with an unread badge. Opening one (`messages.html?c=<id>`) shows the full conversation, quick replies, a reply box and a call button |
@@ -1131,7 +1136,7 @@ Every feature of the web app can be used with the keyboard alone, as in the desk
 | Keys                          | Action                                                                                         |
 | ----------------------------- | ---------------------------------------------------------------------------------------------- |
 | `Ctrl + =`                    | Turn the focus indicator on or off. It is **off by default**, and the choice is remembered     |
-| Arrow keys                    | Move the focus indicator to the next (↓ →) or previous (↑ ←) control. Only works while the focus indicator is on, and stays inside an open dialog |
+| Arrow keys                    | Move the focus indicator across the screen to the nearest control in that direction (↑ ↓ ← →), as in the desktop app. Only works while the focus indicator is on, and stays inside an open dialog |
 | `Enter`                       | Press the focused button; submits the sign-in form                                             |
 | `Tab` / `Shift + Tab`         | Move between controls. Inside an open dialog, focus is trapped in the dialog and returns to the button that opened it when it closes |
 | `Ctrl + +` / `Ctrl + -`       | Zoom in / out, from 80% to 200% (`Ctrl + 0` resets to 100%)                                    |
@@ -1246,6 +1251,39 @@ npm run preview
 
 then open http://localhost:4173. The service worker is only active in this mode (not in `npm run dev`), so use it when testing installing the app or using it offline.
 
+## Performance Optimizations
+
+The web app is optimized so that a first visit on a phone downloads as little as possible, and later visits load almost entirely from the cache. All sizes below come from the production build (`npm run build`); gzip is the size sent over the network.
+
+### Image optimization (WebP, appropriate sizes)
+
+The landing photo is served as WebP in three widths through `<picture>`, `srcset` and `sizes` (`src/pages/Landing.tsx`), so each device downloads only the size it needs. The original JPEG stays as a fallback. `width` and `height` reserve the image's space so the page does not shift while it loads, and `fetchpriority="high"` downloads it first because it is the largest element on screen.
+
+| File                      | Used on                         | Size  | Saving vs. JPEG |
+| ------------------------- | ------------------------------- | ----- | --------------- |
+| `landing-photo.jpg`       | Fallback only                   | 83 KB | –               |
+| `landing-photo-540.webp`  | Phones                          | 13 KB | 85% smaller     |
+| `landing-photo-800.webp`  | Tablets and small laptops       | 21 KB | 74% smaller     |
+| `landing-photo-1080.webp` | Large and high-density screens  | 32 KB | 61% smaller     |
+
+### Code splitting for routes
+
+Every page is its own JavaScript chunk, loaded by React Router's `lazy` route option the first time the page is opened (`src/router.tsx`). The first visit downloads only the shared app code (36 KB, 12 KB gzip) and the current page, with each page between 0.5 and 6.4 KB (0.3–2.2 KB gzip). Code shared by several pages, such as the medication card, goes into its own small chunk so it is downloaded once.
+
+### Lazy loading for heavy components
+
+Components that start closed load with `React.lazy` and `Suspense` the first time they are opened (`src/layouts/AppShell.tsx`, `src/layouts/RootLayout.tsx`): the call screen (3.0 KB), the action history (1.8 KB) and voice commands (1.6 KB). Most visits never open them, so their code stays out of the first download. The service worker precaches every chunk, so they still open offline.
+
+### Bundle size analysis
+
+To see what each chunk contains use
+
+```
+npm run analyze
+```
+
+this builds the app and writes `bundle-stats.html` (ignored by git), an interactive treemap of every module with its size and gzip size, made with [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer). The analysis showed that React, React DOM and React Router make up most of the JavaScript, so they are kept in a separate `vendor` chunk (307 KB, 96 KB gzip; set in `vite.config.ts`). Library versions rarely change, so browsers keep this chunk cached across app updates and returning users only download the much smaller app chunks.
+
 ## Testing the Application
 
 ### Running the tests
@@ -1323,8 +1361,8 @@ The layout follows the screen width automatically. With the application running,
 
 | Device  | Width to test               | What to check                                                                                   |
 | ------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
-| Phone   | 375px (iPhone SE / 12 mini) | Same pieces as the tablet, scaled down: the sidebar starts as a narrow column of icons and the › arrow slides the full sidebar over the page; top bar with notifications, SOS and the profile menu; Scroll up / Voice / Scroll down bar; one column of cards |
-| Tablet  | 768px (iPad)                | Sidebar that collapses with the ‹ button, top bar with notifications, SOS and profile menu, scroll / voice bar, one column of cards |
+| Phone   | 375px (iPhone SE / 12 mini) | Same pieces as the tablet, scaled down: the sidebar starts as a narrow column of icons and the ☰ **Open menu** button under the logo slides the full sidebar over the page; top bar with notifications, SOS and the profile menu; Scroll up / Voice / Scroll down bar; one column of cards |
+| Tablet  | 768px (iPad)                | Sidebar that collapses with the ✕ **Close menu** button under the logo, top bar with notifications, SOS and profile menu, scroll / voice bar, one column of cards |
 | Desktop | 1440px                      | Full sidebar, top bar with history, voice, eye-tracking, notifications, SOS and profile menu, cards in two columns |
 
 On touch screens (`pointer: coarse`) the smaller controls grow to at least 48px (top bar buttons, **?**, the message's **Undo**) and the 30px sidebar arrow grows to 44px; with a mouse they keep the design's click-target sizes. The dose, sign-in and scroll / voice buttons are 52–80px on every device, for people with a tremor.
@@ -1334,7 +1372,7 @@ On every size a floating **?** button opens a short guide to the controls. An op
 ### Manual test flow
 
 1. Open http://localhost:5173. The landing page (`index.html`) appears. Select **I already have an account**, then **Sign in**. The Today page (`today.html`) opens.
-2. Sign out, return to the sign-in page and select **Use Face ID instead**. Choose **Yes, use Face ID**: the "Welcome back, Maddy" screen scans for about 2.5 seconds, then Today opens. **No, use my password** and **Use my password instead** return to the password form.
+2. Go back to the landing page and select **Create account**, then **Care recipient**. The "Sign in with your face?" screen asks whether to use Face ID. Choose **Yes, use Face ID**: the "Welcome, Maddy" screen opens the device's own prompt (Windows Hello, Touch ID / Face ID or fingerprint) and creates a passkey for the site; confirm with your face, fingerprint or PIN and Today opens. (**No, use my password** and **Continue without Face ID** open Today without it.) Sign out, return to the sign-in page and select **Use Face ID instead**: the device's prompt opens straight away (no question this time) and Today opens once you confirm. Cancel the prompt to see **Try again**; on a device without biometrics the app says Face ID is not available here. **Use my password instead** returns to the password form.
 3. On Today or Medications, select **I took this**. The progress bar goes from 2 of 9 to 3 of 9 and a message with **Undo** appears. Select **Undo** to reverse it.
 4. Select **I missed this**. A confirmation dialog appears; confirm it and the card shows **✗ Missed**.
 5. Open **Messages**. Aunt Joyce shows a red unread dot and the sidebar shows a **1** badge. Open her conversation: the badge clears. Send a quick reply such as **I took my medications**, type a message and press the ↑ button, then select **←** to go back to the list.
@@ -1343,7 +1381,7 @@ On every size a floating **?** button opens a short guide to the controls. An op
 8. Open **Symptoms**, select **+ Add**, enter a symptom, choose a severity from 1 to 5 and save. It appears at the top of the list and the count goes up.
 9. Open **Account**. Select **Appearance** to switch theme; turn **Notifications**, **Medication reminders**, **Biometrics** and **Share health data** off and on; use the **Zoom** − / + buttons. Select a care team member to open their conversation.
 10. Switch between light and dark themes (the sun / moon button). The choice is remembered after a page reload.
-11. Move between all six pages with the sidebar. On a phone width, select **›** to expand the sidebar, then pick a page; the sidebar closes again.
+11. Move between all six pages with the sidebar. On a phone width, select ☰ **Open menu** (under the logo) to expand the sidebar, then pick a page; the sidebar closes again.
 12. Select **Voice** and choose a command such as **Go to medications**, **Open messages**, **Log a symptom** or **Scroll down**.
 13. Select **?** to open the help guide.
 14. Sign out from the sidebar, the profile menu or the red button on Account. Each one returns to the landing page.
@@ -1360,8 +1398,8 @@ On every size a floating **?** button opens a short guide to the controls. An op
 
 1. Run `npm run build` and then `npm run preview`, and open http://localhost:4173.
 2. In DevTools open **Application → Manifest** to check the name, colours and icons, and **Application → Service workers** to check the service worker is activated.
-3. Install the app with the install icon in the browser's address bar. It opens in its own window.
-4. In DevTools **Network**, set throttling to **Offline** and reload. The application still loads, and a notice at the top says you are offline and that changes stay on the device. Set throttling back to **No throttling** and the notice goes away.
+3. Install the app with the **Install app** button in the landing page header, the **Install CareConnect** row on the Account page, or the install icon in the browser's address bar. It opens in its own window. The buttons appear only in browsers that offer installing (Chrome, Edge, Android); in Firefox or Safari the Account row says to use the browser's own menu.
+4. In DevTools **Network**, set throttling to **Offline** and reload. The application still loads, and a notice at the top says you are offline and that changes stay on the device. Mark a dose taken, send a message or log a symptom, then reload: it is still there. Set throttling back to **No throttling** and the notice goes away.
 
 ### Accessibility testing
 
@@ -1371,9 +1409,9 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 ## Security Notes
 
-- **No real data.** All medications, schedule items, messages, symptoms and care team details are fictional and live in memory (`src/data.ts`, `src/AppState.tsx`); changes are lost when a page is reloaded or opened from its HTML file directly.
-- **Simulated sign-in.** Sign in, Face ID and create account do not check, store or send any credential, and the Face ID screens never use the camera.
-- **Only UI preferences are stored.** The light / dark theme, the focus indicator setting and the zoom level are the only values saved in `localStorage`. Messages you send, symptoms you log, the Account switches and the action history stay in memory.
+- **No real data.** All medications, schedule items, messages, symptoms and care team details are fictional (`src/data.ts`).
+- **Demo sign-in.** Sign in and create account do not check, store or send any credential. Face ID uses the device's real biometric check through WebAuthn (`src/biometrics.ts`): the face or fingerprint never leaves the device, and only the passkey's id is saved (`localStorage`, `cc.passkey`). With no server to verify the passkey's signature, any confirmation the device gives is accepted, so this is a real biometric prompt but not secure authentication; a production build would verify the passkey on a server.
+- **Saved on the device.** So the app works offline and keeps what you enter after a reload, `src/AppState.tsx` saves the theme, focus indicator, zoom, Account switches, today's doses (a new day starts fresh), messages and symptoms in the browser's `localStorage`. Only the action history stays in memory. Every Sign out button resets the health data to the demo data. `localStorage` is not encrypted, so anyone with access to the browser profile can read what is saved; a production build would need encrypted storage or a server.
 - **Demo-only features.** SOS, calls, eye tracking, voice commands and health-data sharing are simulated. The call screen places no call, nothing is shared, and no microphone, speaker or camera is used. Mouse lock-on only moves focus within the page; it never captures the pointer.
 - **Network.** The app loads the DM Sans and Inter fonts from Google Fonts (cached by the service worker for offline use); it makes no other network requests.
 

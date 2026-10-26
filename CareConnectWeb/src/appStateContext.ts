@@ -61,6 +61,8 @@ export interface AppState {
   callWith: string | null
   startCall: (id: string) => void
   endCall: () => void
+  // Clears the health data saved on this device
+  signOut: () => void
 }
 
 // Page zoom: 80% to 200%, in 10% steps; step 0 resets to 100%
