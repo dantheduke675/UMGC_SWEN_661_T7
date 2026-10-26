@@ -1,13 +1,13 @@
-import { act, fireEvent, screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { checkEmail, checkNewPassword, collectErrors } from '../src/validation'
-import { renderApp, statusMessages } from './utils'
+import { findDialog, renderApp, statusMessages } from './utils'
 
 const banner = () => screen.getByRole('banner')
 
 describe('Notifications panel (top bar bell)', () => {
   it('lists the next dose, the appointment and unread messages, each linking to its page', async () => {
-    const { user, currentPath } = renderApp('/today.html')
+    const { user, currentPath } = await renderApp('/today.html')
     await user.click(within(banner()).getByRole('button', { name: 'Notifications, 3 new' }))
     const panel = screen.getByRole('dialog', { name: 'Notifications' })
     const links = within(panel).getAllByRole('link')
@@ -15,19 +15,19 @@ describe('Notifications panel (top bar bell)', () => {
     expect(links[0]).toHaveFocus()
     expect(links[0]).toHaveTextContent('Loratadip / Carbiopa 25 mg / 100 mg at 7:00 AM')
     await user.click(links[2])
-    expect(currentPath()).toBe('/messages.html')
+    await waitFor(() => expect(currentPath()).toBe('/messages.html'))
     expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
   })
 
   it('updates as doses are logged', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'I took this: Loratadip / Carbiopa 25 mg / 100 mg, 7:00 AM' }))
     await user.click(within(banner()).getByRole('button', { name: /^Notifications/ }))
     expect(screen.getByRole('dialog', { name: 'Notifications' })).toHaveTextContent('Lisinopril 10 mg at 8:00 AM')
   })
 
   it('offers to turn notifications back on when they are off', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.keyboard('{Control>}n{/Control}')
     const bell = within(banner()).getByRole('button', { name: 'Notifications, turned off' })
     await user.click(bell)
@@ -38,7 +38,7 @@ describe('Notifications panel (top bar bell)', () => {
   })
 
   it('closes with Escape or a click outside', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     const bell = within(banner()).getByRole('button', { name: /^Notifications/ })
     await user.click(bell)
     await user.keyboard('{Escape}')
@@ -51,14 +51,14 @@ describe('Notifications panel (top bar bell)', () => {
 
 describe('Top bar', () => {
   it('opens the action history and counts what can be undone', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'I took this: Ropivacaine 10 mg, 8:00 PM' }))
     await user.click(within(banner()).getByRole('button', { name: 'Action history, 1 can be undone' }))
-    expect(screen.getByRole('dialog', { name: 'Action history' })).toHaveTextContent('Marked as taken')
+    expect(await findDialog('Action history')).toHaveTextContent('Marked as taken')
   })
 
   it('closes the account menu with a click outside', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'Maddy, account menu' }))
     expect(screen.getByRole('menu')).toBeInTheDocument()
     await user.click(screen.getByRole('main'))
@@ -69,9 +69,9 @@ describe('Top bar', () => {
 describe('Offline', () => {
   afterEach(() => vi.restoreAllMocks())
 
-  it('says when the connection drops, and when it is back', () => {
+  it('says when the connection drops, and when it is back', async () => {
     const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
-    renderApp('/today.html')
+    await renderApp('/today.html')
     expect(screen.queryByText(/You're offline/)).not.toBeInTheDocument()
 
     online.mockReturnValue(false)
@@ -95,7 +95,7 @@ describe('Mouse lock-on', () => {
   }
 
   it('moves focus to the control nearest the pointer, and a click on empty space presses it', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.keyboard('{Control>}o{/Control}')
     expect(statusMessages().getByText(/Mouse lock on/)).toBeInTheDocument()
     placeControls()
@@ -109,8 +109,8 @@ describe('Mouse lock-on', () => {
     expect(screen.getByRole('dialog', { name: 'Help' })).toBeInTheDocument()
   })
 
-  it('does nothing while it is off', () => {
-    renderApp('/today.html')
+  it('does nothing while it is off', async () => {
+    await renderApp('/today.html')
     placeControls()
     const target = screen.getByRole('button', { name: 'Help' })
     fireEvent.mouseMove(document.body, { clientX: 300, clientY: target.getBoundingClientRect().top + 20 })

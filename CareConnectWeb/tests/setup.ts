@@ -32,5 +32,8 @@ afterEach(() => {
   document.documentElement.style.removeProperty('--zoom')
   vi.useRealTimers()
   vi.restoreAllMocks()
+  // fakeBiometrics() in utils.tsx
+  vi.unstubAllGlobals()
+  delete (navigator as { credentials?: unknown }).credentials
   expect(consoleProblems, 'console errors / warnings during the test').toEqual([])
 })

@@ -41,7 +41,7 @@ export function CallScreen({ c, onEnd }: { c: Conversation; onEnd: (duration: st
       <div className="relative my-8 grid size-[260px] place-items-center rounded-full bg-brand/30 max-sm:size-[220px]">
         <div className="absolute inset-0 animate-ping rounded-full bg-brand/20 [animation-duration:2s] motion-reduce:hidden" aria-hidden="true" />
         <div className="relative flex size-[200px] flex-col items-center justify-center gap-4 rounded-full bg-brand max-sm:size-[170px]">
-          <div className="grid size-20 place-items-center rounded-full bg-white/25 text-[28px] font-bold" aria-hidden="true">{c.initials}</div>
+          <div className="grid size-20 place-items-center rounded-full bg-black/20 text-[28px] font-bold" aria-hidden="true">{c.initials}</div>
           <p role="timer" aria-label="Call length" className="text-3xl font-bold tabular-nums">{mmss(secs)}</p>
         </div>
       </div>

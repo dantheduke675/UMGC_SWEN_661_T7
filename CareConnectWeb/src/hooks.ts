@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import { focusables, topModal } from './focus'
 
 // Calls onEscape when Escape is pressed, while active
@@ -35,30 +35,33 @@ export function useClickOutside<T extends HTMLElement>(onOutside: () => void, ac
 
 // Whether a CSS media query matches, kept up to date (false where matchMedia is missing)
 export function useMediaQuery(query: string) {
-  return useSyncExternalStore(
-    onChange => {
+  // The same function while the query is the same (see subscribeToOnline below)
+  const subscribe = useCallback(
+    (onChange: () => void) => {
       if (typeof window.matchMedia !== 'function') return () => {}
       const mq = window.matchMedia(query)
       mq.addEventListener('change', onChange)
       return () => mq.removeEventListener('change', onChange)
     },
-    () => typeof window.matchMedia === 'function' && window.matchMedia(query).matches,
+    [query],
   )
+  return useSyncExternalStore(subscribe, () => typeof window.matchMedia === 'function' && window.matchMedia(query).matches)
+}
+
+// Defined once: a new function each render would make React unsubscribe and
+// resubscribe after every render, and miss a change that came in between
+function subscribeToOnline(onChange: () => void) {
+  window.addEventListener('online', onChange)
+  window.addEventListener('offline', onChange)
+  return () => {
+    window.removeEventListener('online', onChange)
+    window.removeEventListener('offline', onChange)
+  }
 }
 
 // navigator.onLine, kept up to date
 export function useOnlineStatus() {
-  return useSyncExternalStore(
-    onChange => {
-      window.addEventListener('online', onChange)
-      window.addEventListener('offline', onChange)
-      return () => {
-        window.removeEventListener('online', onChange)
-        window.removeEventListener('offline', onChange)
-      }
-    },
-    () => navigator.onLine,
-  )
+  return useSyncExternalStore(subscribeToOnline, () => navigator.onLine)
 }
 
 // Distance from a point to the nearest edge of a box (0 inside it)

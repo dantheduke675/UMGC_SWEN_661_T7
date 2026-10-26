@@ -77,19 +77,58 @@ function ownsArrowKeys(el: Element | null, key: string) {
   return false
 }
 
-const ARROW_STEP: Record<string, 1 | -1> = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }
+type Direction = 'up' | 'down' | 'left' | 'right'
+const ARROW_DIRECTION: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
+
+// How far apart two ranges on one axis are (0 when they overlap)
+const rangeGap = (a1: number, a2: number, b1: number, b2: number) => Math.max(0, Math.max(a1, b1) - Math.min(a2, b2))
+
+// Added to the score of controls not lined up with the current one, so any
+// control in the same row (or column) wins over a closer one diagonally
+const NOT_LINED_UP = 100_000
+
+// The control on screen nearest to `from` in that direction, preferring ones
+// lined up with it (the desktop app's scoring, with lined-up controls first)
+function nearestInDirection(from: HTMLElement, items: HTMLElement[], dir: Direction) {
+  const c = from.getBoundingClientRect()
+  let best: HTMLElement | null = null
+  let bestScore = Infinity
+  for (const el of items) {
+    if (el === from || el.contains(from) || from.contains(el)) continue
+    const r = el.getBoundingClientRect()
+    const vertical = dir === 'up' || dir === 'down'
+    const main = vertical ? (dir === 'down' ? r.top - c.bottom : c.top - r.bottom) : dir === 'right' ? r.left - c.right : c.left - r.right
+    if (main < -4) continue // not in that direction
+    const cross = vertical ? rangeGap(r.left, r.right, c.left, c.right) : rangeGap(r.top, r.bottom, c.top, c.bottom)
+    const offset = vertical ? Math.abs(r.left + r.right - (c.left + c.right)) / 2 : Math.abs(r.top + r.bottom - (c.top + c.bottom)) / 2
+    const score = (cross > 0 ? NOT_LINED_UP : 0) + Math.max(main, 0) + cross * 2 + offset * 0.05
+    if (score < bestScore) {
+      bestScore = score
+      best = el
+    }
+  }
+  return best
+}
 
 /*
-  Arrow keys move the focus indicator to the next / previous control (inside
-  the open dialog, if there is one). Returns true if it moved focus.
+  Arrow keys move the focus indicator across the screen to the nearest control
+  in that direction (inside the open dialog, if there is one). Returns true if
+  it moved focus; when nothing lies that way the key keeps its usual job of
+  scrolling the page.
 */
 export function moveFocusWithArrow(e: KeyboardEvent) {
-  const step = ARROW_STEP[e.key]
-  if (!step || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || ownsArrowKeys(document.activeElement, e.key)) return false
-  const items = focusables(topModal() ?? document)
+  const dir = ARROW_DIRECTION[e.key]
+  if (!dir || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || ownsArrowKeys(document.activeElement, e.key)) return false
+  const scope = topModal() ?? document
+  const items = focusables(scope)
   if (!items.length) return false
-  const i = items.indexOf(document.activeElement as HTMLElement)
-  const next = i === -1 ? (step > 0 ? items[0] : items[items.length - 1]) : items[(i + step + items.length) % items.length]
-  next.focus()
+  const current = document.activeElement
+  const next =
+    current instanceof HTMLElement && current !== document.body && scope.contains(current)
+      ? nearestInDirection(current, items, dir)
+      : dir === 'up' || dir === 'left' ? items[items.length - 1] : items[0]
+  if (!next) return false
+  next.focus({ preventScroll: true })
+  next.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   return true
 }
