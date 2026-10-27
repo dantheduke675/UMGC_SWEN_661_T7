@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router'
+import { useSignOut } from '../actions'
 import { useAppState } from '../appStateContext'
 import { careTeam, emergencyContact, patient } from '../data'
+import { installApp, useInstallStatus } from '../install'
 
 const APP_VERSION = '1.0.0'
 
@@ -10,7 +12,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section aria-labelledby={id}>
       <h3 id={id} className="mb-2.5 text-xs font-extrabold tracking-[0.12em] text-sub uppercase">{title}</h3>
-      <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">{children}</ul>
+      <ul className="focus-inset divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">{children}</ul>
     </section>
   )
 }
@@ -37,6 +39,33 @@ function Row({ icon, title, value, onClick, checked }: { icon: string; title: st
 }
 
 // Zoom level with - / + buttons (also Ctrl + - and Ctrl + +)
+// Install button where the browser offers it; otherwise whether it is installed, or where to find the browser's own option
+function InstallRow() {
+  const status = useInstallStatus()
+  const { addToast } = useAppState()
+  if (status === 'available') {
+    return (
+      <Row
+        icon="📲"
+        title="Install CareConnect"
+        value="Opens in its own window and works offline"
+        onClick={() => void installApp().then(accepted => accepted && addToast('Installing CareConnect…'))}
+      />
+    )
+  }
+  return (
+    <li className="flex min-h-[80px] items-center gap-4 px-5 py-3">
+      <span className="w-7 shrink-0 text-center text-2xl leading-none" aria-hidden="true">📲</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-bold text-ink">Install CareConnect</span>
+        <span className="block text-sm text-sub">
+          {status === 'installed' ? 'Installed on this device' : "From your browser's menu (Safari: Share › Add to Home Screen)"}
+        </span>
+      </span>
+    </li>
+  )
+}
+
 function ZoomRow() {
   const { zoom, zoomBy } = useAppState()
   const pct = Math.round(zoom * 100)
@@ -64,6 +93,7 @@ function ZoomRow() {
 export function Account() {
   const { theme, toggleTheme, focusIndicator, toggleFocusIndicator, prefs, togglePref, addToast, setHistoryOpen } = useAppState()
   const navigate = useNavigate()
+  const signOut = useSignOut()
 
   return (
     <>
@@ -150,6 +180,7 @@ export function Account() {
           <Row icon="🕘" title="Action history" value="See and undo what you have done · Ctrl + H" onClick={() => setHistoryOpen(true)} />
         </Group>
         <Group title="App information">
+          <InstallRow />
           <li className="flex min-h-[80px] items-center gap-4 px-5 py-3">
             <span className="w-7 shrink-0 text-center text-2xl leading-none" aria-hidden="true">ℹ️</span>
             <span className="flex-1 text-[17px] font-bold text-ink">CareConnect version</span>
@@ -164,7 +195,7 @@ export function Account() {
         </Group>
       </div>
 
-      <button onClick={() => navigate('/')} className="mt-6 h-16 w-full rounded-2xl bg-danger text-lg font-bold text-white transition-all active:scale-[0.98]">
+      <button onClick={signOut} className="mt-6 h-16 w-full rounded-2xl bg-danger text-lg font-bold text-white transition-all active:scale-[0.98]">
         Sign out
       </button>
     </>

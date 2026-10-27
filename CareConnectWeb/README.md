@@ -12,6 +12,7 @@ npm install
 npm run dev       # development server at http://localhost:5173
 npm run build     # type-check and production build into dist/
 npm run preview   # serve the production build (service worker active)
+npm run analyze   # production build plus bundle-stats.html: a treemap of what each JS chunk contains
 npm run lint      # ESLint (typescript-eslint + react-hooks + react-refresh), zero warnings allowed
 npm run lint:oxlint
 npx tsc -b        # type-check the app and the tests
@@ -45,10 +46,11 @@ As of 2026-10-23: 14 files, 260 tests, all passing; about 98% line coverage of `
 | Pages   | One HTML file per page (Vite multi-page build, see `vite.config.ts`)      |
 | Routing | React Router (`createBrowserRouter`, layout routes for auth and the app)  |
 | Styling | Tailwind CSS 4 via `@tailwindcss/vite`; theme tokens in `src/index.css`   |
-| State   | React Context (`src/AppState.tsx`, `src/appStateContext.ts`)              |
+| State   | React Context (`src/AppState.tsx`, `src/appStateContext.ts`), saved in `localStorage` |
 | Forms   | Controlled checks in `src/validation.ts`; errors under each field, `role="alert"`, first bad field focused |
-| PWA     | `vite-plugin-pwa`: `manifest.json`, auto-updating service worker, icons, offline |
+| PWA     | `vite-plugin-pwa`: `manifest.json`, auto-updating service worker, icons, offline; in-app Install buttons (`src/install.ts`) |
 | Lint    | ESLint (`eslint.config.js`, the Vite `react-ts` rules) and oxlint         |
+| Speed   | Each page and each on-demand overlay is its own lazy-loaded chunk; React, React DOM and React Router share a `vendor` chunk; the landing photo is WebP in three widths |
 
 Shared hooks: `useFocusTrap` (`src/focus.ts`), `useEscapeKey`,
 `useClickOutside`, `useMediaQuery`, `useOnlineStatus`, `useMouseLock`
@@ -65,8 +67,8 @@ in-memory dose log.
 | HTML file             | Page           | Notes                                                    |
 | --------------------- | -------------- | -------------------------------------------------------- |
 | `index.html`          | Landing        | Marketing page (always light); also served at `/`        |
-| `signin.html`         | Sign in        | Simulated: no credential is checked or sent. "Use Face ID instead" asks first, then shows a short scan (no camera). |
-| `create-account.html` | Create account | Simulated: choosing a role opens the app                 |
+| `signin.html`         | Sign in        | Demo password sign-in: no credential is checked or sent. "Use Face ID instead" goes straight to the device's real biometric prompt (Windows Hello, Touch ID, fingerprint) through WebAuthn passkeys (`src/biometrics.ts`); with no server, whatever the device confirms is accepted. |
+| `create-account.html` | Create account | Demo sign-up: nothing is stored or sent. Choosing a role asks "Sign in with your face?"; Yes sets up Face ID with the device's prompt (a new passkey), then the app opens |
 | `today.html`          | Today          | Progress, next doses, next appointment                   |
 | `medications.html`    | Medications    | Every dose today; mark taken or missed, with undo        |
 | `messages.html`       | Messages       | Conversations with the care team; open one (`?c=<id>`) full-page to read, reply (typed or one-tap quick replies) and call |
@@ -120,7 +122,7 @@ Every feature works from the keyboard. The shortcuts are defined in
 | Keys              | Action                                                        |
 | ----------------- | ------------------------------------------------------------- |
 | Ctrl + =          | Focus indicator on / off (off by default; remembered)         |
-| Arrow keys        | Move the focus indicator to the next / previous control (only while it is on; stays inside an open dialog) |
+| Arrow keys        | Move the focus indicator across the screen to the nearest control in that direction (only while it is on; stays inside an open dialog) |
 | Enter             | Press the focused button; submits the sign-in form            |
 | Tab / Shift + Tab | Move between controls; trapped inside open dialogs, focus returns to the opener on close |
 | Ctrl + + / Ctrl + − / Ctrl + 0 | Zoom in / out (80–200%) / reset                  |
@@ -156,10 +158,13 @@ page.
 
 ## Data and privacy
 
-As in the other CareConnect apps, all data is fictional and lives in memory
-(`src/data.ts`, `src/AppState.tsx`). Only UI preferences (theme, focus
-indicator, zoom) are stored in `localStorage`. Messages you send, symptoms you
-log, Account switches and the action history also stay in memory. SOS, calls,
+All data is fictional (`src/data.ts`). Unlike the other CareConnect apps, the
+web app saves what you enter in `localStorage` so it works offline and survives
+a reload (`src/AppState.tsx`): the theme, focus indicator, zoom, Account
+switches, today's doses (a new day starts fresh), messages and symptoms. Only
+the action history stays in memory. Every Sign out button resets the health
+data to the demo data. `localStorage` is not encrypted, so a production build
+would need encrypted storage or a server. SOS, calls,
 eye tracking, voice commands and data sharing are demo UI only: no call is
 placed, nothing is shared, and no microphone or camera is used. Mouse lock only
 moves focus within the page; it never captures the pointer.

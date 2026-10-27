@@ -81,7 +81,7 @@ export const conversations: Conversation[] = [
     name: 'Aunt Joyce',
     initials: 'AJ',
     role: 'Caregiver',
-    color: '#6366f1',
+    color: '#4f46e5',
     time: '2:34 PM',
     unread: true,
     messages: [
@@ -112,7 +112,7 @@ export const conversations: Conversation[] = [
     name: 'James Rivera',
     initials: 'JR',
     role: 'Home Aide',
-    color: '#f59e0b',
+    color: '#b45309',
     time: 'Yesterday',
     unread: false,
     messages: [

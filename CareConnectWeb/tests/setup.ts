@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
+
+// Allow lazy imports, React commits and axe scans time on slower hosts.
+// This is a deadline, not an unconditional delay: successful queries return immediately.
+configure({ asyncUtilTimeout: 10_000 })
 
 // jsdom does not implement scrolling; the Scroll up / Scroll down buttons call scrollBy
 Element.prototype.scrollBy = vi.fn()
@@ -32,5 +36,8 @@ afterEach(() => {
   document.documentElement.style.removeProperty('--zoom')
   vi.useRealTimers()
   vi.restoreAllMocks()
+  // fakeBiometrics() in utils.tsx
+  vi.unstubAllGlobals()
+  delete (navigator as { credentials?: unknown }).credentials
   expect(consoleProblems, 'console errors / warnings during the test').toEqual([])
 })

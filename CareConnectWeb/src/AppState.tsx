@@ -2,8 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { AppStateContext, clampZoom, nextZoom, type HistoryEntry, type Prefs, type Theme, type Toast } from './appStateContext'
 import { conversations as initialConversations, initialDoseLog, initialSymptoms, type Conversation, type DoseLog, type Symptom } from './data'
 
-// UI preferences (theme, focus indicator, zoom) are the only things kept in localStorage.
-// Health data, messages and settings stay in memory, as in the other CareConnect apps.
+/*
+  Everything is kept in localStorage, so what someone enters (online or
+  offline) is still there after a reload: UI preferences (theme, focus
+  indicator, zoom), settings, today's doses, messages and symptoms. Signing
+  out puts the health data back to the starting demo data.
+*/
 function readSaved<T>(key: string, parse: (saved: string | null) => T): T {
   try {
     return parse(localStorage.getItem(key))
@@ -20,6 +24,34 @@ function save(key: string, value: string) {
   }
 }
 
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+// Saved JSON, or the fallback when nothing is saved or it is unreadable
+function readJSON<T>(key: string, fallback: T, isValid: (v: unknown) => boolean): T {
+  return readSaved(key, s => {
+    if (s === null) return fallback
+    try {
+      const v: unknown = JSON.parse(s)
+      return isValid(v) ? (v as T) : fallback
+    } catch {
+      return fallback
+    }
+  })
+}
+const saveJSON = (key: string, value: unknown) => save(key, JSON.stringify(value))
+
+// Dose keys have no date ("1-0" is medicine 1, first dose), so a saved log only counts on the day it was made
+const today = () => new Date().toDateString()
+function readDoseLog(): DoseLog {
+  const saved = readJSON<Record<string, unknown>>('cc.doses', {}, isRecord)
+  return saved.day === today() && isRecord(saved.log) ? (saved.log as DoseLog) : initialDoseLog
+}
+
+const DEFAULT_PREFS: Prefs = { notifications: true, reminders: true, biometrics: true, shareData: true, eyeTracking: false, mouseLock: false }
+const readPrefs = (): Prefs => ({ ...DEFAULT_PREFS, ...readJSON<Partial<Prefs>>('cc.prefs', {}, isRecord) })
+const readConversations = () => readJSON<Conversation[]>('cc.conversations', initialConversations, Array.isArray)
+const readSymptoms = () => readJSON<Symptom[]>('cc.symptoms', initialSymptoms, Array.isArray)
+
 const readTheme = () => readSaved<Theme>('cc.theme', s => (s === 'light' || s === 'dark' ? s : 'dark')) // dark is the design's default
 const readFocus = () => readSaved('cc.focus', s => s === 'on')
 
@@ -32,7 +64,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(readTheme)
   const [focusIndicator, setFocusIndicator] = useState(readFocus)
   const [zoom, setZoom] = useState(readZoom)
-  const [doseLog, setDoseLog] = useState<DoseLog>(initialDoseLog)
+  const [doseLog, setDoseLog] = useState<DoseLog>(readDoseLog)
   const [toasts, setToasts] = useState<Toast[]>([])
   // Toasts and history entries share ids, so undoing an action also clears its toast
   const nextId = useRef(0)
@@ -40,10 +72,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   // Undo functions of the actions not undone yet, oldest first
   const undoFns = useRef(new Map<number, { entry: HistoryEntry; fn: () => void }>())
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations)
-  const [symptoms, setSymptoms] = useState<Symptom[]>(initialSymptoms)
-  const nextSymptomId = useRef(Math.max(0, ...initialSymptoms.map(s => s.id)) + 1)
-  const [prefs, setPrefs] = useState<Prefs>({ notifications: true, reminders: true, biometrics: true, shareData: true, eyeTracking: false, mouseLock: false })
+  const [conversations, setConversations] = useState<Conversation[]>(readConversations)
+  const [symptoms, setSymptoms] = useState<Symptom[]>(readSymptoms)
+  const nextSymptomId = useRef(0)
+  const [prefs, setPrefs] = useState<Prefs>(readPrefs)
   const [callWith, setCallWith] = useState<string | null>(null)
 
   useEffect(() => {
@@ -55,6 +87,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     document.documentElement.dataset.focusIndicator = focusIndicator ? 'on' : 'off'
     save('cc.focus', focusIndicator ? 'on' : 'off')
   }, [focusIndicator])
+
+  useEffect(() => saveJSON('cc.doses', { day: today(), log: doseLog }), [doseLog])
+  useEffect(() => saveJSON('cc.conversations', conversations), [conversations])
+  useEffect(() => {
+    saveJSON('cc.symptoms', symptoms)
+    // New symptoms get ids above every saved one
+    nextSymptomId.current = Math.max(nextSymptomId.current, ...symptoms.map(s => s.id + 1), 1)
+  }, [symptoms])
+  useEffect(() => saveJSON('cc.prefs', prefs), [prefs])
 
   // index.css applies --zoom to the body
   useEffect(() => {
@@ -108,6 +149,16 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, [])
   const removeSymptom = useCallback((id: number) => setSymptoms(list => list.filter(s => s.id !== id)), [])
   const togglePref = useCallback((key: keyof Prefs) => setPrefs(p => ({ ...p, [key]: !p[key] })), [])
+  // Back to the demo data, so the next person on this device sees none of it; nothing is left to undo
+  const signOut = useCallback(() => {
+    setDoseLog(initialDoseLog)
+    setConversations(initialConversations)
+    setSymptoms(initialSymptoms)
+    setCallWith(null)
+    undoFns.current.clear()
+    setHistory([])
+    setToasts([])
+  }, [])
   const startCall = useCallback((id: string) => setCallWith(id), [])
   const endCall = useCallback(() => setCallWith(null), [])
 
@@ -139,6 +190,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       callWith,
       startCall,
       endCall,
+      signOut,
     }),
     [
       theme,
@@ -166,6 +218,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       callWith,
       startCall,
       endCall,
+      signOut,
     ],
   )
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
