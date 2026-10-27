@@ -1,6 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { axeViolations, renderApp, sidebar, simulateViewport, VIEWPORTS } from './utils'
+import { axeViolations, fakeBiometrics, findDialog, renderApp, sidebar, simulateViewport, VIEWPORTS } from './utils'
 
 describe('Accessibility test helpers', () => {
   it('report a real violation (so a clean scan means something)', async () => {
@@ -12,8 +12,8 @@ describe('Accessibility test helpers', () => {
     ['phone', { accessBar: true }],
     ['tablet', { accessBar: true }],
     ['desktop', { accessBar: false }],
-  ] as const)('simulate the %s layout from the Figma design', (size, expected) => {
-    renderApp('/today.html')
+  ] as const)('simulate the %s layout from the Figma design', async (size, expected) => {
+    await renderApp('/today.html')
     const sidebarEl = sidebar()
     const topBarEl = screen.getByRole('banner')
     const accessBarEl = screen.getByRole('button', { name: /Scroll down/ }).parentElement!
@@ -32,88 +32,102 @@ const PAGES = ['/', '/signin.html', '/create-account.html', '/today.html', '/med
 describe('Accessibility: axe-core scan (WCAG 2.2 A/AA + best practices)', () => {
   // Every page at every device size from the Figma design
   it.each(PAGES.flatMap(path => VIEWPORTS.map(size => [path, size] as const)))('%s on %s has no violations', async (path, size) => {
-    renderApp(path)
+    await renderApp(path)
     expect(await axeViolations(size)).toEqual([])
   })
 
   it.each(['light', 'dark'])('Today has no violations in %s theme', async theme => {
     localStorage.setItem('cc.theme', theme)
-    renderApp('/today.html')
+    await renderApp('/today.html')
     expect(await axeViolations('phone')).toEqual([])
     expect(await axeViolations('desktop')).toEqual([])
   })
 
   it.each(VIEWPORTS)('has no violations with the missed-dose dialog open (%s)', async size => {
-    const { user } = renderApp('/medications.html')
+    const { user } = await renderApp('/medications.html')
     await user.click(screen.getByRole('button', { name: 'I missed this: Atorvastatin 20 mg, 8:00 PM' }))
     expect(await axeViolations(size)).toEqual([])
   })
 
   it('has no violations with the SOS dialog open', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'SOS, call emergency contact' }))
     expect(await axeViolations('desktop')).toEqual([])
   })
 
   it('has no violations with the voice panel open', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getAllByRole('button', { name: 'Voice commands' })[0])
+    // The panel is lazy-loaded: check it once it is on screen
+    await findDialog('Voice commands')
     expect(await axeViolations('tablet')).toEqual([])
   })
 
   it('has no violations with the profile menu and an undo message open (desktop)', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'I took this: Ropivacaine 10 mg, 8:00 PM' }))
     await user.click(screen.getByRole('button', { name: 'Maddy, account menu' }))
     expect(await axeViolations('desktop')).toEqual([])
   })
 
   it.each(['phone', 'tablet'] as const)('has no violations with the sidebar collapsed to a rail (%s)', async size => {
-    const { user } = renderApp('/messages.html')
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    const { user } = await renderApp('/messages.html')
+    await user.click(screen.getByRole('button', { name: 'Close menu' }))
     expect(await axeViolations(size)).toEqual([])
   })
 
   it.each(VIEWPORTS)('has no violations with the help dialog open (%s)', async size => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'Help' }))
     expect(await axeViolations(size)).toEqual([])
   })
 
   it.each(VIEWPORTS)('has no violations with the add-symptom form showing an error (%s)', async size => {
-    const { user } = renderApp('/symptoms.html')
+    const { user } = await renderApp('/symptoms.html')
     await user.click(screen.getByRole('button', { name: 'Add a symptom' }))
     await user.click(screen.getByRole('button', { name: 'Save symptom' }))
     expect(await axeViolations(size)).toEqual([])
   })
 
   it.each(VIEWPORTS)('has no violations in an open conversation (%s)', async size => {
-    renderApp('/messages.html?c=joyce')
+    await renderApp('/messages.html?c=joyce')
     expect(await axeViolations(size)).toEqual([])
   })
 
   it.each(VIEWPORTS)('has no violations on the Face ID screens (%s)', async size => {
-    const { user } = renderApp('/signin.html')
-    await user.click(screen.getByRole('button', { name: 'Use Face ID instead' }))
+    // The device prompt stays open, so the waiting screen can be checked
+    fakeBiometrics().create.mockImplementation(() => new Promise(() => {}))
+    // After creating an account: the Face ID question, then the set-up screen
+    const { user } = await renderApp('/create-account.html')
+    await user.click(screen.getByRole('button', { name: 'Care recipient' }))
     expect(await axeViolations(size)).toEqual([])
     await user.click(screen.getByRole('button', { name: 'Yes, use Face ID' }))
     expect(await axeViolations(size)).toEqual([])
   })
 
+  it.each(VIEWPORTS)('has no violations when Face ID is not available (%s)', async size => {
+    const { user } = await renderApp('/signin.html')
+    await user.click(screen.getByRole('button', { name: 'Use Face ID instead' }))
+    await screen.findByRole('heading', { name: 'Face ID is not available here' })
+    expect(await axeViolations(size)).toEqual([])
+  })
+
   it.each(VIEWPORTS)('has no violations on the call screen (%s)', async size => {
-    const { user } = renderApp('/messages.html?c=joyce')
+    const { user } = await renderApp('/messages.html?c=joyce')
     await user.click(screen.getByRole('button', { name: 'Call Aunt Joyce' }))
+    // The call screen is lazy-loaded: check it once it is on screen
+    await findDialog('Aunt Joyce')
     expect(await axeViolations(size)).toEqual([])
   })
 
   it('has no violations with the sidebar collapsed (tablet)', async () => {
-    const { user } = renderApp('/schedule.html')
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
+    const { user } = await renderApp('/schedule.html')
+    await user.click(screen.getByRole('button', { name: 'Close menu' }))
     expect(await axeViolations('tablet')).toEqual([])
   })
 
   it.each(VIEWPORTS)('has no violations when a form shows an error (%s)', async size => {
-    const { user } = renderApp('/signin.html')
+    const { user } = await renderApp('/signin.html')
     await user.clear(screen.getByLabelText('Email address'))
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
     expect(await axeViolations(size)).toEqual([])
@@ -121,48 +135,48 @@ describe('Accessibility: axe-core scan (WCAG 2.2 A/AA + best practices)', () => 
 })
 
 describe('Accessibility: page structure', () => {
-  it.each(PAGES)('%s has one main landmark and a level-1 heading', path => {
-    renderApp(path)
+  it.each(PAGES)('%s has one main landmark and a level-1 heading', async path => {
+    await renderApp(path)
     expect(screen.getAllByRole('main')).toHaveLength(1)
     expect(screen.getAllByRole('heading', { level: 1 }).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('offers a "Skip to content" link that targets the main content', () => {
-    renderApp('/today.html')
+  it('offers a "Skip to content" link that targets the main content', async () => {
+    await renderApp('/today.html')
     const skip = screen.getByRole('link', { name: 'Skip to content' })
     expect(skip).toHaveAttribute('href', '#content')
     expect(screen.getByRole('main')).toHaveAttribute('id', 'content')
   })
 
-  it('names every navigation landmark differently', () => {
-    renderApp('/today.html')
+  it('names every navigation landmark differently', async () => {
+    await renderApp('/today.html')
     const names = screen.getAllByRole('navigation').map(n => n.getAttribute('aria-label'))
     expect(new Set(names).size).toBe(names.length)
   })
 
-  it('gives the progress bar a name, value and spoken text', () => {
-    renderApp('/today.html')
+  it('gives the progress bar a name, value and spoken text', async () => {
+    await renderApp('/today.html')
     const bar = screen.getByRole('progressbar', { name: 'Medications taken today' })
     expect(bar).toHaveAttribute('aria-valuemin', '0')
     expect(bar).toHaveAttribute('aria-valuemax', '100')
     expect(bar).toHaveAttribute('aria-valuetext', '2 of 9 taken')
   })
 
-  it('hides decorative emoji icons from screen readers', () => {
-    renderApp('/today.html')
+  it('hides decorative emoji icons from screen readers', async () => {
+    await renderApp('/today.html')
     const link = within(sidebar()).getByRole('link', { name: 'Medications' })
     expect(link.querySelector('[aria-hidden="true"]')).toHaveTextContent('💊')
   })
 
-  it('names each dose button with the medicine, strength and time', () => {
-    renderApp('/medications.html')
+  it('names each dose button with the medicine, strength and time', async () => {
+    await renderApp('/medications.html')
     for (const button of screen.getAllByRole('button', { name: /^I (took|missed) this/ })) {
       expect(button).toHaveAccessibleName(/^I (took|missed) this: .+ \d+ mg.*, \d{1,2}:\d{2} (AM|PM)$/)
     }
   })
 
   it('announces undo messages politely in a live region', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     const live = screen.getByRole('status')
     expect(live).toHaveAttribute('aria-live', 'polite')
     await user.click(screen.getByRole('button', { name: 'I took this: Ropivacaine 10 mg, 8:00 PM' }))
@@ -170,7 +184,7 @@ describe('Accessibility: page structure', () => {
   })
 
   it('announces form errors with role="alert" and links them to the field', async () => {
-    const { user } = renderApp('/create-account.html')
+    const { user } = await renderApp('/create-account.html')
     const password = screen.getByLabelText('Password')
     await user.clear(password)
     await user.click(screen.getByRole('button', { name: 'Caregiver' }))
@@ -182,7 +196,7 @@ describe('Accessibility: page structure', () => {
 
 describe('Accessibility: keyboard', () => {
   it('reaches the sign-in fields and button with Tab and submits with Enter', async () => {
-    const { user, currentPath } = renderApp('/signin.html')
+    const { user, currentPath } = await renderApp('/signin.html')
     await user.tab() // Skip to form
     await user.tab() // Skip to help
     await user.tab() // theme switch
@@ -194,24 +208,24 @@ describe('Accessibility: keyboard', () => {
     await user.tab()
     expect(screen.getByRole('button', { name: 'Sign in' })).toHaveFocus()
     await user.keyboard('{Enter}')
-    expect(currentPath()).toBe('/today.html')
+    await waitFor(() => expect(currentPath()).toBe('/today.html'))
   })
 
   it('moves focus to the safe choice when a confirm dialog opens', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'I missed this: Ropivacaine 10 mg, 8:00 PM' }))
     expect(screen.getByRole('button', { name: 'Cancel — go back' })).toHaveFocus()
   })
 
   it('marks a dose taken with the keyboard alone', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     screen.getByRole('button', { name: 'I took this: Ropivacaine 10 mg, 8:00 PM' }).focus()
     await user.keyboard('{Enter}')
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '3 of 9 taken')
   })
 
   it('confirms a missed dose with the keyboard alone', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     screen.getByRole('button', { name: 'I missed this: Ropivacaine 10 mg, 8:00 PM' }).focus()
     await user.keyboard('{Enter}')
     await user.tab({ shift: true }) // from Cancel back to "Yes, I missed this dose"
@@ -221,33 +235,33 @@ describe('Accessibility: keyboard', () => {
   })
 
   it('focuses the first item when the profile menu opens', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getByRole('button', { name: 'Maddy, account menu' }))
     expect(screen.getByRole('menuitem', { name: 'Account' })).toHaveFocus()
   })
 
   it('focuses Cancel when the voice panel opens', async () => {
-    const { user } = renderApp('/today.html')
+    const { user } = await renderApp('/today.html')
     await user.click(screen.getAllByRole('button', { name: 'Voice commands' })[0])
-    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    expect(await screen.findByRole('button', { name: 'Cancel' })).toHaveFocus()
   })
 })
 
 describe('Accessibility: tremor-friendly targets', () => {
   // The design uses large controls for people with a tremor; check the sizing classes
-  it('uses 52px-tall dose buttons', () => {
-    renderApp('/today.html')
+  it('uses 52px-tall dose buttons', async () => {
+    await renderApp('/today.html')
     for (const button of screen.getAllByRole('button', { name: /^I (took|missed) this/ })) expect(button).toHaveClass('h-[52px]')
   })
 
-  it('uses at least 64px-tall sign-in buttons and fields on phones', () => {
-    renderApp('/signin.html')
+  it('uses at least 64px-tall sign-in buttons and fields on phones', async () => {
+    await renderApp('/signin.html')
     expect(screen.getByRole('button', { name: 'Sign in' })).toHaveClass('h-16')
     expect(screen.getByLabelText('Email address')).toHaveClass('h-16')
   })
 
-  it('uses 64px-tall scroll and voice buttons', () => {
-    renderApp('/today.html')
+  it('uses 64px-tall scroll and voice buttons', async () => {
+    await renderApp('/today.html')
     expect(screen.getByRole('button', { name: /Scroll down/ })).toHaveClass('h-16')
     expect(screen.getAllByRole('button', { name: 'Voice commands' }).at(-1)).toHaveClass('h-16')
   })

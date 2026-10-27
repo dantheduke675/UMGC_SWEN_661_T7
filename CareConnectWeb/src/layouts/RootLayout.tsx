@@ -1,12 +1,14 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Outlet } from 'react-router'
 import { useToggleActions } from '../actions'
 import { nextZoom, useAppState } from '../appStateContext'
-import { HistoryDialog } from '../components/HistoryDialog'
 import { Toasts } from '../components/Toasts'
 import { moveFocusWithArrow } from '../focus'
 import { useMouseLock, useOnlineStatus } from '../hooks'
 import { matchShortcut } from '../shortcuts'
+
+// Opens on demand (Ctrl + H), so it is its own chunk, loaded the first time it opens
+const HistoryDialog = lazy(() => import('../components/HistoryDialog').then(m => ({ default: m.HistoryDialog })))
 
 /*
   Wraps every page: the keyboard shortcuts that work everywhere (see
@@ -83,7 +85,7 @@ export function RootLayout() {
         )}
       </div>
       <Toasts />
-      {historyOpen && <HistoryDialog onClose={() => setHistoryOpen(false)} />}
+      <Suspense fallback={null}>{historyOpen && <HistoryDialog onClose={() => setHistoryOpen(false)} />}</Suspense>
     </>
   )
 }

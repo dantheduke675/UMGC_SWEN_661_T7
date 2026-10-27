@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useToggleActions } from '../actions'
 import { useAppState } from '../appStateContext'
-import { CallScreen } from '../components/CallScreen'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { SkipLinks, type SkipLink } from '../components/SkipLinks'
-import { VoiceModal, type VoiceCommand } from '../components/VoiceModal'
+import type { VoiceCommand } from '../components/VoiceModal'
 import { emergencyContact } from '../data'
 import { useEscapeKey, useMediaQuery } from '../hooks'
 import { NAV_ITEMS } from '../nav'
 import { matchShortcut } from '../shortcuts'
 import { AccessBar, HelpButton, Sidebar, TopBar } from './ShellParts'
+
+// Full-screen overlays that open on demand: each is its own chunk, loaded the first time it opens
+const CallScreen = lazy(() => import('../components/CallScreen').then(m => ({ default: m.CallScreen })))
+const VoiceModal = lazy(() => import('../components/VoiceModal').then(m => ({ default: m.VoiceModal })))
 
 /*
   One shell, three device sizes (the Figma Desktop / Tablet / Phone frames):
@@ -107,16 +110,18 @@ export function AppShell() {
       </div>
 
       {!chatOpen && <HelpButton />}
-      {calling && (
-        <CallScreen
-          c={calling}
-          onEnd={duration => {
-            endCall()
-            addToast(`Call with ${calling.name} ended · ${duration} (demo — no call was placed)`)
-          }}
-        />
-      )}
-      {voiceOpen && <VoiceModal onClose={closeVoice} onCommand={onVoiceCommand} />}
+      <Suspense fallback={null}>
+        {calling && (
+          <CallScreen
+            c={calling}
+            onEnd={duration => {
+              endCall()
+              addToast(`Call with ${calling.name} ended · ${duration} (demo — no call was placed)`)
+            }}
+          />
+        )}
+        {voiceOpen && <VoiceModal onClose={closeVoice} onCommand={onVoiceCommand} />}
+      </Suspense>
       {sosOpen && (
         <ConfirmDialog
           message={`Call ${emergencyContact.name}, your emergency contact?`}

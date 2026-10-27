@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router'
+import { useSignOut } from '../actions'
 import { useAppState } from '../appStateContext'
 import { patient } from '../data'
 import { useFocusTrap } from '../focus'
@@ -37,7 +38,7 @@ function IconBtn({ icon, label, onClick, pressed, className = '' }: { icon: stri
 /* ---------- Sidebar (every size; an icon rail when collapsed) ---------- */
 export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolean; onToggle: () => void; onNavigate: () => void }) {
   const { theme, toggleTheme, conversations } = useAppState()
-  const navigate = useNavigate()
+  const signOut = useSignOut()
   const dark = theme === 'dark'
   const unread = conversations.filter(c => c.unread).length
   // Collapsing is a phone and tablet feature; desktop always shows the full sidebar
@@ -63,17 +64,21 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
           </div>
         </div>
 
-        <button
-          onClick={onToggle}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!collapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="absolute top-6 -right-[15px] z-10 size-[30px] rounded-[10px] pointer-coarse:top-5 pointer-coarse:-right-[22px] pointer-coarse:size-11 border border-line bg-surface-2 text-xl font-extrabold text-sub lg:hidden"
-        >
-          {collapsed ? '›' : '‹'}
-        </button>
+        {/* Its own row under the logo; on the sidebar's edge it covered the logo and the page title.
+            Named by its text, which only screen readers get while the sidebar is a rail */}
+        <div className="px-2.5 pt-3.5 lg:hidden">
+          <button
+            onClick={onToggle}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Open menu' : undefined}
+            className={`${item} ${itemCollapsed} border border-line bg-surface-2 text-sub hover:bg-surface`}
+          >
+            <span className="w-[25px] text-center text-xl leading-none" aria-hidden="true">{collapsed ? '☰' : '✕'}</span>
+            <span className={collapsed ? 'max-lg:sr-only' : ''}>{collapsed ? 'Open menu' : 'Close menu'}</span>
+          </button>
+        </div>
 
-        <nav id="primary-nav" aria-label="Primary" className="flex flex-1 flex-col gap-[5px] overflow-y-auto px-2.5 py-3.5">
+        <nav id="primary-nav" aria-label="Primary" className="flex flex-1 flex-col gap-[5px] overflow-y-auto px-2.5 py-3.5 max-lg:pt-[5px]">
           {NAV_ITEMS.map(n => {
             const badge = n.to === '/messages.html' ? unread : 0
             return (
@@ -109,7 +114,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
             <span className="w-[25px] text-center text-xl leading-none" aria-hidden="true">{dark ? '☀️' : '🌙'}</span>
             <span className={hideLabel}>{dark ? 'Light theme' : 'Dark theme'}</span>
           </button>
-          <button onClick={() => navigate('/')} className={`${item} ${itemCollapsed} text-signout hover:bg-surface-2`} title={collapsed ? 'Sign out' : undefined}>
+          <button onClick={signOut} className={`${item} ${itemCollapsed} text-signout hover:bg-surface-2`} title={collapsed ? 'Sign out' : undefined}>
             <span className="w-[25px] text-center text-xl leading-none" aria-hidden="true">↪</span>
             <span className={hideLabel}>Sign out</span>
           </button>
@@ -123,6 +128,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
 export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string; onVoice: () => void; onSos: () => void; onEyeTracking: () => void }) {
   const { theme, toggleTheme, prefs, history, setHistoryOpen } = useAppState()
   const navigate = useNavigate()
+  const signOut = useSignOut()
   const [open, setOpen] = useState(false)
   const menuRef = useClickOutside<HTMLDivElement>(() => setOpen(false), open)
   const undoable = history.filter(h => !h.undone).length
@@ -149,7 +155,7 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
           onClick={onSos}
           title="Call emergency contact"
           aria-label="SOS, call emergency contact"
-          className="h-11 min-w-[52px] rounded-xl border-2 border-sos font-black tracking-[0.04em] text-sos"
+          className="h-11 min-w-[52px] rounded-xl border-2 border-sos font-black tracking-[0.04em] text-sos-text"
         >
           SOS
         </button>
@@ -158,11 +164,12 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
             onClick={() => setOpen(o => !o)}
             aria-haspopup="menu"
             aria-expanded={open}
-            aria-label={`${patient.name}, account menu`}
             className="flex min-h-12 items-center gap-2 rounded-[14px] border border-line bg-surface-2 py-[5px] pr-2.5 pl-[7px] text-ink"
           >
+            {/* Named by its content, "Maddy, account menu", which includes the visible name */}
             <Avatar />
-            <span className="font-bold max-[860px]:hidden">{patient.name}</span>
+            <span className="font-bold max-[860px]:sr-only">{patient.name}</span>
+            <span className="sr-only">, account menu</span>
             <span aria-hidden="true">⌄</span>
           </button>
           {open && (
@@ -188,7 +195,7 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
               >
                 {theme === 'dark' ? 'Use light theme' : 'Use dark theme'}
               </button>
-              <button role="menuitem" onClick={() => navigate('/')} className="min-h-11 w-full rounded-[10px] px-3 text-left font-semibold hover:bg-brand/15">
+              <button role="menuitem" onClick={signOut} className="min-h-11 w-full rounded-[10px] px-3 text-left font-semibold hover:bg-brand/15">
                 Sign out
               </button>
             </div>
@@ -232,7 +239,7 @@ const APP_HELP: HelpItem[] = [
   ['↕', 'Scroll up / Scroll down', 'Large buttons that move the page, for when scrolling is hard.'],
   ['🆘', 'SOS', 'Calls your emergency contact after you confirm.'],
   ['💊', 'I took this / I missed this', 'Logs a dose. Each change can be undone for a few seconds.'],
-  ['‹›', 'Sidebar arrow', 'Shows or hides the page names next to the icons.'],
+  ['☰', 'Open menu', 'Shows the page names next to the icons; Close menu hides them again.'],
   ['🕘', 'Action history', 'Ctrl + H lists what you have done, so you can undo any of it.'],
 ]
 

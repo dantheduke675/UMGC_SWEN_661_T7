@@ -2,16 +2,10 @@ import { createBrowserRouter, type RouteObject } from 'react-router'
 import { AppShell } from './layouts/AppShell'
 import { AuthLayout } from './layouts/AuthLayout'
 import { RootLayout } from './layouts/RootLayout'
-import { Account } from './pages/Account'
-import { CreateAccount } from './pages/CreateAccount'
-import { Landing } from './pages/Landing'
-import { Medications } from './pages/Medications'
-import { Messages } from './pages/Messages'
-import { NotFound } from './pages/NotFound'
-import { Schedule } from './pages/Schedule'
-import { SignIn } from './pages/SignIn'
-import { Symptoms } from './pages/Symptoms'
-import { Today } from './pages/Today'
+
+// Each page is its own chunk, loaded when its route is first visited; the
+// current page stays on screen while the next one loads
+const landing = () => import('./pages/Landing').then(m => ({ Component: m.Landing }))
 
 /*
   Every page has its own HTML file in the project root (index.html, signin.html,
@@ -24,30 +18,32 @@ export const routes: RouteObject[] = [
   {
     // Every page: keyboard shortcuts, messages and the action history
     element: <RootLayout />,
+    // Shown for the moment the first page's chunk takes to arrive
+    hydrateFallbackElement: <p className="sr-only" role="status">Loading CareConnect…</p>,
     children: [
-      { path: '/', element: <Landing /> },
-      { path: '/index.html', element: <Landing /> },
+      { path: '/', lazy: landing },
+      { path: '/index.html', lazy: landing },
       {
         // Sign-in screens share the brand panel
         element: <AuthLayout />,
         children: [
-          { path: '/signin.html', element: <SignIn /> },
-          { path: '/create-account.html', element: <CreateAccount /> },
+          { path: '/signin.html', lazy: () => import('./pages/SignIn').then(m => ({ Component: m.SignIn })) },
+          { path: '/create-account.html', lazy: () => import('./pages/CreateAccount').then(m => ({ Component: m.CreateAccount })) },
         ],
       },
       {
         // Signed-in pages share the responsive shell
         element: <AppShell />,
         children: [
-          { path: '/today.html', element: <Today /> },
-          { path: '/medications.html', element: <Medications /> },
-          { path: '/messages.html', element: <Messages /> },
-          { path: '/schedule.html', element: <Schedule /> },
-          { path: '/symptoms.html', element: <Symptoms /> },
-          { path: '/account.html', element: <Account /> },
+          { path: '/today.html', lazy: () => import('./pages/Today').then(m => ({ Component: m.Today })) },
+          { path: '/medications.html', lazy: () => import('./pages/Medications').then(m => ({ Component: m.Medications })) },
+          { path: '/messages.html', lazy: () => import('./pages/Messages').then(m => ({ Component: m.Messages })) },
+          { path: '/schedule.html', lazy: () => import('./pages/Schedule').then(m => ({ Component: m.Schedule })) },
+          { path: '/symptoms.html', lazy: () => import('./pages/Symptoms').then(m => ({ Component: m.Symptoms })) },
+          { path: '/account.html', lazy: () => import('./pages/Account').then(m => ({ Component: m.Account })) },
         ],
       },
-      { path: '*', element: <NotFound /> },
+      { path: '*', lazy: () => import('./pages/NotFound').then(m => ({ Component: m.NotFound })) },
     ],
   },
 ]
