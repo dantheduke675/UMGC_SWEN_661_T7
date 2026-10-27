@@ -1818,7 +1818,11 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 ## Daniel
 
-- 
+- Worked on the ReadMe
+- Worked on all of the application screens
+- Worked on some of the tests and the E2E tests
+- Deplyoment
+- Some of the documentation
 
 ## Justin
 
