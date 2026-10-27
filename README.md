@@ -1814,4 +1814,18 @@ Colour contrast needs a real browser. With the application running, scan each pa
 - Provided additional clarification on needs in advance of additional accessibility needs for WCAG 2.1 AA compliance
 - Engaged with codebase to ensure knowledge of accessibility changes, with clarifications from team members
 
+# Weekly Contributions 10/21-10/27
+
+## Daniel
+
+- 
+
+## Justin
+
+- 
+
+## Ian
+
+- 
+
 ### AI Disclosure: The code and parts of the README files in this project were written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code and files have been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.
