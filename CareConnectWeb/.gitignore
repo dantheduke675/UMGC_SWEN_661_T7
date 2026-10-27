@@ -26,3 +26,7 @@ coverage
 
 # Bundle report from npm run analyze
 bundle-stats.html
+
+# Playwright output
+playwright-report
+test-results

@@ -7,7 +7,7 @@ import tseslint from 'typescript-eslint'
 
 // The Vite react-ts template's config, applied to the app, the tests and the config files
 export default defineConfig([
-  globalIgnores(['dist', 'dev-dist', 'coverage']),
+  globalIgnores(['dist', 'dev-dist', 'coverage', 'playwright-report', 'test-results']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
@@ -21,7 +21,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['vite.config.ts', 'vitest.config.ts'],
+    files: ['vite.config.ts', 'vitest.config.ts', 'playwright.config.ts', 'e2e/**/*.ts'],
     languageOptions: { globals: globals.node },
   },
 ])

@@ -1288,7 +1288,42 @@ this builds the app and writes `bundle-stats.html` (ignored by git), an interact
 
 ### Running the tests
 
-The web app has an automated test suite built with [Vitest](https://vitest.dev/), [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) and [axe-core](https://github.com/dequelabs/axe-core). The tests run in Node with jsdom, so no browser or running server is needed. Run the whole suite once with
+The web app has two kinds of automated tests:
+
+- **Unit, integration and accessibility tests** built with [Vitest](https://vitest.dev/), [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) and [axe-core](https://github.com/dequelabs/axe-core). They run in Node with jsdom, so no browser or running server is needed. They live in `CareConnectWeb/tests/`.
+- **End-to-end (E2E) tests** built with [Playwright](https://playwright.dev/). They build the app, serve it and drive it in a real Chromium browser. They live in `CareConnectWeb/e2e/` (see [End-to-end (E2E) testing with Playwright](#end-to-end-e2e-testing-with-playwright) below).
+
+Run every command below from the `CareConnectWeb` folder:
+
+```
+cd CareConnectWeb
+npm install
+```
+
+All of the web app's test commands at a glance:
+
+| Command                          | What it does                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `npm test`                       | Vitest in watch mode (re-runs on every file change; press `q` to quit)       |
+| `npm run test:run`               | Every Vitest / React Testing Library test once                              |
+| `npm run test:a11y`              | Only the accessibility tests (`tests/accessibility.test.tsx`)               |
+| `npm run test:coverage`          | Every Vitest test once, plus a coverage report                              |
+| `npm test -- --coverage`         | Watch mode with coverage (the report refreshes on every re-run)             |
+| `npm test -- --coverage --run`   | Same as `npm run test:coverage`: one run with coverage, then exits          |
+| `npm run test:e2e`               | The Playwright end-to-end tests in a real browser                           |
+| `npm run lint`                   | ESLint, zero errors and zero warnings allowed                                |
+| `npx tsc -b`                     | Type-checks the app, the Vitest tests, the config files and the E2E tests   |
+
+To run everything the way a final check would, one after another:
+
+```
+npm run lint
+npx tsc -b
+npm run test:coverage
+npm run test:e2e
+```
+
+Run the whole Vitest suite once with
 
 ```
 npm run test:run
@@ -1306,24 +1341,56 @@ Run only the accessibility tests with
 npm run test:a11y
 ```
 
-and generate a coverage report with
+Run a single file with `npx vitest run tests/<file name>`, or every test whose name matches a string with `npx vitest run -t "<test name>"`.
+
+### Test coverage
+
+Coverage is measured by Vitest's V8 provider (`@vitest/coverage-v8`) over every file in `src/` (`vitest.config.ts`). Generate a coverage report with
 
 ```
 npm run test:coverage
 ```
 
-which prints a summary and writes an HTML report to `coverage/index.html` (the `coverage/` folder is git ignored). Run a single file with `npx vitest run tests/<file name>`, or every test whose name matches a string with `npx vitest run -t "<test name>"`.
+or pass the coverage flag straight through to `npm test`:
+
+```
+npm test -- --coverage
+```
+
+The `--` tells npm to hand everything after it to Vitest. Because `npm test` is watch mode, `npm test -- --coverage` keeps running and re-measures coverage each time a file is saved; press `q` to quit. Add `--run` (`npm test -- --coverage --run`) for a single run that exits, which is what `npm run test:coverage` does. In a CI environment (when the `CI` environment variable is set) Vitest runs once automatically.
+
+Either command prints a table per file in the terminal and writes these reports to `CareConnectWeb/coverage/` (the folder is git ignored):
+
+| Report                          | Use                                                         |
+| ------------------------------- | ----------------------------------------------------------- |
+| `coverage/index.html`           | Browsable HTML report; open it to see uncovered lines highlighted |
+| `coverage/lcov.info`            | LCOV file for CI tools and editor coverage extensions       |
+| `coverage/coverage-final.json`  | Full JSON results                                            |
+| `coverage/coverage-summary.json`| Totals only                                                  |
+
+The project's minimum requirement is **75%** coverage. `vitest.config.ts` enforces a stricter **95%** threshold for statements, branches, functions and lines, so the coverage command fails (non-zero exit code) if any of them drops below 95%.
+
+As of 2026-10-27 coverage of `src/` is:
+
+| Metric     | Coverage            |
+| ---------- | ------------------- |
+| Statements | 99.17% (957 / 965)  |
+| Branches   | 95.6% (588 / 615)   |
+| Functions  | 99.73% (371 / 372)  |
+| Lines      | 99.73% (759 / 761)  |
+
+Only the Vitest tests count towards coverage. The Playwright tests run against the production build in a separate browser, so they are not measured.
 
 All tests live in `CareConnectWeb/tests/`:
 
 | Test file                 | Tests | What it covers                                                                                                     |
 | ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------ |
-| `accessibility.test.tsx`  | 89    | axe-core scans of every page at phone, tablet and desktop sizes, in both themes and with dialogs, menus, errors, the collapsed sidebar, the help guide, an open conversation, the call screen and the Face ID screens; landmarks, headings, skip link, live regions, labels; keyboard-only use and focus handling; large tremor-friendly targets |
+| `accessibility.test.tsx`  | 92    | axe-core scans of every page at phone, tablet and desktop sizes, in both themes and with dialogs, menus, errors, the collapsed sidebar, the help guide, an open conversation, the call screen and the Face ID screens; landmarks, headings, skip link, live regions, labels; keyboard-only use and focus handling; large tremor-friendly targets |
 | `shell.test.tsx`          | 31    | Sidebar navigation and current-page marking for all six pages; the Messages unread badge; the phone sidebar (starts as an icon rail, expands, closes after picking a page or with Escape); collapsing the tablet sidebar; theme switching and saving; profile menu (Account, theme, sign out); signing out to the landing page; SOS confirmation opening the call screen; the eye tracking switch; help guide; Scroll up / down; voice commands |
 | `features.test.tsx`       | 18    | The notifications panel (contents, links, updates as doses are logged, turned-off state, Escape and click-outside); the top bar history button; closing the account menu by clicking outside; the offline notice; mouse lock-on; the email and password rules |
-| `keyboard.test.tsx`       | 28    | The focus indicator (off by default, `Ctrl + =`, remembered, Account switch); arrow-key focus movement, inside dialogs and around text fields; every `Ctrl` shortcut (zoom, theme, voice, SOS, settings); undo with `Ctrl + U` and the action history (`Ctrl + H`); focus trapping in dialogs and focus returning to the opener; skip links; named landmarks; the shortcut list in Help |
+| `keyboard.test.tsx`       | 30    | The focus indicator (off by default, `Ctrl + =`, remembered, Account switch); arrow-key focus movement, inside dialogs and around text fields; every `Ctrl` shortcut (zoom, theme, voice, SOS, settings); undo with `Ctrl + U` and the action history (`Ctrl + H`); focus trapping in dialogs and focus returning to the opener; skip links; named landmarks; the shortcut list in Help |
 | `html-pages.test.ts`      | 22    | Every HTML page file is a complete document (language, charset, viewport, root element, script), has a route, the right title and its own description, and is built by `vite.config.ts` |
-| `auth.test.tsx`           | 18    | Sign in and Create account: fields, validation errors (empty and badly formed email, empty password, empty name, short password, focus on the first problem), Back, Enter key, role buttons, theme toggle; the Face ID question, "No, use my password", the face scan opening Today and "Use my password instead" |
+| `auth.test.tsx`           | 23    | Sign in and Create account: fields, validation errors (empty and badly formed email, empty password, empty name, short password, focus on the first problem), Back, Enter key, role buttons, theme toggle; the Face ID question, "No, use my password", the face scan opening Today and "Use my password instead" |
 | `today.test.tsx`          | 12    | Greeting by time of day, progress bar, marking doses taken / missed, confirmation dialog, Undo, the undo message hiding after 5 seconds, links |
 | `landing.test.tsx`        | 7     | Hero content, links to the sign-in and sign-up pages, in-page section links, photo description                    |
 | `medications.test.tsx`    | 7     | All 9 doses, categories, taken / missed states and card colours, dose status shared with Today                    |
@@ -1332,12 +1399,204 @@ All tests live in `CareConnectWeb/tests/`:
 | `schedule.test.tsx`       | 6     | Month and week strip (including weeks that cross into the next month), selecting a day, schedule items and Done markers |
 | `symptoms.test.tsx`       | 4     | Symptom list and severity bars, logging a new symptom, the missing-name error, closing the form without saving    |
 | `data.test.ts`            | 4     | The demo data: dose count, unique keys, starting state, schedule                                                   |
+| `coverage-edge.test.tsx`  | 25    | Edge cases: biometric device and storage failures, state boundary conditions, small components and the timed voice state, input and focus boundaries |
+| `coverage-flows.test.tsx` | 8     | Remaining flows: the responsive shell and leftover actions, validation and shortcut boundaries                     |
+| `persistence.test.tsx`    | 7     | What is saved on the device (works offline, survives a reload) and reset on sign out                               |
+| `install.test.tsx`        | 3     | The Install app buttons (PWA install prompt)                                                                       |
+| `main.test.tsx`           | 1     | The app entry point (`src/main.tsx`) mounts                                                                        |
 
-As of 2026-10-23 the suite is 14 files / 260 tests, all passing, with 98% line coverage of `src/`.
+As of 2026-10-27 the suite is 19 files / 314 tests, all passing (see [Test coverage](#test-coverage) above for the coverage numbers).
 
-### Note 1. Any test that logs a console error or warning fails (`tests/setup.ts`), so the suite also guards against console errors and warnings. jsdom's own "Not implemented: canvas" notices, triggered by axe-core, are ignored because they do not come from the app.
+### Note 1. Any test that logs a console error or warning fails (`tests/setup.ts`), so the suite also guards against console errors and warnings. jsdom's own "Not implemented: canvas" notices, triggered by axe-core, are ignored because they do not come from the app. With the `canvas` package installed and built (see [The canvas package](#the-canvas-package-and-npm-install-scripts) below) these notices no longer appear at all.
 
 ### Note 2. jsdom loads no CSS, so `tests/utils.tsx` applies the app's Tailwind visibility classes for a chosen device size before each axe scan. This way each scan sees only what a phone, tablet or desktop browser would show. jsdom also cannot measure colours, so colour contrast is checked in a real browser (see Accessibility testing below).
+
+### The canvas package and npm install scripts
+
+axe-core asks the page for a `<canvas>` drawing context while it scans. jsdom only provides one when the [`canvas`](https://www.npmjs.com/package/canvas) npm package is installed **and its native part is built**. Without it, every axe scan prints
+
+```
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+```
+
+dozens of times during `npm run test:run` and `npm run test:coverage`. The tests still pass, but the output is hard to read.
+
+`canvas` is already listed in `devDependencies` (pinned to `3.2.3`). Its native part is built by an install script (`prebuild-install -r napi || node-gyp rebuild`), and newer versions of npm **block package install scripts unless they are approved**. When it is blocked, `npm install` prints:
+
+```
+npm warn install-scripts 1 package had install scripts blocked because they are not covered by allowScripts:
+npm warn install-scripts   canvas@3.2.3 (install: prebuild-install -r napi || node-gyp rebuild)
+```
+
+The approval has already been made for this project and saved in `CareConnectWeb/package.json`:
+
+```
+"allowScripts": {
+  "canvas@3.2.3": true
+}
+```
+
+so a normal `npm install` builds canvas for everyone on the team. To do it by hand (for example on a fresh clone with an older checkout, or after the approval was removed), run these from `CareConnectWeb`:
+
+```
+npm install-scripts ls              # list packages whose install scripts are blocked
+npm install-scripts approve canvas  # approve canvas (adds it to "allowScripts" in package.json)
+npm rebuild canvas                  # run its install script now, without reinstalling everything
+```
+
+Check that it works with
+
+```
+node -e "const {createCanvas}=require('canvas');console.log('canvas ok', !!createCanvas(1,1).getContext('2d'))"
+```
+
+which prints `canvas ok true`. Then run `npm run test:run` again: the "Not implemented" lines are gone.
+
+### Note 1. The approval is tied to the exact version, `canvas@3.2.3`. **If canvas is upgraded** (for example by `npm update`, `npm install canvas@latest`, or a Dependabot pull request), the new version's install script is blocked again and the "Not implemented" messages come back. After any canvas upgrade run `npm install-scripts approve canvas` and `npm rebuild canvas` again, and commit the updated `allowScripts` entry in `package.json` together with `package-lock.json`.
+
+### Note 2. `prebuild-install` downloads a ready-made binary for Windows, macOS and Linux on common Node.js versions, so no compiler is usually needed. If no prebuilt binary matches your Node.js version, it falls back to `node-gyp rebuild`, which needs Python and a C++ build toolchain (on Windows, Visual Studio Build Tools with the "Desktop development with C++" workload). Using the current Node.js LTS avoids this.
+
+### Note 3. The same rule applies to any other dependency that needs an install script: npm lists it under `npm install-scripts ls`, and it must be approved with `npm install-scripts approve <package>` (and approved again after each upgrade) before its script runs.
+
+### End-to-end (E2E) testing with Playwright
+
+The E2E tests use [Playwright Test](https://playwright.dev/docs/intro) (`@playwright/test`, version 1.64) to check the finished app the way a person uses it: in a real Chromium browser, with real CSS, layout, routing between the HTML pages and `localStorage`. They complement the Vitest tests, which run in jsdom and cannot see layout or styles.
+
+#### First-time setup
+
+Playwright is already in `devDependencies`, so `npm install` installs the test runner. Playwright's browsers are downloaded separately, once per computer:
+
+```
+cd CareConnectWeb
+npm install
+npx playwright install chromium
+```
+
+The browser is saved outside the project (on Windows in `%LOCALAPPDATA%\ms-playwright`), so it is not committed and is shared by every project on the machine. On Linux (including CI) use `npx playwright install --with-deps chromium`, which also installs the system libraries Chromium needs.
+
+### Note 1. **After upgrading Playwright** (`@playwright/test` in `package.json`), run `npx playwright install chromium` again. Each Playwright version expects a matching browser build, and the tests fail with "Executable doesn't exist" until it is downloaded.
+
+#### Running the E2E tests
+
+```
+npm run test:e2e
+```
+
+This runs `playwright test`, which:
+
+1. Builds the app (`npm run build`) and serves the production build with `vite preview` on http://localhost:4173. This is set up in the `webServer` section of `playwright.config.ts`, so there is no need to start a server first. If a server is already running on port 4173, Playwright reuses it (except in CI).
+2. Runs every spec in `CareConnectWeb/e2e/` in parallel, in headless Chromium.
+3. Stops the server when the tests finish.
+
+The first run takes longer because of the build; the tests themselves take about 5–10 seconds.
+
+Useful variations (everything after `--` is passed to Playwright):
+
+| Command                                                     | What it does                                                          |
+| ----------------------------------------------------------- | --------------------------------------------------------------------- |
+| `npm run test:e2e`                                          | All E2E tests, headless                                               |
+| `npx playwright test e2e/auth.spec.ts`                      | One spec file                                                         |
+| `npx playwright test -g "logs a symptom"`                   | Only tests whose name matches                                         |
+| `npx playwright test --project=desktop-chromium`            | Only the desktop tests                                                |
+| `npx playwright test --project=phone-chromium`              | Only the phone tests                                                  |
+| `npm run test:e2e -- --headed`                              | Shows the browser window while the tests run                          |
+| `npm run test:e2e -- --ui`                                  | Playwright's UI mode: pick tests, watch each step, time-travel through the page |
+| `npm run test:e2e -- --debug`                               | Opens the Playwright Inspector and pauses on each step                |
+| `npx playwright test --repeat-each=5`                       | Runs each test 5 times to look for flaky tests                        |
+| `npx playwright show-report`                                | Opens the HTML report of the last run                                 |
+| `npx playwright codegen http://localhost:4173`              | Records clicks in a browser and writes the matching test code (start `npm run preview` first) |
+
+#### Configuration (`playwright.config.ts`)
+
+| Setting                 | Value                                    | Why                                                                     |
+| ----------------------- | ---------------------------------------- | ----------------------------------------------------------------------- |
+| `testDir`               | `./e2e`                                  | Keeps E2E specs apart from the Vitest tests in `tests/`                 |
+| `baseURL`               | `http://localhost:4173`                  | Tests use short paths such as `page.goto('/today.html')`                |
+| `webServer.command`     | `npm run build && npx vite preview --port 4173 --strictPort` | Tests the real production build, the same files that get deployed |
+| `serviceWorkers`        | `'block'`                                | The PWA service worker would otherwise cache pages between tests        |
+| `fullyParallel`         | `true`                                   | Every test gets its own fresh browser context (empty `localStorage`), so they can run at the same time |
+| `retries`               | `2` in CI, `0` locally                   | A real failure shows straight away locally                              |
+| `forbidOnly`            | `true` in CI                             | A forgotten `test.only` fails the CI run instead of skipping the rest   |
+| `trace`                 | `'on-first-retry'`                       | Records a full trace when a test is retried                             |
+| `reporter`              | `list` and `html`                        | Progress in the terminal, and a report in `playwright-report/`          |
+
+Two browser projects are defined:
+
+| Project            | Device                              | Runs                       |
+| ------------------ | ----------------------------------- | -------------------------- |
+| `desktop-chromium` | Desktop Chrome (1280 × 720)         | Every spec except `responsive.spec.ts` |
+| `phone-chromium`   | Pixel 7 (412 × 839, touch, mobile)  | Only `responsive.spec.ts`  |
+
+To add another browser, add a project such as `{ name: 'desktop-firefox', use: { ...devices['Desktop Firefox'] } }` and download it with `npx playwright install firefox`.
+
+The E2E specs are type-checked by their own `tsconfig.e2e.json` (it adds the browser `DOM` types for code that runs inside `page.evaluate()`), which `npx tsc -b` includes, and they are linted by `npm run lint`.
+
+#### What the E2E tests cover
+
+18 tests, all passing as of 2026-10-27:
+
+| Spec file                 | Project | Tests                                                                                                                                       |
+| ------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e/auth.spec.ts`        | Desktop | The landing page heading and link to Sign in; signing in opens Today with its progress bar; an invalid email shows an error, marks the field invalid and stays on Sign in; Create account flags an empty name and a bad email; an unknown URL shows the Not found page |
+| `e2e/features.spec.ts`    | Desktop | Moving through all six signed-in pages from the sidebar (URL and tab title for each); marking a dose taken on Today and undoing it; marking a dose missed on Medications after confirming; sending a typed reply in Messages; starting a demo call (timer) and ending it; picking a day on the Schedule; logging a symptom (name, severity, notes) and the count going up; the theme choice surviving a reload; Account switches and the Zoom in button; the Notifications panel (opens, closes with `Esc`) and the Help guide; signing out to the landing page |
+| `e2e/responsive.spec.ts`  | Phone   | Expanding the phone sidebar and moving to Schedule; no horizontal scrolling on the landing, Today, Medications, Messages and Account pages |
+
+The tests find elements the way a screen reader user would, by role and accessible name (`page.getByRole('button', { name: 'Save symptom' })`, `page.getByLabel('Email address')`), so they also check that the controls are labelled correctly.
+
+#### Reports, traces and failures
+
+- After each run, `npx playwright show-report` opens the HTML report from `CareConnectWeb/playwright-report/`.
+- When a test fails, Playwright writes an `error-context.md` (the page's accessibility tree at the moment of failure) to `CareConnectWeb/test-results/<test name>/`. It is the quickest way to see which buttons and labels were actually on screen.
+- When a test is retried (in CI), a trace is recorded. Open it with `npx playwright show-trace test-results/<test name>/trace.zip` to step through every action with screenshots, the DOM, console messages and network requests. Record traces locally with `npm run test:e2e -- --trace on`.
+- `playwright-report/` and `test-results/` are git ignored and skipped by ESLint.
+
+#### Writing a new E2E test
+
+Add a `*.spec.ts` file to `CareConnectWeb/e2e/` (or a `test()` to an existing one):
+
+```
+import { expect, test } from '@playwright/test'
+
+test('logs a symptom', async ({ page }) => {
+  await page.goto('/symptoms.html')
+  await page.getByRole('button', { name: 'Add a symptom' }).click()
+  await page.getByRole('textbox', { name: 'Symptom' }).fill('Dizziness')
+  await page.getByRole('button', { name: 'Save symptom' }).click()
+  await expect(page.getByRole('list', { name: 'Symptoms logged today' })).toContainText('Dizziness')
+})
+```
+
+Tips:
+
+- Start each test from a page URL with `page.goto()`. The sign-in is a demo, so signed-in pages open directly.
+- Each test starts with an empty `localStorage`, so the demo data is always the starting point.
+- Prefer `getByRole` / `getByLabel` with the exact visible name. Use `{ exact: true }` when one name is part of another (for example **Undo** and **Action history, 1 can be undone**).
+- The app renders the phone, tablet and desktop parts of the shell in the page and hides some with CSS. If a locator matches more than one element, narrow it down with a landmark (`page.getByRole('complementary', { name: 'Sidebar' })`) or `.filter({ visible: true })`.
+- Use the web-first assertions (`await expect(locator).toBeVisible()`, `toHaveURL`, `toHaveAttribute`), which wait automatically. Avoid fixed waits such as `page.waitForTimeout()`.
+- Avoid assertions that depend on the time of day (the Today greeting and which doses are due change during the day).
+
+#### Running the E2E tests in CI
+
+Set `CI=true` (GitHub Actions does this automatically) and run
+
+```
+npm ci
+npx playwright install --with-deps chromium
+npm run test:e2e
+```
+
+In CI, Playwright always starts its own server, retries a failing test twice, records a trace on retry, and fails if a `test.only` was left in. Upload `CareConnectWeb/playwright-report/` as a build artifact to read the report afterwards.
+
+#### E2E troubleshooting
+
+| Problem                                                     | Fix                                                                     |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `Executable doesn't exist at ...ms-playwright\chromium-...` | Run `npx playwright install chromium` (needed once per computer and after every Playwright upgrade) |
+| `Port 4173 is already in use` / `--strictPort` error        | Stop the other `npm run preview` (or let Playwright reuse it locally), or close whatever is using the port |
+| `Timed out waiting 180000ms from config.webServer`          | The build failed or is slow: run `npm run build` on its own to see the error |
+| A locator matches several elements ("strict mode violation") | Use a more exact name, `{ exact: true }`, a landmark or `.filter({ visible: true })` |
+| A test passes locally but fails in CI                        | Open the trace from the CI artifact with `npx playwright show-trace`; check for time-of-day or timing assumptions |
+| Old pages appear after a code change                         | Playwright reuses a running server locally: stop it so the next run rebuilds |
 
 ### Linting and type checking
 
@@ -1419,7 +1678,7 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 - No backend/API integration. All data is static/in-memory, so sent messages, logged symptoms and Account changes reset on reload.
 - Profile and emergency contact editing on the Account page are not built yet; they show a "coming soon" message.
-- No browser-based end-to-end tests yet. The automated tests run in jsdom, so layout and colour contrast are checked manually in a browser.
+- The Playwright end-to-end tests run in Chromium only (desktop and Pixel 7 phone sizes); Firefox and WebKit are not tested yet. Colour contrast is still checked manually in a browser.
 - The focus indicator is off until it is turned on with `Ctrl + =` (or on the Account page), as the design asks. Until then keyboard focus is not visible, which does not meet WCAG 2.4.7 (Focus Visible).
 - `Ctrl + =` replaces the browser's own `Ctrl + =` zoom; zoom in with `Ctrl + +` (`Ctrl + Shift + =`, or the numpad `+`) instead.
 - Chrome and Edge keep `Ctrl + N` for opening a new window in a normal browser tab, so that shortcut only reaches the app when it is installed as a PWA (its own window) or in browsers that pass it through.
