@@ -119,7 +119,7 @@ describe('App shell: theme and account', () => {
     const { user, currentPath } = await renderApp('/today.html')
     await user.click(within(sidebar()).getByRole('button', { name: 'Sign out' }))
     await waitFor(() => expect(currentPath()).toBe('/'))
-    expect(screen.getByRole('heading', { level: 1, name: /Stay on track/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /Stay on track/ })).toBeInTheDocument()
   })
 
   it('signs out from the profile menu', async () => {
@@ -127,7 +127,7 @@ describe('App shell: theme and account', () => {
     await user.click(screen.getByRole('button', { name: 'Maddy, account menu' }))
     await user.click(screen.getByRole('menuitem', { name: 'Sign out' }))
     await waitFor(() => expect(currentPath()).toBe('/'))
-    expect(screen.getByRole('heading', { level: 1, name: /Stay on track/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /Stay on track/ })).toBeInTheDocument()
   })
 })
 
@@ -218,9 +218,11 @@ describe('App shell: scroll and voice controls', () => {
   it('closes the voice panel with Cancel or Escape', async () => {
     const { user } = await renderApp('/today.html')
     await user.click(screen.getAllByRole('button', { name: 'Voice commands' })[0])
+    await findDialog('Voice commands')
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('dialog', { name: 'Voice commands' })).not.toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: 'Voice commands' })[0])
+    await findDialog('Voice commands')
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Voice commands' })).not.toBeInTheDocument()
   })
