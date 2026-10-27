@@ -1,10 +1,19 @@
+import { clearTimeout as cancelDeadline, setTimeout as scheduleDeadline } from 'node:timers'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import axe from 'axe-core'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { expect, vi } from 'vitest'
+import { afterEach, expect, vi } from 'vitest'
 import { AppStateProvider } from '../src/AppState'
 import { routes } from '../src/router'
+
+// Rendering cleanup removes React components; routers also own subscriptions
+// and pending lazy navigations, so dispose those after every test as well.
+const activeRouters = new Set<ReturnType<typeof createMemoryRouter>>()
+afterEach(() => {
+  for (const router of activeRouters) router.dispose()
+  activeRouters.clear()
+})
 
 /*
   Renders the whole app (same routes as the browser build) at a given page.
@@ -13,6 +22,26 @@ import { routes } from '../src/router'
 */
 export async function renderApp(path = '/') {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
+  activeRouters.add(router)
+  // Resolve the initial route before mounting React. Router initialization
+  // alone does not mean RouterProvider has committed a page to the DOM.
+  if (!router.state.initialized) {
+    // Subscribe instead of polling: tests that fake setInterval would freeze
+    // Testing Library's polling before any DOM exists to trigger an observer.
+    await new Promise<void>((resolve, reject) => {
+      const deadline = scheduleDeadline(() => {
+        unsubscribe()
+        reject(new Error(`Router did not initialize for ${path} within 10000ms`))
+      }, 10_000)
+      const unsubscribe = router.subscribe(state => {
+        if (!state.initialized) return
+        cancelDeadline(deadline)
+        unsubscribe()
+        resolve()
+      })
+    })
+  }
+  expect(router.state.errors).toBeNull()
   // Lets user-event's small delays run when a test fakes the clock
   const user = userEvent.setup({ advanceTimers: ms => (vi.isFakeTimers() ? vi.advanceTimersByTime(ms) : undefined) })
   const view = render(
@@ -22,7 +51,7 @@ export async function renderApp(path = '/') {
   )
   // Pages are lazy-loaded chunks: wait until the first one is on screen
   await waitFor(() => {
-    expect(router.state.initialized).toBe(true)
+    expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.queryByText('Loading CareConnect…')).toBeNull()
   })
   return { ...view, user, router, currentPath: () => router.state.location.pathname }

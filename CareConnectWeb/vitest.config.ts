@@ -9,11 +9,15 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.{ts,tsx}'],
     css: false,
+    // Bound simultaneous jsdom/V8 instances on laptops and Windows hosts.
+    maxWorkers: 2,
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/main.tsx'],
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json', 'json-summary', 'lcov'],
+      thresholds: { statements: 95, branches: 95, functions: 95, lines: 95 },
     },
   },
 })
