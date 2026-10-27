@@ -1,12 +1,22 @@
-import { useState, type FormEvent } from 'react'
+import { useCallback, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { AuthButton, AuthField } from '../components/AuthControls'
+import { FaceIdCheck, FaceIdOffer } from '../components/FaceId'
 import { checkEmail, checkNewPassword, checkRequired, collectErrors, focusFirstError, type FieldErrors } from '../validation'
 
-// Simulated sign-up: nothing is stored or sent; choosing a role opens the app
+/*
+  Demo sign-up: nothing is stored or sent. Choosing a role offers Face ID;
+  Yes sets it up with the device's own biometric prompt (a new passkey, see
+  biometrics.ts), then the app opens.
+*/
 export function CreateAccount() {
   const navigate = useNavigate()
   const [errors, setErrors] = useState<FieldErrors<'name' | 'email' | 'password'>>({})
+  const [step, setStep] = useState<'form' | 'offer-face' | 'set-up-face'>('form')
+  // First name, for the Face ID set-up greeting
+  const [name, setName] = useState('')
+  // Stable, so re-rendering does not restart the device prompt
+  const openApp = useCallback(() => navigate('/today.html'), [navigate])
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -18,8 +28,12 @@ export function CreateAccount() {
     })
     setErrors(found)
     if (Object.keys(found).length) return focusFirstError(e.currentTarget, found)
-    navigate('/today.html')
+    setName(String(data.get('name')).trim().split(/\s+/)[0])
+    setStep('offer-face')
   }
+
+  if (step === 'offer-face') return <FaceIdOffer onYes={() => setStep('set-up-face')} onNo={openApp} />
+  if (step === 'set-up-face') return <FaceIdCheck setUp name={name} onDone={openApp} onSkip={openApp} />
 
   const role = 'flex w-full items-center justify-center gap-2 rounded-2xl text-lg font-bold text-white active:scale-[0.98] h-[88px] md:h-20 md:text-[22px]'
 

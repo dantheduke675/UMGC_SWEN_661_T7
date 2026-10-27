@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -8,14 +9,19 @@ import { VitePWA } from 'vite-plugin-pwa'
 const pages = ['index', 'signin', 'create-account', 'today', 'medications', 'messages', 'schedule', 'symptoms', 'account', '404']
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       input: Object.fromEntries(pages.map(p => [p, resolve(import.meta.dirname, `${p}.html`)])),
+      // React, React DOM and React Router in one chunk that stays cached between
+      // app updates; each page is its own chunk (lazy routes in src/router.tsx)
+      output: { codeSplitting: { groups: [{ name: 'vendor', test: /node_modules/ }] } },
     },
   },
   plugins: [
     react(),
+    // npm run analyze: treemap of what each chunk contains, written outside dist/
+    mode === 'analyze' && visualizer({ filename: 'bundle-stats.html', template: 'treemap', gzipSize: true, open: false }),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -48,7 +54,8 @@ export default defineConfig({
       workbox: {
         // Every page's HTML file is precached; unknown URLs show the Not found page offline
         navigateFallback: '/404.html',
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,jpg}'],
+        // The landing photo is precached as WebP; its JPEG is only a fallback for browsers without WebP
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webp}'],
         // Google Fonts: keep a copy so the app looks right offline
         runtimeCaching: [
           {
@@ -60,4 +67,4 @@ export default defineConfig({
       },
     }),
   ],
-})
+}))

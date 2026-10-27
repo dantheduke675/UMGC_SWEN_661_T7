@@ -5,8 +5,8 @@ import { renderApp, statusMessages } from './utils'
 const list = () => screen.getByRole('list', { name: 'Symptoms logged today' })
 
 describe('Symptoms page', () => {
-  it('shows the count and each symptom with its severity', () => {
-    renderApp('/symptoms.html')
+  it('shows the count and each symptom with its severity', async () => {
+    await renderApp('/symptoms.html')
     expect(screen.getByRole('heading', { name: '3 logged today' })).toBeInTheDocument()
     expect(within(list()).getByRole('heading', { name: 'Joint Pain' })).toBeInTheDocument()
     expect(within(list()).getByRole('img', { name: 'Severity 4 of 5, severe' })).toBeInTheDocument()
@@ -14,7 +14,7 @@ describe('Symptoms page', () => {
   })
 
   it('logs a new symptom at the top of the list', async () => {
-    const { user } = renderApp('/symptoms.html')
+    const { user } = await renderApp('/symptoms.html')
     await user.click(screen.getByRole('button', { name: 'Add a symptom' }))
     expect(screen.getByLabelText('Symptom')).toHaveFocus()
     await user.type(screen.getByLabelText('Symptom'), 'Dizziness')
@@ -30,7 +30,7 @@ describe('Symptoms page', () => {
   })
 
   it('asks for a name before saving', async () => {
-    const { user } = renderApp('/symptoms.html')
+    const { user } = await renderApp('/symptoms.html')
     await user.click(screen.getByRole('button', { name: 'Add a symptom' }))
     await user.click(screen.getByRole('button', { name: 'Save symptom' }))
     const field = screen.getByLabelText('Symptom')
@@ -40,7 +40,7 @@ describe('Symptoms page', () => {
   })
 
   it('closes the form with Cancel or Escape without saving', async () => {
-    const { user } = renderApp('/symptoms.html')
+    const { user } = await renderApp('/symptoms.html')
     await user.click(screen.getByRole('button', { name: 'Add a symptom' }))
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

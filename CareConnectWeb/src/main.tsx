@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { AppStateProvider } from './AppState'
 import './index.css'
+// First, so the browser's install event is caught before any page has loaded
+import './install'
 import { PAGE_TITLES } from './nav'
 import { router } from './router'
 
