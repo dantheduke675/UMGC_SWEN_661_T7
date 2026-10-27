@@ -79,6 +79,7 @@ describe('Call screen', () => {
   it('hangs up with Escape', async () => {
     const { user } = await renderApp('/messages.html?c=chen')
     await user.click(screen.getByRole('button', { name: 'Call Dr. Sarah Chen' }))
+    await findDialog('Dr. Sarah Chen')
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
