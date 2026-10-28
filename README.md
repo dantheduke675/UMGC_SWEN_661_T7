@@ -1826,7 +1826,11 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 ## Justin
 
-- 
+- Implemented performance optimizations for the web app: route code splitting, lazy loading for the call screen, voice commands and action history, a separate vendor chunk, and WebP landing images in three sizes (up to 85% smaller)
+- Added the planned PWA features to the application
+- Ran axe DevTools audits on every page in light and dark mode and fixed all color contrast and label issues
+- Compiled most of the documentation for this week
+- Updated the README with the performance optimizations section and the new features
 
 ## Ian
 
