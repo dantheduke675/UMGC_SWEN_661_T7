@@ -2,6 +2,14 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
+    <!-- Apply the saved theme before the first paint, so a light-theme user doesn't
+         see a dark flash (and a fade to light) while the app loads -->
+    <script>
+      try {
+        var t = localStorage.getItem('cc.theme')
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch (e) {}
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#357c6f" />

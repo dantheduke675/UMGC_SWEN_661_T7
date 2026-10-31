@@ -30,6 +30,30 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
     // Opening the thread reads it — clear its unread flag so the messages
     // list no longer shows the red unread indicator for it.
     threadById(widget.threadId).unread = false;
+    // Open at the newest message, as a chat does. Without this a thread
+    // taller than the screen (a landscape window, or large text) opened at
+    // its oldest message, hiding what was just sent.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showNewest());
+  }
+
+  // The scroll controller is shared with the shell (its scroll buttons and
+  // scrollbar). While the previous page's exit transition runs, its list is
+  // still attached too, and scrolling then would trip the scrollbar's
+  // single-position check, so wait (a second at most) until this list is the
+  // only one. The list only estimates its length until the bubbles at the end
+  // are laid out, so jump again until the end stops moving.
+  void _showNewest([int framesLeft = 60]) {
+    if (!mounted) return;
+    final scrollController = context.read<ScrollController>();
+    if (scrollController.positions.length == 1) {
+      final position = scrollController.position;
+      if (position.pixels >= position.maxScrollExtent) return;
+      position.jumpTo(position.maxScrollExtent);
+    }
+    if (framesLeft > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showNewest(framesLeft - 1));
+      WidgetsBinding.instance.scheduleFrame();
+    }
   }
 
   @override

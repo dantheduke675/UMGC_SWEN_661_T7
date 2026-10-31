@@ -71,6 +71,19 @@ describe('MedicationsScreen', () => {
       expect(takeBtn).toHaveAccessibleName(/, Taken$/);
     });
 
+    it('Undo on the toast puts a dose taken by mistake back to not taken', async () => {
+      await renderScreen();
+      const takeBtn = screen.getAllByRole('button', { name: /, I took this$/ })[0];
+
+      await fireEvent.press(takeBtn);
+      expect(takeBtn).toBeDisabled();
+      expect(takeBtn).toHaveAccessibleName(/, Taken$/);
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Undo' }));
+      expect(takeBtn).toBeEnabled();
+      expect(takeBtn).toHaveAccessibleName(/, I took this$/);
+    });
+
     it('announces the missed-confirmation dialog as an alert with named actions', async () => {
       await renderScreen();
       await fireEvent.press(screen.getAllByText('I missed this')[0]);

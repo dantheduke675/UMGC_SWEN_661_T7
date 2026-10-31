@@ -202,7 +202,7 @@ are described in their own sections below.
 
 ## Accessibility Testing
 
-The Flutter app targets **WCAG 2.1 Level AA**. 241 of the 606 host tests are
+The Flutter app targets **WCAG 2.1 Level AA**. 254 of the 627 host tests are
 accessibility tests:
 
 ```
@@ -220,8 +220,8 @@ flutter test ./test/accessibility
 
 One more sits outside that directory: `test/unit/contrast_helpers_test.dart`
 sweeps the contrast helpers SC 1.4.3 rests on across all 256 greys, the full
-hue wheel and every tint strength. It counts toward the 83 unit tests, not the
-241 above.
+hue wheel and every tint strength. It counts toward the unit tests, not the
+254 above.
 
 These assert rather than report: every one fails the build if the app stops
 conforming. Each also carries a control, so a check that silently measured
@@ -229,8 +229,8 @@ nothing would itself fail — a deliberately low-contrast widget must be caught,
 a 20×20 button must fail the target-size guideline, and an emoji-only label
 must be rejected.
 
-Flutter's four built-in `AccessibilityGuideline` checks run per screen as
-well, but are treated as the floor rather than the ceiling: they accept an
+Flutter's four built-in `AccessibilityGuideline` checks run per screen, in
+both themes, as well, but are treated as the floor rather than the ceiling: they accept an
 emoji as a label, and their contrast check cannot see text inside a card whose
 contents are merged into one spoken sentence. `contrast_test.dart` therefore
 enumerates text from the render tree, rasterises the frame, and samples the
@@ -298,6 +298,14 @@ flutter test integration_test -d <device-id>
 ```
 
 Use `flutter devices` to list device IDs.
+
+On the Windows desktop (`-d windows`) run the files one at a time: when one run launches the app again for each file, the later launches fail to attach and those files report errors while "loading", which says nothing about the app. In PowerShell:
+
+```
+Get-ChildItem integration_test\*_test.dart | ForEach-Object { flutter test $_.FullName -d windows }
+```
+
+As of 2026-10-29 all 40 pass on Windows this way. A desktop window is wider and shorter than a phone, which turned up two app bugs, now fixed: a message thread taller than the screen opened at its oldest message instead of the newest (so a reply you had just sent was out of sight when you came back), and a newly logged symptom could end up above the visible part of the list once the form folded away, so it looked as if nothing had been saved. One test was also fixed: it dragged the severity slider a fixed 500 px, which reaches the end on a phone but not across a 1,100 px slider.
 
 | File                                | Workflow                                                                                    |
 | ----------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -424,11 +432,16 @@ rather than merely reported. For a browsable HTML report instead,
 `genhtml coverage/lcov.info -o coverage/html` still works where `lcov` is
 installed; open `coverage/html/index.html` in a browser.
 
-**As of 2026-09-21: 98.90% line coverage (1,795 of 1,815 lines) across 18
-files, with 606 tests passing and `flutter analyze` clean.** 11 of the 18
-files are at 100% and every other file is above 98% except `lib/main.dart`
-at 93.85%, whose uncovered lines are `main()` itself — orientation setup and
-`runApp`, which no host test executes and every `integration_test` run does.
+**As of 2026-10-29: 99.45% line coverage (1,824 of 1,834 lines) across 18
+files, with 627 tests passing and `flutter analyze` clean.** 16 of the 18
+files are at 100%. The 10 lines left are deliberate:
+
+- `lib/main.dart` (94.62%): `main()` itself — orientation setup and `runApp`,
+  which no host test executes and every `integration_test` run does.
+- `lib/widgets.dart` (99.01%): the undo sheet's "5m ago" / "2h ago" times
+  (an action's time comes from `DateTime.now()` when it is pushed, so a test
+  can't age it without an injectable clock in `ActionHistory`), and the
+  `excludeChildSemantics: false` option of `CTappable`, which nothing uses.
 
 ## Security Notes
 
@@ -601,7 +614,8 @@ npm run test:coverage
 ```
 
 This runs the Node test runner suite under [c8](https://github.com/bcoe/c8)
-and measures `main.js` and `src/app.js`. It prints a summary table and fails
+and measures `main.js`, `preload.js` and `src/app.js` (as of 2026-10-29: 162 tests, 100% of
+lines and statements, 99.3% of functions, 97.9% of branches). It prints a summary table and fails
 if any file drops below **70%** of lines, statements, functions or branches.
 The full report is written to `coverage/`:
 
@@ -736,7 +750,12 @@ minutes; later builds take about a minute. The output goes to
 | `CareConnect 1.0.0.exe`        | Portable app. Runs without installing                            |
 | `win-unpacked/CareConnect.exe` | The unpacked app, useful for a quick check                       |
 
-`dist/` is not ignored by git, so do not commit it. To put the build
+Only the app's own files are packaged: `build.files` in `package.json` lists
+`main.js`, `preload.js`, `src/` and `package.json`. (Without it electron-builder
+packaged the whole folder, so the installer also carried `coverage/`, `tests/`,
+`reports/` and `scripts/`.)
+
+`dist/` is ignored by git (`.gitignore`), so builds are never committed. To put the build
 somewhere else, add `--config.directories.output=<folder>`. The version
 number comes from `version` in `package.json`.
 
@@ -987,47 +1006,14 @@ Note the trailing `.` in the script — a bare `expo lint` only checks `src/`, `
 `coverage/` is git-ignored, so there is no hosted report — generate one locally:
 
 ```
-npx jest --coverage --forceExit --collectCoverageFrom="src/**/*.{ts,tsx}"
+npm run test:coverage
 ```
 
-You can alternatively use
+Coverage is collected from `App.tsx` and everything in `src/` (`collectCoverageFrom` in `package.json`), so a file no test imports still counts, at 0%. The run fails if lines, statements, functions or branches drop below **60%** (`coverageThreshold`).
 
-```
-npm test -- --coverage
-```
+Then open `coverage/lcov-report/index.html` in a browser. Unlike the Flutter report this needs no extra tooling — Jest writes the HTML itself. As of 2026-10-29 the suite is 23 files / 215 tests, all passing, with 100% line coverage (563 of 563 lines), 99.7% of statements, 98.8% of functions and 97.0% of branches. What is left is deliberate: iOS-only styling (`Platform.OS === 'ios'`), default prop values, guards the interface makes unreachable (a disabled button's handler, a list with no doses), the Voice button's empty placeholder handler (voice input isn't built yet), and the default `toggleTheme` of `ThemeContext`, used only outside its provider.
 
-Then open `coverage/lcov-report/index.html` in a browser. Unlike the Flutter report this needs no extra tooling — Jest writes the HTML itself. As of 2026-09-14 the suite is 19 files / 117 tests, all passing, and overall line coverage is 92.4% (461 of 499 lines).
-
-## Maestro
-
-In order to test through the maestro flows make sure an emulator is currently running the application then run
-
-```
-maestro test .maestro
-```
-
-An emulator is always require with Maestro and you must either use an emulator or a physical device running the application there are currently 8 maestro test flows that run through the react application. There are 8 maestro flows which recreate 8 user flows through the react application as seen below:
-
-1. Sign in → Today — password login shows the dashboard + all tabs.
-2. Create account + Face ID — sign up, opt into Face ID, land on Today.
-3. Face ID sign-in — alternate login path, same Today landing.
-4. Tab navigation — every bottom tab opens its screen.
-5. Message quick reply — open a thread, send a canned reply, go back.
-6. Calling — call from a thread, connects, then end call.
-7. Theme + sign out — toggle dark mode, sign out to Landing.
-8. Take/undo medication — mark a dose taken, undo it.
-
-## Screen Reader Testing
-
-TalkBack was used as a screen reader as well for the React CareConnect Version of the application an emulator of an android phone was used to run the application and Talkback was enabled using
-
-```
-adb shell settings put secure enabled_accessibility_services com.google.android.marvin.talkback/com.google.android.marvin.talkback.TalkBackService
-adb shell settings put secure accessibility_enabled 1
-adb shell settings put secure touch_exploration_enabled 1
-```
-
-The application was then ran through manually using the screen reader to ensure accuracy and each Item that was interactable was able to be read by the screen reader.
+### Note 1. The first test in each file renders the React Native tree for the first time, which is slow under coverage on a busy machine, so `testTimeout` is 20 seconds (Jest's default of 5 seconds made those tests time out at random).
 
 ## Accessibility
 
@@ -1044,6 +1030,17 @@ Accessibility is a major focus of this application in many ways with this versio
 - The scroll buttons allowing the user to scroll up and down when they can.
 - The voice command feature allowing the user to navigate and select UI elements with their voice (planned in the UI does not exist currently as there's no backend)
 - Carefully labeled so the application is screen reader accessible
+
+### Checking the web build with axe
+
+The app also builds for the web (`npx expo export --platform web`), which lets the same axe-core scan used for the web app run against the React Native screens in a real browser: landing, sign in, Today, Medications, Schedule, Symptoms, Messages and Account, in both themes. As of 2026-10-29 it reports no contrast, naming or state violations. It found, and these were fixed:
+
+- **States lost on the web.** `accessibilityState={{ … }}` and `accessibilityValue` are not passed to the DOM by react-native-web 0.21, so the Dark mode switch had no on/off state, disabled buttons were not disabled and the tab bar had no selected tab. They now use `aria-checked`, `aria-selected`, `aria-disabled`, `aria-expanded` and `aria-value*`, which React Native also supports on iOS and Android. Buttons that toggle (call controls, schedule days, symptom options) use `selectedButtonState()` in `src/constants/a11y.ts`: "selected" on phones, `aria-pressed` on the web, where `aria-selected` is not allowed on a button. The severity picker's radios report "checked".
+- **The Today progress bar had no name.** It is now "Medications taken today", read with its percentage.
+- **Contrast on tinted chips and badges.** Accent text was checked against the card but not against the pale tint behind it. `accessibleAccentText()` takes the tint into account, `CChip` applies it itself, and the `primaryText` token was adjusted slightly (dark `#6C9F96`, light `#29695D`) so it reads at 4.5:1 on every primary tint. White 70% text on the green Today card is now solid white.
+- **"I took this" buttons** were named only after the medication. Their names now start with the visible text ("I took this: Ropivacaine 10 mg, 8:00 AM"), as in the web and desktop apps, so voice control works.
+
+Two kinds of axe "label in name" warnings remain and were reviewed: schedule days (shown as "M" over "26", named "Monday, October 26") and message rows (avatar initials before the name). In both the name contains the visible words a voice-control user would say ("26", "Aunt Joyce"); axe flags them because the decorative letter or initials are joined to the text with no space in the DOM.
 
 ## Security Notes
 
@@ -1076,7 +1073,7 @@ Accessibility is a major focus of this application in many ways with this versio
 
 ## Troubleshooting
 
-Jest prints `A worker process has failed to exit gracefully` at the end of a run. This is a teardown leak in the React Native test environment, not a test failure, and it is why the `test:ci` script and the coverage command above pass `--forceExit`.
+If Jest ever prints `A worker process has failed to exit gracefully` at the end of a run, it is a teardown leak in the React Native test environment, not a test failure; Jest stops the worker and still exits. The suite currently exits cleanly, so `test:ci` and `test:coverage` no longer pass `--forceExit`.
 
 A cold run with `--coverage` occasionally fails a suite or two on timing alone, because Babel instruments every file on the first pass. Re-running usually passes; if it does not, clear the Jest cache with
 
@@ -1094,7 +1091,7 @@ ESLint's React Compiler rules reject the older `useRef(new Animated.Value(0)).cu
 
 Import it from there and **not** from `react-native`. React Native exports a hook of the same name, but `react-native-web` does not re-export it, so the `react-native` import type-checks, passes the Jest suite, and bundles without complaint — then throws `useAnimatedValue is not a function` the moment the screen renders in a browser. `eslint.config.js` has a `no-restricted-imports` rule that fails the lint if anyone imports it from `react-native` again.
 
-The test output contains `SafeAreaView has been deprecated` warnings from React Native. These are noise from the current component implementation and do not fail the suite.
+Import `SafeAreaView` from `react-native-safe-area-context`, **not** from `react-native`. The React Native version is deprecated, does nothing on Android, and floods the test output with `SafeAreaView has been deprecated` warnings. `eslint.config.js` has a `no-restricted-imports` rule that fails the lint if anyone imports it from `react-native` again.
 
 Maestro can have issues specifically test 6 which uses the call button can have issues when certain emulators put icons over the call button other tests can also have issues when that same settings button goes over the light/dark mode button when those items are moved or are not there the maestro tests work perfectly so adjust that icon from the emulator accordingly. Note that icon is a byproduct of certain emulators and not the android OS itself.
 
@@ -1135,7 +1132,7 @@ Every feature of the web app can be used with the keyboard alone, as in the desk
 
 | Keys                          | Action                                                                                         |
 | ----------------------------- | ---------------------------------------------------------------------------------------------- |
-| `Ctrl + =`                    | Turn the focus indicator on or off. It is **off by default**, and the choice is remembered     |
+| `Ctrl + =`                    | Turn the large focus indicator (and arrow-key focus movement) on or off. It is **off by default**, and the choice is remembered; keyboard focus always shows a 2px ring either way |
 | Arrow keys                    | Move the focus indicator across the screen to the nearest control in that direction (↑ ↓ ← →), as in the desktop app. Only works while the focus indicator is on, and stays inside an open dialog |
 | `Enter`                       | Press the focused button; submits the sign-in form                                             |
 | `Tab` / `Shift + Tab`         | Move between controls. Inside an open dialog, focus is trapped in the dialog and returns to the button that opened it when it closes |
@@ -1370,14 +1367,16 @@ Either command prints a table per file in the terminal and writes these reports 
 
 The project's minimum requirement is **75%** coverage. `vitest.config.ts` enforces a stricter **95%** threshold for statements, branches, functions and lines, so the coverage command fails (non-zero exit code) if any of them drops below 95%.
 
-As of 2026-10-27 coverage of `src/` is:
+As of 2026-10-29 coverage of `src/` is (339 tests):
 
 | Metric     | Coverage            |
 | ---------- | ------------------- |
-| Statements | 99.17% (957 / 965)  |
-| Branches   | 95.6% (588 / 615)   |
-| Functions  | 99.73% (371 / 372)  |
-| Lines      | 99.73% (759 / 761)  |
+| Statements | 99.69% (967 / 970)  |
+| Branches   | 98.04% (603 / 615)  |
+| Functions  | 100% (373 / 373)    |
+| Lines      | 100% (767 / 767)    |
+
+The branches left are deliberate: guards for an element that is always there (`focus.ts`, `Messages.tsx`, the notifications panel's focus), fallbacks for hard-coded data, a Face ID cancel that races the result, and the notification panel's "You're all caught up", which today's data can't reach (the schedule always has an appointment still to come).
 
 Only the Vitest tests count towards coverage. The Playwright tests run against the production build in a separate browser, so they are not measured.
 
@@ -1460,7 +1459,7 @@ which prints `canvas ok true`. Then run `npm run test:run` again: the "Not imple
 
 ### End-to-end (E2E) testing with Playwright
 
-The E2E tests use [Playwright Test](https://playwright.dev/docs/intro) (`@playwright/test`, version 1.64) to check the finished app the way a person uses it: in a real Chromium browser, with real CSS, layout, routing between the HTML pages and `localStorage`. They complement the Vitest tests, which run in jsdom and cannot see layout or styles.
+The E2E tests use [Playwright Test](https://playwright.dev/docs/intro) (`@playwright/test`, version 1.64) to check the finished app the way a person uses it: in real browsers (Chromium, Chrome, Edge, Firefox and WebKit, the engine behind Safari), with real CSS, layout, routing between the HTML pages and `localStorage`. They complement the Vitest tests, which run in jsdom and cannot see layout or styles.
 
 #### First-time setup
 
@@ -1469,8 +1468,10 @@ Playwright is already in `devDependencies`, so `npm install` installs the test r
 ```
 cd CareConnectWeb
 npm install
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 ```
+
+`npm run test:e2e` runs the quick check (Chromium, desktop and Pixel 7). `npm run test:e2e:browsers` runs every browser: Chromium, Firefox, WebKit, the installed Google Chrome and Microsoft Edge, and the Pixel 7 and iPhone 14 layouts. Every run builds the app and serves it fresh (`reuseExistingServer: false` in `playwright.config.ts`): a leftover `vite preview` from an earlier run would otherwise be reused and the tests would check an old `dist/`. As of 2026-10-29, 249 browser tests pass in all seven projects.
 
 The browser is saved outside the project (on Windows in `%LOCALAPPDATA%\ms-playwright`), so it is not committed and is shared by every project on the machine. On Linux (including CI) use `npx playwright install --with-deps chromium`, which also installs the system libraries Chromium needs.
 
@@ -1664,7 +1665,20 @@ On every size a floating **?** button opens a short guide to the controls. An op
 
 The automated accessibility tests (`npm run test:a11y`) scan every page with axe-core against WCAG 2.2 A / AA and axe's best-practice rules, at phone, tablet and desktop sizes. They also check keyboard use, focus handling, labels and live announcements.
 
-Colour contrast needs a real browser. With the application running, scan each page with the [axe DevTools](https://www.deque.com/axe/devtools/) browser extension or the **Lighthouse** tab in Chrome DevTools. Do this at the phone, tablet and desktop widths, in both light and dark themes.
+jsdom can't measure colour, so `e2e/a11y.spec.ts` (`npm run test:e2e:a11y`, and part of every browser run) repeats the axe scan in real browsers, where contrast and visibility rules run: every page in the dark and light themes, plus the missed-dose and SOS confirmations, the call screen and sign-in errors. With real key presses it also checks that keyboard focus is visible, that Tab stays inside a confirmation, that Escape closes the account menu, notifications panel and confirmations and returns focus to the control that opened them, and that the skip link moves focus to the content. As of 2026-10-29, axe reports **0 violations** on every page in both themes, in every browser.
+
+`npm run lighthouse` builds the app and runs [Lighthouse](https://developer.chrome.com/docs/lighthouse) on all 10 pages, writing HTML reports to `reports/lighthouse/` and failing if any accessibility score is under 90. As of 2026-10-29 every page scores **100** for accessibility and best practices (performance 90–100; the 404 page's SEO score is 54 because it is deliberately `noindex`).
+
+For the manual checks, run the app (`npm run preview`) and scan each page with the [axe DevTools](https://www.deque.com/axe/devtools/) and [WAVE](https://wave.webaim.org/extension/) extensions, at phone, tablet and desktop widths in both themes.
+
+**Fixed while adding these tests:** Escape closed the account menu and notifications panel but left focus on the page instead of their buttons; each page started in the dark theme and faded to a saved light theme after loading (each HTML file now applies the saved theme before the first paint); and keyboard focus was invisible until the focus indicator was turned on (below). Two E2E tests had gone stale (a renamed "Open menu" button, a `localhost`-only URL) without failing, because an old preview server kept serving an old build.
+
+#### Browser-specific notes
+
+- **Safari: Tab skips links.** Safari's Tab visits only form controls by default; links, including the skip links, need Option + Tab, or "Press Tab to highlight each item" in Safari's settings. This is Safari's behaviour on every site. The WebKit test focuses the skip link directly and checks that it still moves focus to the content.
+- **WebKit on Windows** occasionally stalls inside an axe scan (normally about 1 second; now and then 50 seconds or more), mostly when several WebKit instances run at once: about 1 run in 20 with four workers, and no failures in 84 scans with one. The cause wasn't found; it was seen only with Playwright's Windows build of WebKit, so check real Safari on a Mac. The WebKit projects retry once, and Playwright reports such a test as "flaky" rather than hiding it.
+- **Firefox and `localhost`.** `vite preview` was listening only on IPv6 (`::1`) while Firefox sometimes tried IPv4 for `localhost`, so pages failed to load when many tests ran at once. The test server now uses `127.0.0.1`.
+- **Chrome and Edge: `Ctrl + N`** (see Known Issues).
 
 ## Security Notes
 
@@ -1676,10 +1690,9 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 ## Known Issues / Limitations
 
-- No backend/API integration. All data is static/in-memory, so sent messages, logged symptoms and Account changes reset on reload.
+- No backend/API integration. Messages, symptoms, doses and Account changes are saved only in this browser's `localStorage` (see Security Notes); signing out resets them to the demo data.
 - Profile and emergency contact editing on the Account page are not built yet; they show a "coming soon" message.
-- The Playwright end-to-end tests run in Chromium only (desktop and Pixel 7 phone sizes); Firefox and WebKit are not tested yet. Colour contrast is still checked manually in a browser.
-- The focus indicator is off until it is turned on with `Ctrl + =` (or on the Account page), as the design asks. Until then keyboard focus is not visible, which does not meet WCAG 2.4.7 (Focus Visible).
+- Keyboard focus always shows a 2px ring (WCAG 2.4.7, Focus Visible), as in the desktop app. The design's focus indicator setting (`Ctrl + =`, or on the Account page) is off by default; turning it on makes the ring 4px and lets the arrow keys move focus.
 - `Ctrl + =` replaces the browser's own `Ctrl + =` zoom; zoom in with `Ctrl + +` (`Ctrl + Shift + =`, or the numpad `+`) instead.
 - Chrome and Edge keep `Ctrl + N` for opening a new window in a normal browser tab, so that shortcut only reaches the app when it is installed as a PWA (its own window) or in browsers that pass it through.
 - `Ctrl + Shift` + letter is left to the browser (for example `Ctrl + Shift + I` for developer tools).
@@ -1826,10 +1839,17 @@ Colour contrast needs a real browser. With the application running, scan each pa
 
 ## Justin
 
-- 
+- Implemented performance optimizations for the web app: route code splitting, lazy loading for the call screen, voice commands and action history, a separate vendor chunk, and WebP landing images in three sizes (up to 85% smaller)
+- Added the planned PWA features to the application
+- Ran axe DevTools audits on every page in light and dark mode and fixed all color contrast and label issues
+- Compiled most of the documentation for this week
+- Updated the README with the performance optimizations section and the new features
 
 ## Ian
 
-- 
+- Handled + improved web test functionality
+- Improved existing web branch test coverage to 95% minimum
+- Included minimum 95% coverage test enforcement in web build
+- Patched issues with existing web tests to reduce timing issues
 
 ### AI Disclosure: The code and parts of the README files in this project were written with the help of Figma Make, Claude Opus 5, and Claude Sonnet 5 many of the screens were adapted from screens written with Figma Make and Claude Opus 5 as well with Figma and Claude working to translate the screens into code which was then edited and check by the Team in order to better reflect the project. The code and files have been subject to changes by Team 7 and all content is to be reviewed by Team 7 before submission.

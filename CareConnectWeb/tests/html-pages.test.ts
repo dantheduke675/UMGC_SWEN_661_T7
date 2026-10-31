@@ -23,6 +23,25 @@ describe('HTML page files', () => {
     expect(html).toContain('<noscript>')
   })
 
+  it.each(PAGES)('%s.html applies the saved theme before the first paint', page => {
+    const html = read(`${page}.html`)
+    const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1]
+    expect(script).toBeDefined()
+    // Runs before the app's module script, so there's no flash of the wrong theme
+    expect(html.indexOf('<script>')).toBeLessThan(html.indexOf('<script type="module"'))
+    for (const [saved, expected] of [['light', 'light'], ['dark', 'dark'], ['purple', 'dark'], [null, 'dark']] as const) {
+      const root = { dataset: { theme: 'dark' } }
+      new Function('localStorage', 'document', script!)({ getItem: () => saved }, { documentElement: root })
+      expect(root.dataset.theme).toBe(expected)
+    }
+    // Storage that throws (blocked site data) leaves the default in place
+    const root = { dataset: { theme: 'dark' } }
+    expect(() =>
+      new Function('localStorage', 'document', script!)({ getItem: () => { throw new Error('blocked') } }, { documentElement: root }),
+    ).not.toThrow()
+    expect(root.dataset.theme).toBe('dark')
+  })
+
   it.each(PAGES.filter(p => p !== '404'))('%s.html has a route and a matching <title>', page => {
     const path = `/${page}.html`
     expect(routePaths()).toContain(path)

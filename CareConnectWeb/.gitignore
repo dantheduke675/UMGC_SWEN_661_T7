@@ -30,3 +30,6 @@ bundle-stats.html
 # Playwright output
 playwright-report
 test-results
+
+# Lighthouse reports (npm run lighthouse)
+reports

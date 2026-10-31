@@ -311,7 +311,7 @@ void main() {
         'Call Dr. Sarah Chen',
         'Send message',
         'Scroll up',
-        'Mark Metformin at 8:00 AM as taken',
+        'I took this: Metformin at 8:00 AM',
       ]) {
         expect(_meaningful(label), isTrue, reason: '"$label" must be accepted');
       }

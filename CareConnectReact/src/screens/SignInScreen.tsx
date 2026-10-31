@@ -8,11 +8,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   useWindowDimensions,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { AuthBtn, AuthField, ThemeToggleBtn } from '../components/AuthComponents';
 

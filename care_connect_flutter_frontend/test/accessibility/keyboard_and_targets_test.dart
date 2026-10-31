@@ -117,16 +117,20 @@ void main() {
 
   group('Flutter AccessibilityGuideline floor', () {
     for (final screen in allScreens) {
-      testWidgets('${screen.name}: iOS targets, labels, contrast',
-          (tester) async {
-        final handle = tester.ensureSemantics();
-        await pumpScreen(tester, screen);
-        await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
-        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-        await expectLater(tester, meetsGuideline(textContrastGuideline));
-        await disposeScreen(tester);
-        handle.dispose();
-      });
+      // Both themes: contrast in particular can pass in one and fail in the other
+      for (final isDark in const [true, false]) {
+        testWidgets(
+            '${screen.name} (${isDark ? 'dark' : 'light'}): iOS targets, labels, contrast',
+            (tester) async {
+          final handle = tester.ensureSemantics();
+          await pumpScreen(tester, screen, isDark: isDark);
+          await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+          await disposeScreen(tester);
+          handle.dispose();
+        });
+      }
     }
   });
 

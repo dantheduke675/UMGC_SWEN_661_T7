@@ -140,6 +140,29 @@ void main() {
       expect(find.text('Breathing'), findsOneWidget);
     });
 
+    testWidgets('a newly logged symptom is scrolled into view on a short screen', (tester) async {
+      await pumpScreen(tester, buildTestApp(child: const SymptomsScreen()));
+      // Short, as in a landscape window or with large text: reaching Submit
+      // scrolls Recent logs (where the new entry goes, at the top) off screen
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Log a symptom'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Breathing'));
+      await tester.pumpAndSettle();
+      final submit = find.text('Log symptom');
+      await tester.ensureVisible(submit);
+      await tester.pumpAndSettle();
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+
+      // On screen and unobscured, not just built somewhere in the list
+      expect(find.text('Breathing').hitTestable(), findsOneWidget,
+          reason: 'the new entry was logged out of sight');
+    });
+
     testWidgets('logging a symptom adds an undoable action, and undoing it removes the log', (tester) async {
       await pumpScreen(tester, buildTestApp(child: const SymptomsScreen()));
 

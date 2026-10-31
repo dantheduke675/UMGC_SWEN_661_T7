@@ -22,7 +22,12 @@ export function NotificationsButton() {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
   const ref = useClickOutside<HTMLDivElement>(close, open)
-  useEscapeKey(close, open)
+  const bell = useRef<HTMLButtonElement>(null)
+  // Escape also puts focus back on the bell, so it isn't lost with the panel
+  useEscapeKey(() => {
+    close()
+    bell.current?.focus()
+  }, open)
 
   const nextDose = dosesByTime.find(d => doseLog[d.key] === undefined)
   const nextVisit = schedule.find(s => s.type === 'appointment' && !s.done)
@@ -37,6 +42,7 @@ export function NotificationsButton() {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={bell}
         onClick={() => setOpen(o => !o)}
         aria-haspopup="dialog"
         aria-expanded={open}
