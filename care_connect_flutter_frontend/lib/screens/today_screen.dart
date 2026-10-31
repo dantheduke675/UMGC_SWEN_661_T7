@@ -321,9 +321,11 @@ class _MedCard extends StatelessWidget {
           // Take / undo-take button. The on-screen text repeats on every card,
           // so the accessible name names the dose it applies to (SC 4.1.2).
           CTappable(
+            // Starts with the button's visible text, so it works with voice control
+            // ("tap I took this"), as in the web, desktop and React Native apps
             label: isTaken
-                ? 'Undo: mark ${slot.med.name} at ${slot.time} as not taken'
-                : 'Mark ${slot.med.name} at ${slot.time} as taken',
+                ? 'Taken, tap to undo: ${slot.med.name} at ${slot.time}'
+                : 'I took this: ${slot.med.name} at ${slot.time}',
             borderRadius: BorderRadius.circular(14),
             onTap: isTaken ? onUntake : onTake,
             child: Container(

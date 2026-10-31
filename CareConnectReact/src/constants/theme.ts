@@ -40,7 +40,9 @@ export const dark: ColorScheme = {
   muted:       '#828DA1',
   link:        '#59AD9E',
   primary:     '#357C6F',
-  primaryText: '#5D968C',
+  // Text-safe green: 4.5:1 even on the pale primary tints it sits on (up to '21'),
+  // such as the Taken badge and the Care recipient badge
+  primaryText: '#6C9F96',
   danger:      '#D66C6C',
 };
 
@@ -55,7 +57,8 @@ export const light: ColorScheme = {
   muted:       '#626A78',
   link:        '#2D7567',
   primary:     '#2D7567',
-  primaryText: '#2D7567',
+  // Text-safe green: 4.5:1 even on the pale primary tints it sits on (up to '21')
+  primaryText: '#29695D',
   danger:      '#C53030',
 };
 
@@ -93,28 +96,48 @@ function contrastRatio(hexA: string, hexB: string): number {
 }
 
 /**
+ * A see-through fill a piece of text sits on, such as a chip's pale tint:
+ * `color` laid over the scheme's backgrounds at `alpha` (0–1). Without
+ * `color` the tint is the text colour itself, as in CChip.
+ */
+export interface Tint {
+  color?: string;
+  alpha: number;
+}
+
+// `top` at `alpha` laid over the solid `bottom`
+function blend(top: string, bottom: string, alpha: number): string {
+  const t = hexToRgb(top);
+  const b = hexToRgb(bottom);
+  return rgbToHex([0, 1, 2].map(ch => t[ch] * alpha + b[ch] * (1 - alpha)) as [number, number, number]);
+}
+
+/**
  * Returns `hex` unchanged if it already reads at 4.5:1 against every
  * background in `scheme`; otherwise mixes it toward white (dark schemes) or
  * black (light schemes) until it does, so accent hues stay legible as text
  * in both themes without needing a hand-picked value per hue per theme.
+ * Pass `tint` when the text sits on a tinted fill: contrast is then measured
+ * against that fill as it actually appears on each background.
  */
-export function accessibleAccentText(hex: string, scheme: ColorScheme): string {
+export function accessibleAccentText(hex: string, scheme: ColorScheme, tint?: Tint): string {
   const backgrounds = [scheme.bg, scheme.surface, scheme.surface2];
   const isDarkScheme = relativeLuminance(hexToRgb(scheme.bg)) < 0.5;
   const mixTarget: [number, number, number] = isDarkScheme ? [255, 255, 255] : [0, 0, 0];
 
+  const worstContrast = (text: string) =>
+    Math.min(...backgrounds.map(bg => contrastRatio(text, tint ? blend(tint.color ?? text, bg, tint.alpha) : bg)));
+
+  if (worstContrast(hex) >= 4.5) return hex;
+
   const base = hexToRgb(hex);
-  const worstContrast = () => Math.min(...backgrounds.map(bg => contrastRatio(rgbToHex(mixed), bg)));
-
-  let mixed = base;
-  if (Math.min(...backgrounds.map(bg => contrastRatio(hex, bg))) >= 4.5) return hex;
-
+  let mixed = hex;
   for (let i = 1; i <= 100; i++) {
     const t = i / 100;
-    mixed = [0, 1, 2].map(ch => base[ch] + (mixTarget[ch] - base[ch]) * t) as [number, number, number];
-    if (worstContrast() >= 4.5) break;
+    mixed = rgbToHex([0, 1, 2].map(ch => base[ch] + (mixTarget[ch] - base[ch]) * t) as [number, number, number]);
+    if (worstContrast(mixed) >= 4.5) break;
   }
-  return rgbToHex(mixed);
+  return mixed;
 }
 
 /**

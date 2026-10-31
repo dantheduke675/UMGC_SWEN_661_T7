@@ -3,7 +3,8 @@
  * and (critically) the call button that starts a CallingScreen session.
  */
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { FlatList } from 'react-native';
+import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import MsgThreadScreen from '../src/screens/MsgThreadScreen';
 import { contactById, threadById } from '../src/constants/data';
 import { dark } from '../src/constants/theme';
@@ -68,6 +69,35 @@ describe('MsgThreadScreen', () => {
     await fireEvent(input, 'submitEditing');
 
     expect(screen.getByText('Feeling great today!')).toBeTruthy();
+  });
+
+  describe('keeps the newest message in view', () => {
+    let scrollToEnd: jest.SpyInstance;
+    beforeEach(() => {
+      scrollToEnd = jest.spyOn(FlatList.prototype, 'scrollToEnd');
+    });
+    afterEach(() => scrollToEnd.mockRestore());
+
+    it('scrolls to the end, animated, after a message is sent', async () => {
+      await render(<MsgThreadScreen threadId={1} scheme={dark} />);
+      await fireEvent.changeText(screen.getByLabelText('Message'), 'On my way');
+      scrollToEnd.mockClear();
+
+      await fireEvent.press(screen.getByRole('button', { name: 'Send message' }));
+      // After the new bubble is in the list (next animation frame)
+      await act(() => jest.runOnlyPendingTimers());
+      expect(scrollToEnd).toHaveBeenCalledWith({ animated: true });
+    });
+
+    it('jumps to the end whenever the list grows (opening the thread, new messages)', async () => {
+      const thread = threadById(1);
+      await render(<MsgThreadScreen threadId={1} scheme={dark} />);
+      scrollToEnd.mockClear();
+
+      // Bubbles up from a message to the list, as a real layout change does
+      await fireEvent(screen.getByText(thread.messages[0].text), 'contentSizeChange', 390, 1600);
+      expect(scrollToEnd).toHaveBeenCalledWith({ animated: false });
+    });
   });
 
   it('clears the input after sending', async () => {

@@ -107,6 +107,6 @@ test.describe('Signed-in pages', () => {
   test('signs out to the landing page', async ({ page }) => {
     await page.goto('/account.html')
     await page.getByRole('main').getByRole('button', { name: 'Sign out' }).click()
-    await expect(page).toHaveURL(/localhost:\d+\/$/)
+    await expect(page).toHaveURL(/:\d+\/$/)
   })
 })

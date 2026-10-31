@@ -43,6 +43,8 @@ describe('Notifications panel (top bar bell)', () => {
     await user.click(bell)
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
+    // Focus goes back to the bell rather than being lost with the panel
+    expect(bell).toHaveFocus()
     await user.click(bell)
     await user.click(screen.getByRole('main'))
     expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()

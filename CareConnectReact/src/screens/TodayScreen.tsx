@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { ColorScheme, dark, accessibleAccentText } from '../constants/theme';
+import { ColorScheme, dark, accessibleAccentText, tokens } from '../constants/theme';
 import { buildSlots, patient, MedSlot } from '../constants/data';
 import {
   SectionLabel,
@@ -49,7 +49,7 @@ function ProgressCard({
         <Text style={styles.progressLabel}>{"TODAY'S MEDICATIONS"}</Text>
         <Text style={styles.progressCount}>{taken} of {total} taken</Text>
         <View style={{ height: 14 }} />
-        <LinearProgressBar value={total > 0 ? taken / total : 0} />
+        <LinearProgressBar value={total > 0 ? taken / total : 0} label="Medications taken today" />
       </View>
       <Text style={styles.progressPct}>{pct}%</Text>
     </View>
@@ -80,7 +80,9 @@ function AppointmentCard({ scheme }: { scheme: ColorScheme }) {
       <View
         style={styles.apptTimeBadge}
       >
-        <Text style={[styles.apptTimeText, { color: accessibleAccentText('#F59E0B', scheme) }]}>2:30 PM</Text>
+        <Text style={[styles.apptTimeText, { color: accessibleAccentText('#F59E0B', scheme, { color: '#F59E0B', alpha: 0x21 / 255 }) }]}>
+          2:30 PM
+        </Text>
       </View>
     </View>
   );
@@ -147,9 +149,15 @@ function MedCard({
         ]}
         accessible
         accessibilityRole="button"
-        accessibilityLabel={`${slot.med.name}, ${slot.med.dose}, ${slot.time}`}
+        // Starts with the button's visible text, so "I took this" works with voice
+        // control (and matches the web and desktop apps)
+        accessibilityLabel={
+          isTaken
+            ? `${slot.med.name} ${slot.med.dose}, ${slot.time}: taken`
+            : `I took this: ${slot.med.name} ${slot.med.dose}, ${slot.time}`
+        }
         accessibilityHint={isTaken ? undefined : 'Marks this medication as taken'}
-        accessibilityState={{ disabled: isTaken }}
+        aria-disabled={isTaken}
       >
         <Text
           style={[
@@ -324,7 +332,8 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize:      11,
     fontWeight:    '700',
-    color:         'rgba(255,255,255,0.7)',
+    // Full white: at 70% it was 3.3:1 on the green card (11px text needs 4.5:1)
+    color:         tokens.white,
     letterSpacing: 1.2,
   },
   progressCount: {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import { useSignOut } from '../actions'
 import { useAppState } from '../appStateContext'
@@ -133,7 +133,14 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
   const menuRef = useClickOutside<HTMLDivElement>(() => setOpen(false), open)
   const undoable = history.filter(h => !h.undone).length
 
-  useEscapeKey(() => setOpen(false), open)
+  const menuButton = useRef<HTMLButtonElement>(null)
+
+  // Escape closes the menu and puts focus back on its button (the focused menu
+  // item is about to unmount, which would otherwise drop focus to the page)
+  useEscapeKey(() => {
+    setOpen(false)
+    menuButton.current?.focus()
+  }, open)
 
   return (
     <header className="flex min-h-[68px] items-center gap-2 border-b border-line bg-surface py-2.5 pr-3 pl-6 md:gap-3.5 md:pr-[18px] lg:min-h-[76px] lg:px-8">
@@ -161,6 +168,7 @@ export function TopBar({ title, onVoice, onSos, onEyeTracking }: { title: string
         </button>
         <div ref={menuRef} className="relative">
           <button
+            ref={menuButton}
             onClick={() => setOpen(o => !o)}
             aria-haspopup="menu"
             aria-expanded={open}
