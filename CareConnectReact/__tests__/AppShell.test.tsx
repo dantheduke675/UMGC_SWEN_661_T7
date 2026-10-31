@@ -59,6 +59,48 @@ describe('AppShellNavigator', () => {
     expect(screen.getByText(`${threads.length} conversations`)).toBeTruthy();
   });
 
+  it.each([
+    ['Schedule', 'Schedule'],
+    ['Symptoms', 'Recent logs'],
+    ['Account', 'Care team'],
+  ])('the %s tab shows its screen', async (tab, sectionHeading) => {
+    await render(<AppShellNavigator />);
+    await fireEvent.press(screen.getByRole('tab', { name: tab }));
+
+    expect(screen.getByRole('header', { name: tab })).toBeTruthy();
+    expect(screen.getByRole('header', { name: sectionHeading })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: tab })).toBeSelected();
+  });
+
+  it('the Back button in a thread returns to the Messages list', async () => {
+    await render(<AppShellNavigator />);
+    await fireEvent.press(screen.getByText('Messages'));
+    await fireEvent.press(screen.getByText(contactById(threads[0].contactId).name));
+    expect(screen.queryByText(`${threads.length} conversations`)).toBeNull();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByText(`${threads.length} conversations`)).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Messages' })).toBeSelected();
+  });
+
+  it('Sign out on the Account tab returns to the landing screen', async () => {
+    const navigation = { reset: jest.fn() };
+    await render(<AppShellNavigator navigation={navigation} />);
+    await fireEvent.press(screen.getByRole('tab', { name: 'Account' }));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: 'Landing' }] });
+  });
+
+  it('messaging a care team member from the Account tab opens Messages', async () => {
+    await render(<AppShellNavigator />);
+    await fireEvent.press(screen.getByRole('tab', { name: 'Account' }));
+
+    await fireEvent.press(screen.getAllByRole('button', { name: /^Message / })[0]);
+    expect(screen.getByText(`${threads.length} conversations`)).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Messages' })).toBeSelected();
+  });
+
   it('hides the bottom nav and access bar while in a thread or on a call', async () => {
     await render(<AppShellNavigator />);
 

@@ -490,12 +490,19 @@
 }
 
 /*
-  Focus indicator: hidden until the user turns it on (Ctrl + = or Account >
-  Focus indicator); AppState sets data-focus-indicator on <html>. Not in a
-  layer, so it wins over component styles such as .auth-input.
+  Keyboard focus is always visible (WCAG 2.4.7), as in the desktop app: a 2px
+  ring by default. The Focus indicator setting (Ctrl + = or Account > Focus
+  indicator) makes it the larger 4px ring and turns on arrow-key navigation;
+  AppState sets data-focus-indicator on <html>. Not in a layer, so it wins over
+  component styles such as .auth-input.
 */
 :focus-visible {
-  outline: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+[tabindex='-1']:focus-visible,
+.focus-inset > li > :focus-visible {
+  outline-offset: -2px;
 }
 [data-focus-indicator='on'] :focus-visible {
   outline: 4px solid var(--focus);

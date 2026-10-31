@@ -5,7 +5,7 @@ test.describe('Phone layout', () => {
   test('opens the menu and navigates', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'phone layout only')
     await page.goto('/today.html')
-    await page.getByRole('button', { name: 'Expand sidebar' }).click()
+    await page.getByRole('button', { name: 'Open menu' }).click()
     await page.getByRole('link', { name: /^Schedule/ }).filter({ visible: true }).click()
     await expect(page).toHaveURL(/\/schedule\.html$/)
   })

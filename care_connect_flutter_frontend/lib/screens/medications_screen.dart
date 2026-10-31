@@ -286,9 +286,11 @@ class _MedCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: CTappable(
+                              // Starts with the button's visible text, so it works with voice control
+                              // ("tap I took this"), as in the web, desktop and React Native apps
                               label: isTaken
-                                  ? 'Undo: mark ${slot.med.name} at ${slot.time} as not taken'
-                                  : 'Mark ${slot.med.name} at ${slot.time} as taken',
+                                  ? 'Taken, tap to undo: ${slot.med.name} at ${slot.time}'
+                                  : 'I took this: ${slot.med.name} at ${slot.time}',
                               borderRadius: BorderRadius.circular(14),
                               onTap: isTaken ? onUntake : onTake,
                               child: Container(
@@ -317,7 +319,9 @@ class _MedCard extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: CTappable(
-                                label: 'Mark ${slot.med.name} at ${slot.time} as missed',
+                                label: isMissed
+                                    ? 'Missed: ${slot.med.name} at ${slot.time}'
+                                    : 'I missed this: ${slot.med.name} at ${slot.time}',
                                 hint: 'Asks you to confirm',
                                 borderRadius: BorderRadius.circular(14),
                                 onTap: onMissed,

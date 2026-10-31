@@ -10,8 +10,9 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { ColorScheme, dark, accessibleAccentText } from '../constants/theme';
+import { ColorScheme, dark } from '../constants/theme';
 import { CChip } from '../components/AppComponents';
+import { selectedButtonState } from '../constants/a11y';
 import { useScrollContext } from '../context/ScrollContext';
 
 // ── Static appointment data ───────────────────────────────────────────────────
@@ -100,7 +101,7 @@ function WeekStrip({
             accessible
             accessibilityRole="button"
             accessibilityLabel={a11yLabel}
-            accessibilityState={{ selected: isSel }}
+            {...selectedButtonState(isSel)}
           >
             <Text style={[styles.dayLetter, { color: isSel ? '#FFFFFF' : scheme.sub }]}>
               {DAY_LETTERS[i]}
@@ -143,7 +144,6 @@ function WeekStrip({
 function ApptCard({ appt, scheme }: { appt: Appt; scheme: ColorScheme }) {
   const meta  = TYPE_META[appt.type] ?? { color: '#6366F1', icon: '📅' };
   const col   = meta.color;
-  const textCol = accessibleAccentText(col, scheme);
 
   const a11yLabel = `${appt.title}, ${appt.subtitle}, ${appt.time}, ${appt.duration}${appt.confirmed ? '' : ', pending confirmation'}`;
 
@@ -163,13 +163,13 @@ function ApptCard({ appt, scheme }: { appt: Appt; scheme: ColorScheme }) {
         <Text style={[styles.apptTitle, { color: scheme.text }]}>{appt.title}</Text>
         <Text style={[styles.apptSub, { color: scheme.sub }]}>{appt.subtitle}</Text>
         <View style={styles.chipRow}>
-          <CChip label={appt.time}     color={textCol} />
+          <CChip label={appt.time}     color={col} scheme={scheme} />
           <View style={{ width: 6 }} />
-          <CChip label={appt.duration} color={scheme.sub} />
+          <CChip label={appt.duration} color={scheme.sub} scheme={scheme} />
           {!appt.confirmed && (
             <>
               <View style={{ width: 6 }} />
-              <CChip label="Pending" color={accessibleAccentText('#F59E0B', scheme)} />
+              <CChip label="Pending" color="#F59E0B" scheme={scheme} />
             </>
           )}
         </View>

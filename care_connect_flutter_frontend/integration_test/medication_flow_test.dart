@@ -57,9 +57,9 @@ void main() {
     // ── Take the first dose that is still outstanding ─────────────────────
     final slot = buildSlots().firstWhere(
         (s) => (slotStatuses[s.key] ?? SlotStatus.none) != SlotStatus.taken);
-    final takeName = 'Mark ${slot.med.name} at ${slot.time} as taken';
+    final takeName = 'I took this: ${slot.med.name} at ${slot.time}';
     final undoName =
-        'Undo: mark ${slot.med.name} at ${slot.time} as not taken';
+        'Taken, tap to undo: ${slot.med.name} at ${slot.time}';
 
     final before = takenDoses;
     await tapAndSettle(tester, byAccessibleName(takeName));
@@ -95,7 +95,7 @@ void main() {
     final slot = buildSlots().firstWhere(
         (s) => (slotStatuses[s.key] ?? SlotStatus.none) != SlotStatus.taken);
     await tapAndSettle(
-        tester, byAccessibleName('Mark ${slot.med.name} at ${slot.time} as taken'));
+        tester, byAccessibleName('I took this: ${slot.med.name} at ${slot.time}'));
     expect(slotStatuses[slot.key], SlotStatus.taken);
 
     // Leave the screen the action was performed on.
@@ -123,7 +123,7 @@ void main() {
 
     final slot = buildSlots().firstWhere(
         (s) => (slotStatuses[s.key] ?? SlotStatus.none) == SlotStatus.none);
-    final missName = 'Mark ${slot.med.name} at ${slot.time} as missed';
+    final missName = 'I missed this: ${slot.med.name} at ${slot.time}';
 
     await tapAndSettle(tester, byAccessibleName(missName));
 
@@ -154,10 +154,10 @@ void main() {
     final slot = buildSlots().firstWhere(
         (s) => (slotStatuses[s.key] ?? SlotStatus.none) != SlotStatus.taken);
     final undoName =
-        'Undo: mark ${slot.med.name} at ${slot.time} as not taken';
+        'Taken, tap to undo: ${slot.med.name} at ${slot.time}';
 
     await tapAndSettle(
-        tester, byAccessibleName('Mark ${slot.med.name} at ${slot.time} as taken'));
+        tester, byAccessibleName('I took this: ${slot.med.name} at ${slot.time}'));
 
     // Round-trip through two other tabs, then come back.
     await openTab(tester, 'Schedule');

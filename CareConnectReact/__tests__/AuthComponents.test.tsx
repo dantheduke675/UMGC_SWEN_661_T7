@@ -2,11 +2,13 @@
  * Component tests for src/components/AuthComponents.tsx.
  */
 import React from 'react';
+import { Animated } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import {
   AuthBtn,
   AuthField,
   AuthRoleTile,
+  AuthStatusRing,
   ThemeToggleBtn,
 } from '../src/components/AuthComponents';
 import { dark } from '../src/constants/theme';
@@ -79,6 +81,38 @@ describe('AuthRoleTile', () => {
   it('renders the caregiver label', async () => {
     await render(<AuthRoleTile role="caregiver" scheme={dark} />);
     expect(screen.getByText(/Caregiver/)).toBeTruthy();
+  });
+});
+
+describe('AuthStatusRing', () => {
+  let loop: jest.SpyInstance;
+  const stop = jest.fn();
+  const start = jest.fn();
+  beforeEach(() => {
+    stop.mockClear();
+    start.mockClear();
+    loop = jest.spyOn(Animated, 'loop').mockReturnValue({ start, stop, reset: jest.fn() });
+  });
+  afterEach(() => loop.mockRestore());
+
+  it('stays still when not scanning', async () => {
+    await render(<AuthStatusRing scheme={dark} />);
+    expect(loop).not.toHaveBeenCalled();
+  });
+
+  it('pulses while scanning, and stops the pulse when it goes away', async () => {
+    const { unmount } = await render(<AuthStatusRing scheme={dark} scanning />);
+    expect(loop).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledTimes(1);
+
+    await unmount();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops pulsing when scanning ends', async () => {
+    const { rerender } = await render(<AuthStatusRing scheme={dark} scanning />);
+    await rerender(<AuthStatusRing scheme={dark} scanning={false} />);
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 });
 

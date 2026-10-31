@@ -108,7 +108,7 @@ function MedCard({
                 {slot.med.name}
               </Text>
               <View style={{ width: 8 }} />
-              <CChip label={slot.med.category} color={scheme.primaryText} />
+              <CChip label={slot.med.category} color={scheme.primaryText} scheme={scheme} />
             </View>
             <Text style={[styles.medDose, { color: scheme.sub }]}>
               {slot.med.dose} · {slot.time}
@@ -140,7 +140,7 @@ function MedCard({
             accessibilityRole="button"
             accessibilityLabel={`${slot.med.name}, ${isTaken ? 'Taken' : 'I took this'}`}
             accessibilityHint={isTaken ? undefined : 'Marks this dose as taken'}
-            accessibilityState={{ disabled: isTaken }}
+            aria-disabled={isTaken}
           >
             <Text
               style={[
@@ -171,7 +171,7 @@ function MedCard({
               accessibilityRole="button"
               accessibilityLabel={`${slot.med.name}, ${isMissed ? 'Missed' : 'I missed this'}`}
               accessibilityHint={isMissed ? undefined : 'Opens a confirmation to mark this dose as missed'}
-              accessibilityState={{ disabled: isMissed }}
+              aria-disabled={isMissed}
             >
               <Text
                 style={[styles.actionBtnText, { color: scheme.danger }]}

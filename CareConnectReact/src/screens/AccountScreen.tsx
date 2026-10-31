@@ -127,7 +127,7 @@ function ThemeSwitch({
       accessible
       accessibilityRole="switch"
       accessibilityLabel="Dark mode"
-      accessibilityState={{ checked: isDark }}
+      aria-checked={isDark}
     >
       <Animated.View
         style={[styles.switchTrack, { backgroundColor: trackColor as any }]}

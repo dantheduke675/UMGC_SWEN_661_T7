@@ -111,8 +111,11 @@ describe('App shell: theme and account', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
 
     await user.click(profile)
+    expect(within(screen.getByRole('menu')).getAllByRole('menuitem')[0]).toHaveFocus()
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    // Focus goes back to the menu button rather than being lost with the menu
+    expect(profile).toHaveFocus()
   })
 
   it('signs out from the sidebar to the landing page', async () => {

@@ -53,8 +53,10 @@ void main() {
         reason: 'the chosen symptom does not report itself as selected');
     expect(tester.widget<CTappable>(submit).onTap, isNotNull);
 
-    // Drag the severity slider to its maximum.
-    await tester.drag(find.byType(Slider), const Offset(500, 0));
+    // Drag the severity slider to its maximum: from its centre by its full
+    // width, so it reaches the end on a phone and in a wide desktop window.
+    final slider = find.byType(Slider);
+    await tester.drag(slider, Offset(tester.getSize(slider).width, 0));
     await tester.pumpAndSettle();
 
     await tapAndSettle(tester, byAccessibleName('Log symptom'));

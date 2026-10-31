@@ -31,6 +31,11 @@ module.exports = defineConfig([
           name: 'react-native',
           importNames: ['useAnimatedValue'],
           message: "react-native-web does not export this. Import { useAnimatedValue } from the local 'hooks/useAnimatedValue' instead.",
+        }, {
+          // Deprecated in React Native and a no-op on Android.
+          name: 'react-native',
+          importNames: ['SafeAreaView'],
+          message: "SafeAreaView is deprecated in react-native. Import { SafeAreaView } from 'react-native-safe-area-context' instead.",
         }],
       }],
     },
