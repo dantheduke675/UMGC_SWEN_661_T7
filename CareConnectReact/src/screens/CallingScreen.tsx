@@ -13,10 +13,11 @@ import {
   Easing,
   StyleSheet,
   useWindowDimensions,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { contactById } from '../constants/data';
+import { selectedButtonState } from '../constants/a11y';
 
 // ── Pulse ring ────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ function CtrlBtn({
       accessible
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected: active }}
+      {...selectedButtonState(active)}
     >
       <View
         style={[

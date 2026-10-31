@@ -10,13 +10,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   useWindowDimensions,
   StatusBar,
   Animated,
   Easing,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { dark } from '../constants/theme';
 import { useTheme } from '../context/ThemeContext';

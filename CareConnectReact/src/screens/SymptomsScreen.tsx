@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { ColorScheme, dark, accessibleAccentText, accessibleFillForWhiteText } from '../constants/theme';
 import { useScrollContext } from '../context/ScrollContext';
+import { selectedButtonState } from '../constants/a11y';
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ function SeverityPicker({
             accessible
             accessibilityRole="radio"
             accessibilityLabel={`Severity ${v} of 5`}
-            accessibilityState={{ selected: v === value }}
+            aria-checked={v === value}
           >
             {v === value && (
               <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF' }}>
@@ -159,7 +160,7 @@ function LogCard({
         accessible
         accessibilityRole="button"
         accessibilityLabel="Log a symptom"
-        accessibilityState={{ expanded }}
+        aria-expanded={expanded}
       >
         <View
           style={[styles.logCardPlus, { backgroundColor: scheme.primary }]}
@@ -201,7 +202,7 @@ function LogCard({
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel={opt.label}
-                  accessibilityState={{ selected: isSel }}
+                  {...selectedButtonState(isSel)}
                 >
                   <Text
                     style={{ fontSize: 16 }}
@@ -240,7 +241,7 @@ function LogCard({
             accessibilityRole="button"
             accessibilityLabel="Log symptom"
             accessibilityHint={selected ? undefined : 'Choose a symptom above first'}
-            accessibilityState={{ disabled: !selected }}
+            aria-disabled={!selected}
           >
             <Text
               style={[
@@ -265,7 +266,6 @@ function LogTile({ log, scheme }: { log: SymptomLog; scheme: ColorScheme }) {
     log.severity === 3 ? '#F59E0B' :
     '#EF4444';
 
-  const textCol = accessibleAccentText(col, scheme);
 
   return (
     <View
@@ -290,7 +290,9 @@ function LogTile({ log, scheme }: { log: SymptomLog; scheme: ColorScheme }) {
           <Text style={[styles.logTileTime, { color: scheme.sub }]}>{log.time}</Text>
         </View>
         <View style={[styles.severityBadge, { backgroundColor: col + '1F' }]}>
-          <Text style={[styles.severityBadgeText, { color: textCol }]}>{log.severity}/5</Text>
+          <Text style={[styles.severityBadgeText, { color: accessibleAccentText(col, scheme, { color: col, alpha: 0x1f / 255 }) }]}>
+            {log.severity}/5
+          </Text>
         </View>
       </View>
       <View style={{ height: 10 }} />

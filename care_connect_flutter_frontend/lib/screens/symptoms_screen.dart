@@ -46,6 +46,10 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
   int _severity = 3;
   bool _showLogger = false;
 
+  // The entry logged most recently on this screen, brought into view once added
+  final _newestKey = GlobalKey();
+  _SymptomLog? _justLogged;
+
   void _logSymptom() {
     if (_selectedSymptom == null) return;
     final opt = _symptomOptions.firstWhere((o) => o.label == _selectedSymptom);
@@ -58,6 +62,7 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
     );
     setState(() {
       _logs.insert(0, entry);
+      _justLogged = entry;
       _selectedSymptom = null;
       _severity = 3;
       _showLogger = false;
@@ -72,6 +77,21 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
     );
     announceStatus(context,
         '${entry.name} logged at severity ${entry.severity} of 5');
+    // The Submit button is below the form, so the list is scrolled down when
+    // it's pressed; once the form folds away the new entry (at the top of
+    // Recent logs) can be out of sight. Show it, so the log visibly landed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final tile = _newestKey.currentContext;
+      if (!mounted || tile == null) return;
+      Scrollable.ensureVisible(
+        tile,
+        alignment: 0.5,
+        duration: MediaQuery.of(context).disableAnimations
+            ? Duration.zero
+            : const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   String _formatTime(DateTime d) {
@@ -128,6 +148,7 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
             const SizedBox(height: 10),
 
             ..._logs.map((log) => Padding(
+              key: identical(log, _justLogged) ? _newestKey : null,
               padding: const EdgeInsets.only(bottom: 12),
               child: _LogTile(log: log, scheme: scheme),
             )),

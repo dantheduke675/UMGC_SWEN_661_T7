@@ -29,14 +29,58 @@ tests in `tests/`). `tests/utils.tsx` renders the real routes in a memory
 router (`renderApp('/today.html')`). It also runs axe at a chosen device size:
 `simulateViewport` applies the Tailwind visibility classes for phone, tablet or
 desktop, because jsdom loads no CSS. Colour contrast is not checked in jsdom;
-check it in a browser with axe DevTools or Lighthouse.
+the browser tests below check it.
 
 `tests/setup.ts` fails any test that logs a console error or warning (React
 key or `act()` warnings, caught render errors and so on), so the suite also
 guards "no console errors". jsdom's own "Not implemented: canvas" notices,
 triggered by axe-core, are ignored because they do not come from the app.
 
-As of 2026-10-23: 14 files, 260 tests, all passing; about 98% line coverage of `src/`.
+As of 2026-10-29: 20 files, 339 tests, all passing; 100% line coverage of `src/`
+(`npm run test:coverage`, report in `coverage/`).
+
+### In real browsers (Playwright)
+
+The e2e tests in `e2e/` build the app and drive the production build
+(`vite preview`). Every run builds fresh, so a leftover preview server can't
+serve an old `dist/`.
+
+| Command                      | What it runs                                                   |
+| ---------------------------- | -------------------------------------------------------------- |
+| `npm run test:e2e`           | Chromium desktop and phone (the quick check)                    |
+| `npm run test:e2e:browsers`  | Every browser: Chromium, Chrome, Edge, Firefox, WebKit (Safari), plus Pixel 7 and iPhone 14 layouts |
+| `npm run test:e2e:a11y`      | Only `e2e/a11y.spec.ts`                                          |
+| `npm run lighthouse`         | Lighthouse on every page; HTML reports in `reports/lighthouse/`, fails under 90 accessibility |
+
+Chrome and Edge must be installed; the other engines come from
+`npx playwright install firefox webkit`.
+
+`e2e/a11y.spec.ts` runs axe-core (WCAG 2.2 A/AA and best practices) with real
+layout, so colour contrast is checked: every page in the dark and light themes,
+plus the missed-dose and SOS confirmations, the call screen and sign-in errors.
+It also checks focus management with real key presses: Tab and Shift + Tab stay
+inside a confirmation, Escape closes the account menu, the notifications panel
+and confirmations and puts focus back on the control that opened them, and the
+skip link is the first Tab stop and moves focus to the content.
+
+As of 2026-10-29: 249 browser tests passing in all seven projects; axe reports
+0 violations on every page in both themes; Lighthouse scores 100 for
+accessibility and best practices on all 10 pages (90–100 performance).
+
+### Browser-specific notes
+
+- **Safari: Tab skips links.** By default Safari's Tab only visits form
+  controls; links (including the skip links) need Option + Tab, or "Press Tab
+  to highlight each item" in Safari's settings. This is Safari's behaviour on
+  every site. The WebKit test focuses the skip link directly and checks it
+  still moves focus to the content.
+- **Chrome and Edge: Ctrl + N** opens a new window in a normal tab, so the
+  notifications shortcut only reaches the app when it's installed (see below).
+- **WebKit on Windows** occasionally stalls inside an axe scan (normally about 1 second; now and then 50 seconds or more), mostly when several WebKit instances run at once: about 1 run in 20 with four workers, and no failures in 84 scans with one. The cause wasn't found; it was seen only with Playwright's Windows build of WebKit, so check real Safari on a Mac. The WebKit projects retry once, and Playwright reports such a test as "flaky" rather than hiding it.
+- **Firefox and `localhost`.** The test server listens on `127.0.0.1`: Firefox
+  sometimes resolved `localhost` to IPv4 while `vite preview` was listening only
+  on IPv6 (`::1`), and pages failed to load under load.
+- **404 page SEO score (54)** is intended: the page is `noindex`.
 
 ## Stack
 
@@ -121,7 +165,7 @@ Every feature works from the keyboard. The shortcuts are defined in
 
 | Keys              | Action                                                        |
 | ----------------- | ------------------------------------------------------------- |
-| Ctrl + =          | Focus indicator on / off (off by default; remembered)         |
+| Ctrl + =          | Large focus indicator and arrow-key focus on / off (off by default; remembered). Focus always shows a 2px ring |
 | Arrow keys        | Move the focus indicator across the screen to the nearest control in that direction (only while it is on; stays inside an open dialog) |
 | Enter             | Press the focused button; submits the sign-in form            |
 | Tab / Shift + Tab | Move between controls; trapped inside open dialogs, focus returns to the opener on close |

@@ -48,10 +48,24 @@
     "lint": "expo lint .",
     "lint:fix": "expo lint . --fix",
     "test": "jest --watchAll",
-    "test:ci": "jest --forceExit"
+    "test:ci": "jest",
+    "test:coverage": "jest --coverage"
   },
   "private": true,
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "testTimeout": 20000,
+    "collectCoverageFrom": [
+      "App.tsx",
+      "src/**/*.{ts,tsx}"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 60,
+        "statements": 60,
+        "functions": 60,
+        "branches": 60
+      }
+    }
   }
 }

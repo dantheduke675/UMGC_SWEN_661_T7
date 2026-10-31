@@ -2,7 +2,7 @@
  * Component tests for src/components/AppComponents.tsx.
  */
 import React from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, StyleSheet } from 'react-native';
 import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import {
   CAvatarBadge,
@@ -13,7 +13,7 @@ import {
   SectionLabel,
   LinearProgressBar,
 } from '../src/components/AppComponents';
-import { dark } from '../src/constants/theme';
+import { dark, light } from '../src/constants/theme';
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -30,10 +30,55 @@ describe('CAvatarBadge', () => {
   });
 });
 
+// WCAG contrast of two '#RRGGBB' colours
+function contrast(a: string, b: string) {
+  const lum = (hex: string) => {
+    const [r, g, bl] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// '#RRGGBBAA' laid over a solid '#RRGGBB'
+function over(fill: string, base: string) {
+  const alpha = parseInt(fill.slice(7, 9), 16) / 255;
+  const ch = (hex: string, i: number) => parseInt(hex.slice(i, i + 2), 16);
+  return '#' + [1, 3, 5].map(i => Math.round(ch(fill, i) * alpha + ch(base, i) * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+}
+
+describe('primaryText token', () => {
+  // The green text colour sits on pale primary tints ('14' to '21') as well as plain cards
+  it.each([['dark', dark], ['light', light]] as const)('reads at 4.5:1 on every %s background and primary tint', (_, scheme) => {
+    for (const card of [scheme.bg, scheme.surface, scheme.surface2]) {
+      expect(contrast(scheme.primaryText, card)).toBeGreaterThanOrEqual(4.5);
+      for (const alpha of ['14', '1A', '1F', '21']) {
+        expect(contrast(scheme.primaryText, over(scheme.primary + alpha, card))).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+});
+
 describe('CChip', () => {
   it('renders its label', async () => {
-    await render(<CChip label="Pain" color="#357C6F" />);
+    await render(<CChip label="Pain" color="#357C6F" scheme={dark} />);
     expect(screen.getByText('Pain')).toBeTruthy();
+  });
+
+  // The accents the app's chips use (category, appointment types, pending)
+  it.each([
+    ['dark', dark], ['light', light],
+  ] as const)('label clears 4.5:1 against its own tinted fill on every %s background', async (_, scheme) => {
+    for (const color of [scheme.primaryText, '#6366F1', '#F59E0B', '#22C55E', '#EF4444', scheme.sub]) {
+      const { unmount } = await render(<CChip label="Chip" color={color} scheme={scheme} />);
+      const text = StyleSheet.flatten(screen.getByText('Chip').props.style).color as string;
+      const fill = StyleSheet.flatten(screen.getByText('Chip').parent!.props.style).backgroundColor as string;
+      for (const card of [scheme.bg, scheme.surface, scheme.surface2]) {
+        expect(contrast(text, over(fill, card))).toBeGreaterThanOrEqual(4.5);
+      }
+      await unmount();
+    }
   });
 });
 
@@ -142,7 +187,7 @@ describe('UndoHistoryPanel', () => {
 
 describe('LinearProgressBar', () => {
   it('renders without crashing for any value in [0, 1]', async () => {
-    await render(<LinearProgressBar value={0.5} />);
+    await render(<LinearProgressBar value={0.5} label="Progress" />);
     // Purely visual — just confirm it mounts without throwing.
     expect(screen.root).toBeTruthy();
   });
@@ -181,7 +226,7 @@ describe('accessibility', () => {
   });
 
   it('reports LinearProgressBar as a progressbar with the matching accessibility value', async () => {
-    await render(<LinearProgressBar value={0.5} />);
-    expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ min: 0, max: 100, now: 50 });
+    await render(<LinearProgressBar value={0.5} label="Progress" />);
+    expect(screen.getByRole('progressbar', { name: 'Progress' })).toHaveAccessibilityValue({ min: 0, max: 100, now: 50 });
   });
 });

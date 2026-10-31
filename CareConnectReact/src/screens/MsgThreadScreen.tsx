@@ -248,7 +248,7 @@ function InputRow({
         accessible
         accessibilityRole="button"
         accessibilityLabel="Send message"
-        accessibilityState={{ disabled: value.trim().length === 0 }}
+        aria-disabled={value.trim().length === 0}
       >
         <Text
           style={styles.sendBtnText}

@@ -90,17 +90,17 @@ describe('SymptomsScreen', () => {
       expect(chip).toBeSelected();
     });
 
-    it('exposes the severity picker as a radio group with one selected option', async () => {
+    it('exposes the severity picker as a radio group with one checked option', async () => {
       await renderScreen();
       await fireEvent.press(screen.getByText('Log a symptom'));
 
-      // Default severity is 3.
-      expect(screen.getByRole('radio', { name: 'Severity 3 of 5' })).toBeSelected();
-      expect(screen.getByRole('radio', { name: 'Severity 5 of 5' })).not.toBeSelected();
+      // Default severity is 3. Radios report "checked" (not "selected"), as screen readers expect.
+      expect(screen.getByRole('radio', { name: 'Severity 3 of 5' })).toBeChecked();
+      expect(screen.getByRole('radio', { name: 'Severity 5 of 5' })).not.toBeChecked();
 
       await fireEvent.press(screen.getByRole('radio', { name: 'Severity 5 of 5' }));
-      expect(screen.getByRole('radio', { name: 'Severity 5 of 5' })).toBeSelected();
-      expect(screen.getByRole('radio', { name: 'Severity 3 of 5' })).not.toBeSelected();
+      expect(screen.getByRole('radio', { name: 'Severity 5 of 5' })).toBeChecked();
+      expect(screen.getByRole('radio', { name: 'Severity 3 of 5' })).not.toBeChecked();
     });
 
     it('disables the submit button until a symptom is selected', async () => {
@@ -112,6 +112,25 @@ describe('SymptomsScreen', () => {
 
       await fireEvent.press(screen.getByText('Breathing'));
       expect(submit).toBeEnabled();
+    });
+  });
+
+  // The new entry's time, at the hours where 12-hour clocks go wrong
+  describe('time stamp of a new entry', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it.each([
+      [0, 5, 'Today · 12:05 AM'],
+      [9, 7, 'Today · 9:07 AM'],
+      [12, 30, 'Today · 12:30 PM'],
+      [15, 0, 'Today · 3:00 PM'],
+    ])('logged at %i:%i reads "%s"', async (h, m, expected) => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 29, h, m) });
+      await renderScreen();
+      await fireEvent.press(screen.getByText('Log a symptom'));
+      await fireEvent.press(screen.getByText('Breathing'));
+      await fireEvent.press(screen.getByText('Log symptom'));
+      expect(screen.getByText(expected)).toBeTruthy();
     });
   });
 });

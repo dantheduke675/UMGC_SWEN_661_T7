@@ -115,17 +115,19 @@ describe('TodayScreen', () => {
       const total = buildSlots().length;
       const now = Math.round((2 / total) * 100);
 
-      expect(screen.getByRole('progressbar')).toHaveAccessibilityValue({ min: 0, max: 100, now });
+      expect(screen.getByRole('progressbar', { name: 'Medications taken today' })).toHaveAccessibilityValue({ min: 0, max: 100, now });
     });
 
     it('disables a med card\'s take button once it has been marked taken', async () => {
       await renderScreen();
 
-      const takeBtn = screen.getAllByRole('button', { name: /,/, disabled: false })[0];
+      // Named with the visible "I took this", then the medication, dose and time
+      const takeBtn = screen.getAllByRole('button', { name: /^I took this: .+ \d+ mg, \d{1,2}:\d{2} [AP]M$/, disabled: false })[0];
       expect(takeBtn).toBeEnabled();
+      const medication = takeBtn.props.accessibilityLabel.replace('I took this: ', '');
 
       await fireEvent.press(takeBtn);
-      expect(takeBtn).toBeDisabled();
+      expect(screen.getByRole('button', { name: `${medication}: taken` })).toBeDisabled();
     });
   });
 });
