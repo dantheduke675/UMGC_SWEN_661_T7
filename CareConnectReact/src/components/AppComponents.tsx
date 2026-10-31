@@ -14,7 +14,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
-import { ColorScheme, accessibleFillForWhiteText } from '../constants/theme';
+import { ColorScheme, accessibleAccentText, accessibleFillForWhiteText } from '../constants/theme';
 
 // ── CAvatarBadge ──────────────────────────────────────────────────────────────
 
@@ -52,13 +52,20 @@ export function CAvatarBadge({ initials, color, size = 40, label }: AvatarProps)
 
 interface ChipProps {
   label: string;
+  /** The design's accent; darkened or lightened as needed to read at 4.5:1 */
   color: string;
+  scheme: ColorScheme;
 }
 
-export function CChip({ label, color }: ChipProps) {
+// The chip's fill is its text colour at this opacity ('21' in hex)
+const CHIP_TINT_ALPHA = 0x21 / 255;
+
+export function CChip({ label, color, scheme }: ChipProps) {
+  // Measured against the tinted fill itself, not just the card behind it
+  const text = accessibleAccentText(color, scheme, { alpha: CHIP_TINT_ALPHA });
   return (
-    <View style={[styles.chip, { backgroundColor: color + '21' }]}>
-      <Text style={[styles.chipText, { color }]}>{label}</Text>
+    <View style={[styles.chip, { backgroundColor: text + '21' }]}>
+      <Text style={[styles.chipText, { color: text }]}>{label}</Text>
     </View>
   );
 }
@@ -269,9 +276,11 @@ export function SectionLabel({ text, scheme }: SectionLabelProps) {
 
 interface ProgressBarProps {
   value: number; // 0–1
+  /** What the bar measures, read out with its value ("Medications taken today, 50%") */
+  label: string;
 }
 
-export function LinearProgressBar({ value }: ProgressBarProps) {
+export function LinearProgressBar({ value, label }: ProgressBarProps) {
   const width = useAnimatedValue(0);
 
   useEffect(() => {
@@ -287,7 +296,11 @@ export function LinearProgressBar({ value }: ProgressBarProps) {
       style={styles.progressTrack}
       accessible
       accessibilityRole="progressbar"
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100) }}
+      accessibilityLabel={label}
+      // aria-value* (not accessibilityValue) so the value also reaches the DOM on web
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(value * 100)}
     >
       <Animated.View
         style={[

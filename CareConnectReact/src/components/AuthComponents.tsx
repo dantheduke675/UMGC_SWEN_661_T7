@@ -77,7 +77,8 @@ export function AuthBtn({
     accessibilityRole: 'button' as const,
     accessibilityLabel: accessibilityLabel ?? label,
     accessibilityHint,
-    accessibilityState: { disabled },
+    // aria-* (not accessibilityState) so the state also reaches the DOM on web
+    'aria-disabled': disabled,
   };
 
   if (variant === 'text') {
@@ -351,7 +352,7 @@ export function ThemeToggleBtn({ isDark, onToggle }: ThemeToggleBtnProps) {
       accessible
       accessibilityRole="switch"
       accessibilityLabel="Dark mode"
-      accessibilityState={{ checked: isDark }}
+      aria-checked={isDark}
       accessibilityHint={`Double tap to switch to ${isDark ? 'light' : 'dark'} mode`}
     >
       <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>

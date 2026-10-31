@@ -10,6 +10,21 @@ configure({ asyncUtilTimeout: 10_000 })
 Element.prototype.scrollBy = vi.fn()
 
 /*
+  With css: false no stylesheet loads, so jsdom reports every element's
+  font-family as "depends on user agent". axe-core draws text on a canvas
+  with that font and node-canvas prints "couldn't load font" for each one.
+  A real generic family keeps the output clean; it is re-added before each
+  test in case a test replaced <head>.
+*/
+function ensureTestFont() {
+  if (document.getElementById('test-font')) return
+  const style = document.createElement('style')
+  style.id = 'test-font'
+  style.textContent = '* { font-family: sans-serif; }'
+  document.head.appendChild(style)
+}
+
+/*
   No console errors or warnings: any console.error / console.warn during a
   test (React key warnings, act() warnings, failed prop types, crashes caught
   by React...) fails that test. jsdom's own "Not implemented" notices for
@@ -19,6 +34,7 @@ const JSDOM_GAPS = /Not implemented: HTMLCanvasElement/
 let consoleProblems: string[] = []
 
 beforeEach(() => {
+  ensureTestFont()
   consoleProblems = []
   for (const level of ['error', 'warn'] as const) {
     vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {

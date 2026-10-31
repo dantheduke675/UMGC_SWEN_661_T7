@@ -122,4 +122,28 @@ describe('useUndoHistory', () => {
     expect(result.current.toastEntry).toBeNull();
     expect(result.current.history).toHaveLength(0);
   });
+
+  it('undoing the action on show keeps its toast gone when the timer later runs out', async () => {
+    const { result } = await renderHook(() => useUndoHistory());
+    await act(async () => result.current.pushAction('Marked as taken', jest.fn()));
+    const { id } = result.current.toastEntry!;
+
+    await act(async () => result.current.undoEntry(id));
+    expect(result.current.toastEntry).toBeNull();
+    await act(async () => jest.advanceTimersByTime(5000));
+    expect(result.current.toastEntry).toBeNull();
+    expect(result.current.history).toEqual([]);
+  });
+
+  it('dismissing after the toast has already timed out is harmless', async () => {
+    const { result } = await renderHook(() => useUndoHistory());
+    await act(async () => result.current.pushAction('Marked as taken', jest.fn()));
+    await act(async () => jest.advanceTimersByTime(5000));
+    expect(result.current.toastEntry).toBeNull();
+
+    await act(async () => result.current.dismissToast());
+    expect(result.current.toastEntry).toBeNull();
+    // The action itself can still be undone from the history
+    expect(result.current.history).toHaveLength(1);
+  });
 });

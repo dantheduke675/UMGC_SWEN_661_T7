@@ -20,7 +20,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  //SafeAreaView,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -170,7 +169,7 @@ function BottomNav({
             accessible
             accessibilityRole="tab"
             accessibilityLabel={item.label}
-            accessibilityState={{ selected: active }}
+            aria-selected={active}
           >
             {/* Active top stripe */}
             <View style={styles.navStripeRow}>

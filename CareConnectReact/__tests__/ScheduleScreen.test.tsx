@@ -95,4 +95,30 @@ describe('ScheduleScreen', () => {
       expect(otherCells[0]).toBeSelected();
     });
   });
+
+  // Fixed dates rather than today's, so the week maths is checked against
+  // known answers (the strip runs Monday to Sunday)
+  describe('week strip on a fixed date', () => {
+    afterEach(() => jest.useRealTimers());
+    const dayButtons = () =>
+      screen.getAllByRole('button', { name: /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), / });
+
+    it('on a Sunday, the week is the Monday six days before through today', async () => {
+      jest.useFakeTimers({ now: new Date(2026, 10, 1, 12) }); // Sunday, November 1
+      await renderScreen();
+      const days = dayButtons();
+      expect(days).toHaveLength(7);
+      expect(days[0]).toHaveAccessibleName(/^Monday, October 26/);
+      expect(days[6]).toHaveAccessibleName(/^Sunday, November 1, today/);
+    });
+
+    it('mid-week, today sits in the middle of its Monday-to-Sunday week', async () => {
+      jest.useFakeTimers({ now: new Date(2026, 9, 28, 12) }); // Wednesday, October 28
+      await renderScreen();
+      const days = dayButtons();
+      expect(days[0]).toHaveAccessibleName(/^Monday, October 26/);
+      expect(days[2]).toHaveAccessibleName(/^Wednesday, October 28, today/);
+      expect(days[6]).toHaveAccessibleName(/^Sunday, November 1/);
+    });
+  });
 });
