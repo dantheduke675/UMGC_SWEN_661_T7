@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/semantics.dart';
 import 'package:provider/provider.dart';
 import 'action_history.dart';
@@ -55,6 +56,19 @@ void announceStatus(BuildContext context, String message) {
   );
 }
 
+/// `scrollCacheExtent` for the app's scrolling lists: large enough that every item
+/// in them is built, not only the ones near the viewport.
+///
+/// Keyboard focus can only move to a control that exists. A list builds just
+/// what is on screen plus a small margin, so once Tab had walked to the bottom
+/// of the Medications list and wrapped round from the tab bar, the doses at
+/// the top had been disposed, and Tab resumed half-way down — the first few
+/// doses could then be reached only by reversing with Shift+Tab (WCAG 2.1
+/// SC 2.1.1). Every list this is used on holds a dozen or so items, so
+/// building all of them is cheap.
+const ScrollCacheExtent kKeyboardReachableExtent =
+    ScrollCacheExtent.pixels(100000);
+
 /// The focus ring colour — deliberately the highest-contrast neutral in the
 /// active theme so the indicator stays visible on brand-coloured, surface and
 /// transparent backgrounds alike (WCAG 2.1 SC 2.4.7 Focus Visible).
@@ -84,6 +98,10 @@ class CTappable extends StatefulWidget {
   final bool excludeChildSemantics;
   final Widget child;
 
+  /// Exposes the control as a link rather than a button, for controls whose
+  /// only job is to take the user to another screen.
+  final bool link;
+
   const CTappable({
     super.key,
     required this.label,
@@ -94,6 +112,7 @@ class CTappable extends StatefulWidget {
     this.toggled,
     this.borderRadius,
     this.excludeChildSemantics = true,
+    this.link = false,
   });
 
   @override
@@ -112,7 +131,8 @@ class _CTappableState extends State<CTappable> {
         : widget.child;
 
     return Semantics(
-      button: true,
+      button: !widget.link,
+      link: widget.link,
       enabled: widget.onTap != null,
       label: widget.label,
       hint: widget.hint,
@@ -319,6 +339,16 @@ class AuthField extends StatelessWidget {
   final bool obscure;
   final TextInputType? keyboardType;
 
+  /// Checked by the enclosing `Form`. A non-null result is shown as the
+  /// field's error text — under the field, in place of the helper, and part
+  /// of the field's own accessible description, so it is announced with the
+  /// field it belongs to (WCAG 2.1 SC 3.3.1, SC 3.3.3).
+  final FormFieldValidator<String>? validator;
+  final FocusNode? focusNode;
+
+  /// When given, holds the text instead of [value]; the caller seeds it.
+  final TextEditingController? controller;
+
   const AuthField({
     super.key,
     required this.label,
@@ -328,6 +358,9 @@ class AuthField extends StatelessWidget {
     this.lg = false,
     this.obscure = false,
     this.keyboardType,
+    this.validator,
+    this.focusNode,
+    this.controller,
   });
 
   @override
@@ -346,9 +379,12 @@ class AuthField extends StatelessWidget {
     );
 
     return TextFormField(
-      initialValue: filled ? value : null,
+      controller: controller,
+      initialValue: controller == null && filled ? value : null,
       obscureText: obscure,
       keyboardType: keyboardType,
+      validator: validator,
+      focusNode: focusNode,
       style: TextStyle(
         fontSize: inputFs,
         fontWeight: FontWeight.w400,
@@ -368,12 +404,30 @@ class AuthField extends StatelessWidget {
         hintStyle: TextStyle(fontSize: inputFs, color: scheme.muted),
         helperText: helper,
         helperStyle: TextStyle(fontSize: helperFs, color: scheme.muted),
+        // Wraps instead of being cut off with an ellipsis, so the whole
+        // suggestion stays readable at large text sizes (SC 1.4.4).
+        errorMaxLines: 4,
+        errorStyle: TextStyle(fontSize: helperFs, fontWeight: FontWeight.w600,
+            color: readableOn(CTokens.danger, scheme.surface)),
         filled: true,
         fillColor: scheme.surface,
         contentPadding: EdgeInsets.symmetric(horizontal: px, vertical: vy),
         border: border,
         enabledBorder: border,
         focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: focusRingColor(notifier.isDark), width: 3),
+        ),
+        // A field in error is outlined in red as well as described in text;
+        // the colour is never the only signal (SC 1.4.1). Focus keeps the
+        // usual focus ring, so focus stays visible on an invalid field too.
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+              color: readableOn(CTokens.danger, scheme.surface, minRatio: 3.0),
+              width: 2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: focusRingColor(notifier.isDark), width: 3),
         ),

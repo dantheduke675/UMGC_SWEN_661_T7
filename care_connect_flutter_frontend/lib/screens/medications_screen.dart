@@ -84,6 +84,7 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
       children: [
         ListView(
           controller: scrollController,
+          scrollCacheExtent: kKeyboardReachableExtent,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
             // ── Header ───────────────────────────────────────────────────────
@@ -232,9 +233,14 @@ class _MedCard extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // Header — announced as one sentence (SC 1.3.1).
+                      // Header — announced as one sentence (SC 1.3.1), and a
+                      // heading, so a screen reader user can move dose to dose
+                      // with heading navigation and skip the two buttons on
+                      // every card on the way (SC 2.4.1 Bypass Blocks).
                       Semantics(
                         container: true,
+                        header: true,
+                        headingLevel: 2,
                         label: '${slot.med.name}, ${slot.med.category}, '
                             '${slot.med.dose}, due at ${slot.time}, ${slot.med.freq}'
                             '${isTaken ? ', taken' : isMissed ? ', missed' : ''}',

@@ -9,6 +9,7 @@
 // overflow count and passed regardless; it now fails.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'a11y_harness.dart';
@@ -19,12 +20,20 @@ Future<List<String>> _layoutErrors(
   Screen screen,
   double scale, {
   bool isDark = true,
+  Size viewport = phoneViewport,
+  TextStyle? textSpacing,
+  void Function()? whileMounted,
 }) async {
   final errors = <String>[];
   final previous = FlutterError.onError;
   FlutterError.onError = (details) => errors.add(details.exception.toString());
   try {
-    await pumpScreen(tester, screen, textScale: scale, isDark: isDark);
+    await pumpScreen(tester, screen,
+        textScale: scale,
+        isDark: isDark,
+        viewport: viewport,
+        textSpacing: textSpacing);
+    whileMounted?.call();
     await disposeScreen(tester);
   } finally {
     FlutterError.onError = previous;
@@ -117,6 +126,103 @@ void main() {
 
       expect(after, greaterThan(before * 1.5),
           reason: 'the scroll button label is being scaled back down');
+    });
+  });
+
+  // WCAG 2.1 SC 1.4.10 Reflow (AA): content usable at 320 CSS px wide without
+  // scrolling in two dimensions. On a phone that is a 320 dp viewport — the
+  // width of the smallest phones still in use. Layout errors would mean
+  // clipped content; a page that is wider than the viewport would mean the
+  // user has to scroll sideways to read it.
+  group('SC 1.4.10 — reflow at 320 px wide', () {
+    const narrow = Size(320, 640);
+    for (final screen in allScreens) {
+      // 100% only: SC 1.4.10 already assumes 400% zoom in its 320 px figure,
+      // so 320 px *and* 200% text together is beyond what it asks. SC 1.4.4
+      // above covers 200% at a phone width.
+      for (final scale in const [1.0]) {
+        testWidgets('${screen.name} at 320 px, ${(scale * 100).round()}% text',
+            (tester) async {
+          final offscreen = <String>[];
+          final errors = await _layoutErrors(tester, screen, scale,
+              viewport: narrow, whileMounted: () {
+            // No paragraph may sit past either side edge, which would mean
+            // scrolling sideways (or not at all) to read it. Text inside a
+            // horizontal rail — the week strip, the quick replies — is
+            // exempt: that is a component scrolled on its own axis, and
+            // every item in it is reachable by swipe, Tab and screen reader.
+            for (final e in find
+                .byElementPredicate((e) => e.renderObject is RenderParagraph)
+                .evaluate()) {
+              final inRail = e
+                      .findAncestorWidgetOfExactType<Scrollable>()
+                      ?.axisDirection ==
+                  AxisDirection.right;
+              if (inRail) continue;
+              final p = e.renderObject! as RenderParagraph;
+              if (!p.hasSize) continue;
+              final rect = MatrixUtils.transformRect(
+                  p.getTransformTo(null), Offset.zero & p.size);
+              if (rect.left < -0.5 || rect.right > narrow.width + 0.5) {
+                offscreen.add('"${p.text.toPlainText()}" at $rect');
+              }
+            }
+          });
+          expect(errors, isEmpty,
+              reason: '${screen.name} loses content at 320 px:\n'
+                  '${errors.map((e) => '  $e').join('\n')}');
+          expect(offscreen, isEmpty,
+              reason: '${screen.name}: text outside a 320 px viewport');
+        });
+      }
+    }
+  });
+
+  // WCAG 2.1 SC 1.4.12 Text Spacing (AA): no loss of content when a user
+  // raises letter, word and line spacing. Native Flutter has no user style
+  // sheet, so the overrides are applied the only way they can be — through the
+  // text theme every Text inherits from — and the test is the one the
+  // criterion asks: does anything clip or overflow?
+  group('SC 1.4.12 — no loss of content with increased text spacing', () {
+    for (final screen in allScreens) {
+      testWidgets('${screen.name} with WCAG text spacing', (tester) async {
+        final errors = await _layoutErrors(tester, screen, 1.0,
+            textSpacing: wcagTextSpacing);
+        expect(errors, isEmpty,
+            reason: '${screen.name} loses content with increased spacing:\n'
+                '${errors.map((e) => '  $e').join('\n')}');
+      });
+    }
+
+    testWidgets('the spacing override is genuinely applied', (tester) async {
+      // Control: if the override never reached the painted text, every test
+      // in this group would pass without having changed anything.
+      // Measured as the text's own size, not its box: the heading's box is
+      // stretched to the list's width whatever the text inside it does.
+      final screen = allScreens.firstWhere((s) => s.name == 'Today');
+      Size measure() {
+        final p = tester.renderObject<RenderParagraph>(find.descendant(
+            of: find.text("Today's medications"),
+            matching: find.byType(RichText)));
+        return Size(p.getMaxIntrinsicWidth(double.infinity), p.size.height);
+      }
+
+      await pumpScreen(tester, screen);
+      final plain = measure();
+      await disposeScreen(tester);
+
+      await pumpScreen(tester, screen, textSpacing: wcagTextSpacing);
+      final spaced = measure();
+      await disposeScreen(tester);
+
+      expect(spaced.width, greaterThan(plain.width * 1.1),
+          reason: 'letter and word spacing did not widen the heading');
+      // The heading is 16 px, so a 1.5 line height is 24 px. (The test font's
+      // own line height is already 1.44, so "grew by x%" would be too weak.)
+      expect(spaced.height, greaterThanOrEqualTo(16 * 1.5),
+          reason: 'line height is not 1.5x the font size');
+      expect(plain.height, lessThan(16 * 1.5),
+          reason: 'control: without the override the line is shorter');
     });
   });
 

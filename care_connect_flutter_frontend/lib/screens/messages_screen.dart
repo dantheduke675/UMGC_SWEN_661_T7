@@ -17,6 +17,7 @@ class MessagesScreen extends StatelessWidget {
 
     return ListView(
       controller: scrollController,
+      scrollCacheExtent: kKeyboardReachableExtent,
       padding: EdgeInsets.zero,
       children: [
         // Header

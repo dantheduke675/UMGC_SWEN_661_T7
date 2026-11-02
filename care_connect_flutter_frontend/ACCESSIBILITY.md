@@ -29,6 +29,14 @@ fixed. VoiceOver remains untested — see §8 for why, and what stands in for it
 | 1.4.11 Non-text Contrast | AA | Done |
 | 2.4.7 Focus Visible | AA | Done |
 | 4.1.3 Status Messages | AA | Done |
+| 2.1.2 No Keyboard Trap | A | Done (§4, *Second pass*) |
+| 2.4.1 Bypass Blocks | A | Done (§4, *Second pass*) |
+| 2.5.3 Label in Name | A | Done (§4, *Second pass*) |
+| 3.3.1 Error Identification | A | Done (§4, *Second pass*) |
+| 1.4.10 Reflow | AA | Done (§4, *Second pass*) |
+| 1.4.12 Text Spacing | AA | Done (§4, *Second pass*) |
+| 2.4.5 Multiple Ways | AA | Done (§4, *Second pass*) |
+| 3.3.3 Error Suggestion | AA | Done (§4, *Second pass*) |
 | Target size 48×48 | rubric* | Done |
 
 \* Target size is Level **AAA** in WCAG 2.1 (SC 2.5.5); WCAG 2.2 later added
@@ -329,6 +337,98 @@ the controls they label. Fixed by wrapping each prompt in
 immediately before the chips and the slider's label immediately before the
 slider.
 
+### Second pass: the remaining A/AA criteria (2026-11-02)
+
+Done to bring the mobile VPAT's remaining "Partially" / "Does Not Support"
+rows up to evidence. All of it is asserted in
+`test/accessibility/navigation_and_input_test.dart` and
+`test/accessibility/text_scaling_test.dart`.
+
+**2.1.1 / 2.1.2 Keyboard, No Keyboard Trap.** A new test walks a full Tab lap
+on all 13 screens — forwards, a second time, and backwards with Shift+Tab —
+and checks every enabled control is reached and focus never stalls. It found
+one real defect: the tab screens' lists only build what is near the viewport,
+so after Tab reached the tab bar and wrapped round, the doses at the top of
+Medications (and Today, Symptoms, Schedule, Messages, Account, the week strip
+and the quick replies) had been disposed and Tab resumed half-way down the
+list. Those lists now build every item (`kKeyboardReachableExtent` in
+`lib/widgets.dart`; each list holds a dozen or so items). The test fails on the
+old code. Escape closes the missed-dose dialog, and Tab leaves the message
+field, so nothing traps focus; inside the dialog Tab stays put by design
+(SC 2.4.3), with Cancel and Escape as the way out.
+
+**2.4.1 Bypass Blocks.** The blocks that repeat on every screen — the scroll
+bar and the tab bar — come *after* the content in focus and reading order, so
+the first Tab on every tab screen lands in that screen's content. Within a
+long list, every dose card's summary on Today and Medications is now a heading
+(level 3 and 2), so TalkBack/VoiceOver heading navigation steps dose to dose
+past the two buttons on each card — the "skip to later doses" the VPAT asked
+for.
+
+**2.4.3 Focus Order.** Asserted, not just observed: on Today and Medications
+the dose controls are met in the order the cards are drawn, then the scroll
+bar, then the six tabs in bar order; on Sign in, Back → email → password →
+Sign in → Use Face ID.
+
+**2.4.5 Multiple Ways.** Today ends with a "Go to" section of links to
+Medications, Schedule, Symptoms, Messages and Account — a second route to
+every main screen beside the tab bar. They are exposed as links, not buttons
+(`CTappable(link: true)`).
+
+**2.4.7 Focus Visible.** Now checked at *every* focus stop on Today, Sign in,
+the message thread and Account (CTappable, Material buttons and text fields),
+by rasterising each control focused and unfocused at the same scroll position.
+Its control is a focusable box with no indicator, which the check must report.
+
+**2.5.3 Label in Name.** Every paragraph drawn on a control, on all 13 screens,
+must appear in that control's accessible name (case, punctuation and glyphs
+ignored). Everything passes. The one allowance is a single short abbreviation
+of a word in the name — the week strip's "M" for "Monday, November 2", an
+avatar's "AJ" for "Aunt Joyce" — which the test prints so it stays visible;
+saying the full word still matches. A control checks a mismatch is caught.
+
+**3.3.1 / 3.3.3 Error Identification and Suggestion.** Two inputs could fail
+silently:
+
+- *Sign in* accepted an empty or malformed email. It now validates on submit:
+  "Enter your email address, for example name@example.com" or "Check your
+  email address. It should look like name@example.com". The error shows under
+  the field with a red outline (never colour alone), is part of the field's own
+  semantics (Flutter passes `errorText` as the field's hint, so it is read with
+  the field), is a live region where announcements are unsupported (Android),
+  is announced elsewhere, and focus moves to the field. It clears as soon as
+  the address is fixed. The password field is not validated: there is no
+  authentication behind this prototype, so there is nothing to check it
+  against.
+- *Send* with an empty message was silently ignored. It now shows "Type a
+  message before sending, or choose a quick reply above" on the field, with
+  the same semantics, announcement and focus; typing clears it.
+
+The rest of the app has no input that can be wrong: dose, symptom and theme
+actions cannot fail (state is local), and each success is already confirmed by
+a status message (SC 4.1.3). The symptom form's submit stays disabled, and says
+why, until a symptom is chosen — error prevention rather than an error.
+
+**1.4.4 Resize Text.** No change: the app follows the operating system's
+font-size setting with no cap, which is how a native app meets this without
+assistive technology; 100–200% is asserted on every screen in both themes.
+
+**1.4.10 Reflow.** Every screen at 320 px wide (the criterion's 1280 px at
+400%): no layout overflow and no text past either edge. The week strip and
+quick replies are horizontal rails by design; every item in them is reachable
+by swipe, Tab and screen reader. 320 px *and* 200% text together is beyond
+the criterion and is not claimed: the message thread and call screen run out
+of height there.
+
+**1.4.12 Text Spacing.** Every screen with letter spacing 0.12, word spacing
+0.16 and line height 1.5 applied through the text theme (anchored to 24 px, so
+all text up to 24 px gets at least the required spacing): no overflow. It
+found one: the Account preference value "On · 15 min before" ran 1.1 px off
+its tile; it now wraps (`_PrefTile`, 3:2 flex). A control checks the spacing
+genuinely reaches the painted text. Two caveats: the two all-caps labels keep
+their designed 1.2 px letter spacing, slightly under 0.12 em at 11–12 px; and
+paragraph spacing has nothing to act on.
+
 ---
 
 ## 5. Visual changes worth reviewing
@@ -358,6 +458,12 @@ should get a glance from the team before submission:
    as well as its visible text, so both changed together and the screen reader
    still says exactly what the tab says (SC 2.5.3 Label in Name). The screen's
    own heading is unchanged at "Medications".
+8. **Today ends with a "Go to" row of links** to the other five main screens
+   (SC 2.4.5), styled as outlined chips in the link colour.
+9. **Sign in can now refuse** an empty or malformed email, with a red outline
+   and a message under the field; **Send** with nothing typed shows a message
+   under the message field (SC 3.3.1, 3.3.3). The seeded email is valid, so
+   the normal demo path is unchanged.
 
 ---
 
@@ -373,7 +479,8 @@ been invisible. Every file below fails the build when the app stops conforming.
 | `test/accessibility/contrast_test.dart` | SC 1.4.3 | every painted paragraph, both themes, plus 200% scale |
 | `test/accessibility/semantics_test.dart` | SC 1.1.1, 1.3.1, 4.1.2 | roles, names, emoji leakage, duplicate names, headings, tab state |
 | `test/accessibility/keyboard_and_targets_test.dart` | SC 2.1.1, 2.4.3, 2.4.7 + 48x48 | focusability, Tab traversal, focus visibility, modal behaviour, all four Flutter guidelines |
-| `test/accessibility/text_scaling_test.dart` | SC 1.4.4 | 100/130/150/200% in both themes, and that text actually grows |
+| `test/accessibility/text_scaling_test.dart` | SC 1.4.4, 1.4.10, 1.4.12 | 100/130/150/200% in both themes, and that text actually grows; every screen at 320 px; every screen with WCAG text spacing |
+| `test/accessibility/navigation_and_input_test.dart` | SC 2.1.1, 2.1.2, 2.4.1, 2.4.3, 2.4.5, 2.4.7, 2.5.3, 3.3.1, 3.3.3 | full Tab laps both ways, reading order, headings per dose, links, focus visible at every stop, label in name, form errors |
 | `test/accessibility/status_messages_test.dart` | SC 4.1.3 | announcements and live regions |
 | `test/unit/contrast_helpers_test.dart` | underpins SC 1.4.3 | exhaustive sweeps over the contrast helpers |
 
@@ -414,8 +521,10 @@ whenever it resembled the text, clipped-away text being measured against the
 pixels of whatever covered it, and paragraphs being counted twice. Each is
 documented at the point of the fix.
 
-**Current state:** `flutter analyze` clean, **606 tests passing**, line coverage
-**98.90%** (1,795 of 1,815 lines), against a required floor of 75%.
+**Current state:** `flutter analyze` clean, **713 tests passing** (340 of them
+in `test/accessibility/`) as of 2026-11-02. Line coverage was **98.90%**
+(1,795 of 1,815 lines) when last measured, before the second pass; it has not
+been re-measured since. Required floor: 75%.
 
 ```bash
 flutter test --coverage
@@ -451,7 +560,7 @@ Four layers, each checking something the one below it cannot.
 
 | Layer | Runs on | What only it can check |
 |---|---|---|
-| `test/` — 606 tests | `flutter test`, synthetic 800×5000 surface | Widgets and screens in isolation; contrast by rasterising the frame |
+| `test/` — 713 tests | `flutter test`, synthetic 800×5000 surface | Widgets and screens in isolation; contrast by rasterising the frame |
 | `integration_test/` — 40 tests | An emulator, real app | Workflows that cross screens, through the real router and shell |
 | `.maestro/` — 5 flows | An emulator, installed APK | The platform accessibility tree, as TalkBack sees it |
 | TalkBack pass (§8) | An emulator, screen reader on | What a person actually hears, in the order they hear it |

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../action_history.dart';
 import '../data.dart';
@@ -54,6 +55,7 @@ class TodayScreen extends StatelessWidget {
       children: [
         ListView(
           controller: scrollController,
+          scrollCacheExtent: kKeyboardReachableExtent,
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
           children: [
             // ── Date + greeting ──────────────────────────────────────────────
@@ -99,6 +101,12 @@ class TodayScreen extends StatelessWidget {
                 onUntake: () => _unmarkTaken(context, slot),
               ),
             )),
+            const SizedBox(height: 8),
+
+            // ── Go to ────────────────────────────────────────────────────────
+            _SectionLabel('Go to', scheme: scheme),
+            const SizedBox(height: 10),
+            _QuickLinks(scheme: scheme),
           ],
         ),
 
@@ -267,8 +275,12 @@ class _MedCard extends StatelessWidget {
         children: [
           // Header row — announced as one coherent sentence rather than as
           // loose fragments merged in with the button below it (SC 1.3.1).
+          // A level-3 heading under "Today's medications", so heading
+          // navigation steps dose to dose (SC 2.4.1 Bypass Blocks).
           Semantics(
             container: true,
+            header: true,
+            headingLevel: 3,
             label: '${slot.med.name}, ${slot.med.dose}, due at ${slot.time}'
                 '${isTaken ? ', taken' : ''}',
             excludeSemantics: true,
@@ -351,6 +363,58 @@ class _MedCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Quick links ───────────────────────────────────────────────────────────────
+
+/// A second way to reach every other main screen, alongside the tab bar
+/// (WCAG 2.1 SC 2.4.5 Multiple Ways). Each is a link whose accessible name is
+/// exactly its visible text (SC 2.5.3).
+class _QuickLinks extends StatelessWidget {
+  final CScheme scheme;
+  const _QuickLinks({required this.scheme});
+
+  static const _links = [
+    (label: 'Medications', path: '/medications'),
+    (label: 'Schedule',    path: '/schedule'),
+    (label: 'Symptoms',    path: '/symptoms'),
+    (label: 'Messages',    path: '/messages'),
+    (label: 'Account',     path: '/account'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8, runSpacing: 8,
+      children: [
+        for (final l in _links)
+          CTappable(
+            label: l.label,
+            link: true,
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => context.go(l.path),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: scheme.controlBorder, width: 2),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(l.label,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                          color: scheme.link)),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
