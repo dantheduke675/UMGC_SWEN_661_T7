@@ -12,7 +12,7 @@ import { AuthButton } from './AuthControls'
 function FaceScreen({ titleId, title, intro, children }: { titleId: string; title: string; intro: string; children: ReactNode }) {
   return (
     <section aria-labelledby={titleId} className="mx-auto flex min-h-full max-w-[560px] flex-col items-center px-[26px] py-[50px] text-center md:justify-center md:px-10">
-      <div className="mb-8 grid size-[90px] place-items-center rounded-3xl bg-brand text-[44px]" aria-hidden="true">💊</div>
+      <div className="mb-8 grid size-[90px] place-items-center rounded-3xl bg-brand text-[44px] text-white" aria-hidden="true">💊</div>
       <h1 id={titleId} className="text-[28px] font-bold text-ink md:text-[40px]">
         {title}
       </h1>

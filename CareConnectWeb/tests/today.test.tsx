@@ -39,8 +39,10 @@ describe('Today (today.html)', () => {
     expect(progress()).toHaveAttribute('aria-valuetext', '3 of 9 taken')
     expect(screen.getByRole('button', { name: 'Ropivacaine 10 mg, 8:00 PM: taken' })).toHaveTextContent('✓ Taken')
     expect(statusMessages().getByText('Marked as taken')).toBeInTheDocument()
+    // The live region holds text only, so screen readers don't run "Undo" into the message
+    expect(statusMessages().queryByRole('button')).not.toBeInTheDocument()
 
-    await user.click(statusMessages().getByRole('button', { name: 'Undo' }))
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
     expect(progress()).toHaveAttribute('aria-valuetext', '2 of 9 taken')
     expect(screen.getByRole('button', { name: 'I took this: Ropivacaine 10 mg, 8:00 PM' })).toBeInTheDocument()
     expect(statusMessages().queryByText('Marked as taken')).not.toBeInTheDocument()
@@ -81,7 +83,7 @@ describe('Today (today.html)', () => {
     expect(progress()).toHaveAttribute('aria-valuetext', '2 of 9 taken')
     expect(statusMessages().getByText('Marked as missed')).toBeInTheDocument()
 
-    await user.click(statusMessages().getByRole('button', { name: 'Undo' }))
+    await user.click(screen.getByRole('button', { name: 'Undo' }))
     expect(screen.getByRole('button', { name: 'I missed this: Ropivacaine 10 mg, 8:00 PM' })).toBeInTheDocument()
   })
 

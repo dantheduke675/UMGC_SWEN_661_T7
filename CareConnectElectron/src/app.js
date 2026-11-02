@@ -571,6 +571,7 @@ function shell(title, body) {
   const tip = text => state.collapsed ? ` title="${text}"` : ''
   return `
   <div class="shell">
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <aside class="sidebar ${state.collapsed ? 'collapsed' : ''}" id="sidebar" aria-label="Sidebar">
       <div class="sb-head">
         <div class="avatar" aria-hidden="true">${esc(user.initials)}</div>
@@ -578,12 +579,12 @@ function shell(title, body) {
         <button class="collapse-btn" data-act="collapse" aria-label="Sidebar" aria-expanded="${!state.collapsed}" aria-controls="sidebar" title="${state.collapsed ? 'Expand' : 'Collapse'} sidebar">${I.chevL(16)}</button>
       </div>
       <nav aria-label="Main"><ul class="nav">
-        ${NAV.map(n => {
+        ${NAV.map((n, i) => {
           // The unread count is in the name itself, so it is still read when
           // the sidebar is collapsed and the visible label is hidden
           const count = n.id === 'messages' && unread ? unread : 0
           return `
-          <li><button class="${state.screen === n.id ? 'active' : ''}" data-go="${n.id}"${tip(n.label)}${count ? ` aria-label="Messages, ${count} unread"` : ''} ${state.screen === n.id ? 'aria-current="page"' : ''}>
+          <li><button class="${state.screen === n.id ? 'active' : ''}" data-go="${n.id}" aria-keyshortcuts="Control+${i + 1}"${tip(n.label)}${count ? ` aria-label="Messages, ${count} unread"` : ''} ${state.screen === n.id ? 'aria-current="page"' : ''}>
             <span class="emoji" aria-hidden="true">${n.icon}</span><span class="label">${n.label}${count ? ` (${count})` : ''}</span>
           </button></li>`
         }).join('')}
@@ -609,7 +610,7 @@ function shell(title, body) {
         </div>
         <button class="sos" data-act="sos" aria-label="SOS, send emergency alert" aria-haspopup="dialog" aria-keyshortcuts="Control+S" title="Send an emergency alert (Ctrl+S)">SOS</button>
       </header>
-      <main class="content">${body}</main>
+      <main class="content" id="main-content">${body}</main>
     </div>
   </div>`
 }
@@ -684,6 +685,7 @@ const SHORTCUTS = [
   ['Tab / Shift Tab', 'Next / previous control'],
   ['← →', 'Choose a day, tab or option in a group'],
   ['Enter / Space', 'Press the focused button / sign in'],
+  ...NAV.map((n, i) => [`Ctrl ${i + 1}`, `Go to ${n.label}`]),
   ['Ctrl +', 'Zoom in'],
   ['Ctrl -', 'Zoom out'],
   ['Ctrl 0', 'Reset zoom'],
@@ -894,7 +896,7 @@ function openSymptomModal() {
   $('#sym-form').addEventListener('submit', e => {
     e.preventDefault()
     const name = $('#sym-name').value.trim()
-    if (!name) return showError('#sym-err', 'Please enter a symptom.', '#sym-name')
+    if (!name) return showError('#sym-err', 'Please enter a symptom, for example Headache, or choose one from the list.', '#sym-name')
     const entry = { name, when: 'Today · ' + nowTime(), sev, note: $('#sym-note').value.trim() || 'No notes' }
     state.symptoms.unshift(entry)
     const action = record(`Logged ${name} (severity ${sev}/5)`, '📊',
@@ -1242,11 +1244,13 @@ function navRoot(from) {
   if (modalOpen()) return $('#modal-root')
   return (from && from.closest && from.closest('.popover')) || document.body
 }
-// Controls covered by an open popover can't be reached behind it
+// Controls covered by an open popover can't be reached behind it. The skip
+// link is only for Tab: arrow keys and the mouse never land on it.
 function candidates(root) {
   const pop = root === document.body ? $('.popover') : null
   const pr = pop && pop.getBoundingClientRect()
   return focusables(root).filter(el => {
+    if (el.classList.contains('skip-link')) return false
     if (!pr || pop.contains(el)) return true
     const r = el.getBoundingClientRect()
     return r.right < pr.left || r.left > pr.right || r.bottom < pr.top || r.top > pr.bottom
@@ -1461,6 +1465,19 @@ toastEl.addEventListener('focusout', e => { if (!toastEl.contains(e.relatedTarge
 // ============================================================
 // Events
 // ============================================================
+// Skip link: past the sidebar and top bar to the first control in the page
+// content (the focus indicator always sits on a control), without changing
+// the URL
+document.addEventListener('click', e => {
+  if (!e.target.closest('.skip-link')) return
+  e.preventDefault()
+  const main = $('#main-content')
+  const first = tabbables(main)[0]
+  if (first) return first.focus()
+  main.tabIndex = -1
+  main.focus()
+})
+
 document.addEventListener('click', e => {
   const t = e.target.closest('button, [data-close]')
   if (!t) return
@@ -1543,6 +1560,8 @@ document.addEventListener('mousedown', e => {
   }
 })
 
+// Each form error says what is wrong and how to fix it (WCAG 3.3.3)
+const EMAIL_ERROR = 'Please enter a valid email address, such as name@example.com.'
 document.addEventListener('submit', e => {
   const f = e.target
   if (f.id === 'signin-form') {
@@ -1550,8 +1569,8 @@ document.addEventListener('submit', e => {
     const email = $('#si-email').value.trim()
     const pass = $('#si-pass').value
     const err = $('#si-err')
-    if (!/^\S+@\S+\.\S+$/.test(email)) return showError(err, 'Please enter a valid email address.', '#si-email')
-    if (!pass) return showError(err, 'Please enter your password.', '#si-pass')
+    if (!/^\S+@\S+\.\S+$/.test(email)) return showError(err, EMAIL_ERROR, '#si-email')
+    if (!pass) return showError(err, 'Please enter your password. It cannot be left blank.', '#si-pass')
     state.history = []
     go('today', { replace: true })
   } else if (f.id === 'create-form') {
@@ -1560,9 +1579,9 @@ document.addEventListener('submit', e => {
     const email = $('#ca-email').value.trim()
     const pass = $('#ca-pass').value
     const err = $('#ca-err')
-    if (!name) return showError(err, 'Please enter your full name.', '#ca-name')
-    if (!/^\S+@\S+\.\S+$/.test(email)) return showError(err, 'Please enter a valid email address.', '#ca-email')
-    if (pass.length < 8) return showError(err, 'Password must be at least 8 characters.', '#ca-pass')
+    if (!name) return showError(err, 'Please enter your full name, for example Maddy Chen.', '#ca-name')
+    if (!/^\S+@\S+\.\S+$/.test(email)) return showError(err, EMAIL_ERROR, '#ca-email')
+    if (pass.length < 8) return showError(err, `Password must be at least 8 characters. Add ${8 - pass.length} more.`, '#ca-pass')
     user.name = name
     user.first = name.split(/\s+/)[0]
     user.initials = name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
@@ -1606,6 +1625,14 @@ function handleCtrlShortcut(e) {
   if (zoom !== null) {
     e.preventDefault()
     return zoom ? zoomStep(zoom) : setZoom(1)
+  }
+  // Ctrl+1 to Ctrl+6 open the sidebar pages in order: a second way to reach
+  // every page. By key position, so it works on any keyboard layout.
+  const digit = /^(?:Digit|Numpad)([1-6])$/.exec(e.code)
+  if (digit) {
+    e.preventDefault()
+    if (e.repeat || modalOpen() || !APP_SCREENS.includes(state.screen)) return
+    return go(NAV[digit[1] - 1].id, { replace: true })
   }
   const key = e.code === 'Backslash' ? '\\' : e.key.toLowerCase()
   const sc = CTRL_SHORTCUTS[key]

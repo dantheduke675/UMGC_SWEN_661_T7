@@ -113,6 +113,7 @@ class _SymptomsScreenState extends State<SymptomsScreen> {
       children: [
         ListView(
           controller: scrollController,
+          scrollCacheExtent: kKeyboardReachableExtent,
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
           children: [
             // ── Header ─────────────────────────────────────────────────────

@@ -11,7 +11,8 @@
   --surface: #f2f3f5;
   --surface-2: #e8eaed;
   --border: #e0e2e6;
-  --border-input: #e0e2e6;
+  /* Text-field outlines need 3:1 against the page, surface and field fill (WCAG 1.4.11) */
+  --border-input: #7d8696;
   --text: #1a2133;
   --sub: #5a6478;
   --muted: #666e7d;

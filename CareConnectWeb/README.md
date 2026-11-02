@@ -50,6 +50,7 @@ serve an old `dist/`.
 | `npm run test:e2e`           | Chromium desktop and phone (the quick check)                    |
 | `npm run test:e2e:browsers`  | Every browser: Chromium, Chrome, Edge, Firefox, WebKit (Safari), plus Pixel 7 and iPhone 14 layouts |
 | `npm run test:e2e:a11y`      | Only `e2e/a11y.spec.ts`                                          |
+| `npm run test:e2e:firefox`   | The 49 desktop tests in the installed Firefox, through Puppeteer (see below) |
 | `npm run lighthouse`         | Lighthouse on every page; HTML reports in `reports/lighthouse/`, fails under 90 accessibility |
 
 Chrome and Edge must be installed; the other engines come from
@@ -80,6 +81,12 @@ accessibility and best practices on all 10 pages (90–100 performance).
 - **Firefox and `localhost`.** The test server listens on `127.0.0.1`: Firefox
   sometimes resolved `localhost` to IPv4 while `vite preview` was listening only
   on IPv6 (`::1`), and pages failed to load under load.
+- **Firefox on Windows 11.** Playwright's own Firefox build won't start on
+  Windows 11 build 26200 ("side-by-side configuration is incorrect": Windows
+  can't load its `mozglue.dll`). `npm run test:e2e:firefox`
+  (`scripts/firefox-e2e.mjs`) runs the same 49 desktop tests in the installed
+  Firefox through Puppeteer and WebDriver BiDi. Set `FIREFOX_PATH` if Firefox
+  is elsewhere. As of 2026-11-02, all 49 pass in Firefox 148.
 - **404 page SEO score (54)** is intended: the page is `noindex`.
 
 ## Stack

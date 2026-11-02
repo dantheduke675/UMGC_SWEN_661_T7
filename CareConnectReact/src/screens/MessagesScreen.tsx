@@ -7,10 +7,10 @@ import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { ColorScheme, dark } from '../constants/theme';
 import { threads, contactById, ChatMessage, Thread, Contact } from '../constants/data';
 import { CAvatarBadge } from '../components/AppComponents';

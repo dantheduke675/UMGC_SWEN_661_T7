@@ -8,12 +8,19 @@ const SEVERITY_LABELS = ['Very mild', 'Mild', 'Moderate', 'Severe', 'Very severe
 // Green for mild, amber for moderate, red for severe (as in the design)
 const severityColor = (n: number) => (n <= 2 ? 'bg-[#22c55e]' : n === 3 ? 'bg-[#f59e0b]' : 'bg-[#ef4444]')
 
+// The bar's light colours can't reach 3:1 on the light card (WCAG 1.4.11), so the severity is also
+// written beside it; screen readers keep the single image name instead of hearing it twice
 function SeverityBar({ severity }: { severity: number }) {
   return (
-    <div className="my-4 flex gap-2" role="img" aria-label={`Severity ${severity} of 5, ${SEVERITY_LABELS[severity - 1].toLowerCase()}`}>
-      {[1, 2, 3, 4, 5].map(i => (
-        <span key={i} className={`h-2.5 flex-1 rounded-full ${i <= severity ? severityColor(severity) : 'bg-surface-2'}`} />
-      ))}
+    <div className="my-4 flex items-center gap-3">
+      <div className="flex flex-1 gap-2" role="img" aria-label={`Severity ${severity} of 5, ${SEVERITY_LABELS[severity - 1].toLowerCase()}`}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <span key={i} className={`h-2.5 flex-1 rounded-full ${i <= severity ? severityColor(severity) : 'bg-surface-2'}`} />
+        ))}
+      </div>
+      <span className="shrink-0 text-sm font-bold text-sub" aria-hidden="true">
+        {SEVERITY_LABELS[severity - 1]} · {severity}/5
+      </span>
     </div>
   )
 }

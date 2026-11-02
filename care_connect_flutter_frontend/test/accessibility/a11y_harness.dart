@@ -110,12 +110,46 @@ void resetAppState() {
   threads[0].messages.removeWhere((m) => m.time == 'Now');
 }
 
+/// The WCAG 2.1 SC 1.4.12 text-spacing overrides, as one style merged into
+/// every entry of the app's text theme.
+///
+/// The criterion is written in `em` — letter spacing 0.12x the font size, word
+/// spacing 0.16x, line height 1.5x — but Flutter's spacing is absolute, so the
+/// values are anchored to 24 px, the largest body text in the app. Everything
+/// at 24 px and below therefore gets at least the required spacing; the 11-15 px
+/// text most of the app is set in gets roughly double. Paragraph spacing (2x)
+/// has nothing to act on: no screen sets text as consecutive paragraphs.
+const TextStyle wcagTextSpacing = TextStyle(
+  letterSpacing: 0.12 * 24,
+  wordSpacing: 0.16 * 24,
+  height: 1.5,
+);
+
+TextTheme _withSpacing(TextTheme t, TextStyle s) => t.merge(TextTheme(
+      displayLarge: s, displayMedium: s, displaySmall: s,
+      headlineLarge: s, headlineMedium: s, headlineSmall: s,
+      titleLarge: s, titleMedium: s, titleSmall: s,
+      bodyLarge: s, bodyMedium: s, bodySmall: s,
+      labelLarge: s, labelMedium: s, labelSmall: s,
+    ));
+
+ThemeData _theme(bool isDark, TextStyle? spacing) {
+  final base = buildTheme(isDark);
+  return spacing == null
+      ? base
+      : base.copyWith(textTheme: _withSpacing(base.textTheme, spacing));
+}
+
 /// Mounts [screen] in the shell with the given theme and text scale.
+///
+/// [textSpacing], when given, is merged into every text-theme style, which is
+/// where every `Text` in the app inherits unset spacing from (SC 1.4.12).
 Widget buildApp(
   Screen screen, {
   bool isDark = true,
   double textScale = 1.0,
   bool supportsAnnounce = true,
+  TextStyle? textSpacing,
 }) {
   final notifier = ThemeNotifier(isDark: isDark);
 
@@ -154,8 +188,8 @@ Widget buildApp(
       create: (_) => ActionHistory(),
       child: MaterialApp.router(
         routerConfig: router,
-        theme: buildTheme(false),
-        darkTheme: buildTheme(true),
+        theme: _theme(false, textSpacing),
+        darkTheme: _theme(true, textSpacing),
         themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
         // The banner paints over the top-right corner and would be
         // sampled as if it were app content.
@@ -185,6 +219,7 @@ Future<void> pumpScreen(
   double textScale = 1.0,
   bool supportsAnnounce = true,
   Size viewport = phoneViewport,
+  TextStyle? textSpacing,
 }) async {
   tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1.0;
@@ -198,6 +233,7 @@ Future<void> pumpScreen(
     isDark: isDark,
     textScale: textScale,
     supportsAnnounce: supportsAnnounce,
+    textSpacing: textSpacing,
   ));
 
   if (screen.animated) {

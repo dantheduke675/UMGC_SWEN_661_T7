@@ -259,7 +259,9 @@ void main() {
                   ? 'text field'
                   : f.isSlider
                       ? 'slider'
-                      : 'NO ROLE';
+                      : f.isLink
+                          ? 'link'
+                          : 'NO ROLE';
           final state = f.isSelected == Tristate.isTrue
               ? ', selected'
               : f.isToggled == Tristate.isTrue

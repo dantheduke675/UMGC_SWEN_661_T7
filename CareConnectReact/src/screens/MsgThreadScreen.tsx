@@ -9,7 +9,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   FlatList,
   ScrollView,
   KeyboardAvoidingView,
@@ -17,6 +16,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ColorScheme, dark } from '../constants/theme';
 import { threadById, contactById, ChatMessage, Contact } from '../constants/data';
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
 
   // Quick replies
   quickRepliesBar: {
-    height:          60,
+    minHeight:          60,
     borderTopWidth:  1,
   },
   quickRepliesContent: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius:      12,
     borderWidth:       1,
-    height:            44,
+    minHeight:            44,
     alignItems:        'center',
     justifyContent:    'center',
   },
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   inputPill: {
     flex:         1,
-    height:       48,
+    minHeight:       48,
     borderRadius: 24,
     paddingHorizontal: 16,
     justifyContent: 'center',

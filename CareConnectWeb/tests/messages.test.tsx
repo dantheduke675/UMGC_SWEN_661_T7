@@ -20,8 +20,10 @@ describe('Messages page', () => {
     const { user } = await renderApp('/messages.html')
     await user.click(screen.getByRole('button', { name: /^Aunt Joyce/ }))
     expect(screen.getByRole('heading', { level: 1, name: 'Conversation' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: 'Aunt Joyce' })).toBeInTheDocument()
+    // The pressed button is gone, so focus moves to the conversation's heading for screen readers
+    expect(screen.getByRole('heading', { level: 2, name: 'Aunt Joyce' })).toHaveFocus()
     expect(within(thread('Aunt Joyce')).getAllByRole('listitem')).toHaveLength(4)
+    expect(thread('Aunt Joyce')).toHaveAttribute('aria-live', 'polite')
     expect(thread('Aunt Joyce')).toHaveTextContent('Dr. Chen called')
     // The conversation brings its own reply box instead of the scroll bar
     expect(screen.queryByRole('button', { name: /Scroll down/ })).not.toBeInTheDocument()
@@ -29,6 +31,8 @@ describe('Messages page', () => {
     await user.click(screen.getByRole('button', { name: 'Back to all messages' }))
     expect(screen.getByRole('heading', { level: 1, name: 'Messages' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Aunt Joyce/ })).not.toHaveAccessibleName(/unread/)
+    // Back returns focus to the conversation that was open
+    expect(screen.getByRole('button', { name: /^Aunt Joyce/ })).toHaveFocus()
   })
 
   it('sends a typed reply and ignores an empty one', async () => {

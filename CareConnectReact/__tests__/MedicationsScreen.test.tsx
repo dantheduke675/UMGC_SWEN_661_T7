@@ -63,25 +63,35 @@ describe('MedicationsScreen', () => {
     it('names a med card\'s take button after the medication and disables it once taken', async () => {
       await renderScreen();
 
-      const takeBtn = screen.getAllByRole('button', { name: /, I took this$/ })[0];
+      const takeBtn = screen.getAllByRole('button', { name: /^I took this: / })[0];
       expect(takeBtn).toBeEnabled();
 
       await fireEvent.press(takeBtn);
       expect(takeBtn).toBeDisabled();
-      expect(takeBtn).toHaveAccessibleName(/, Taken$/);
+      expect(takeBtn).toHaveAccessibleName(/^Taken: /);
     });
 
     it('Undo on the toast puts a dose taken by mistake back to not taken', async () => {
       await renderScreen();
-      const takeBtn = screen.getAllByRole('button', { name: /, I took this$/ })[0];
+      const takeBtn = screen.getAllByRole('button', { name: /^I took this: / })[0];
 
       await fireEvent.press(takeBtn);
       expect(takeBtn).toBeDisabled();
-      expect(takeBtn).toHaveAccessibleName(/, Taken$/);
+      expect(takeBtn).toHaveAccessibleName(/^Taken: /);
 
       await fireEvent.press(screen.getByRole('button', { name: 'Undo' }));
       expect(takeBtn).toBeEnabled();
-      expect(takeBtn).toHaveAccessibleName(/, I took this$/);
+      expect(takeBtn).toHaveAccessibleName(/^I took this: /);
+    });
+
+    it('gives every dose a heading, so screen readers can jump from dose to dose', async () => {
+      await renderScreen();
+      const slots = buildSlots();
+      // The screen title plus one heading per dose
+      const headings = screen.getAllByRole('header');
+      expect(headings).toHaveLength(slots.length + 1);
+      expect(headings[1]).toHaveAccessibleName(`${slots[0].med.name}, ${slots[0].time}, taken`);
+      expect(headings[2]).toHaveAccessibleName(`${slots[1].med.name}, ${slots[1].time}, not yet taken`);
     });
 
     it('announces the missed-confirmation dialog as an alert with named actions', async () => {
@@ -90,7 +100,7 @@ describe('MedicationsScreen', () => {
 
       expect(screen.getByRole('alert')).toHaveTextContent(/Mark this dose as missed\?/);
       expect(screen.getByRole('button', { name: 'Yes, I missed this dose' })).toBeOnTheScreen();
-      expect(screen.getByRole('button', { name: 'Cancel' })).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: 'Cancel, go back' })).toBeOnTheScreen();
     });
   });
 

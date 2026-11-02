@@ -6,13 +6,13 @@ import React, { useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
   Animated,
   Modal,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { TouchableOpacity } from './Touchable';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { ColorScheme, accessibleAccentText, accessibleFillForWhiteText } from '../constants/theme';
 

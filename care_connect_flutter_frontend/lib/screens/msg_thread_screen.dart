@@ -59,7 +59,29 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _inputFocus.dispose();
     super.dispose();
+  }
+
+  final _inputFocus = FocusNode();
+
+  /// Shown under the message field when Send is pressed with nothing typed.
+  /// The press used to be silently ignored, so it was impossible to tell a
+  /// send that did nothing from one that worked (WCAG 2.1 SC 3.3.1); the
+  /// message also says how to fix it (SC 3.3.3).
+  String? _composeError;
+
+  static const _emptyMessageError =
+      'Type a message before sending, or choose a quick reply above';
+
+  void _sendTyped() {
+    if (_controller.text.trim().isEmpty) {
+      setState(() => _composeError = _emptyMessageError);
+      _inputFocus.requestFocus();
+      announceStatus(context, 'Message not sent. $_emptyMessageError');
+      return;
+    }
+    _send(_controller.text);
   }
 
   void _send(String text) {
@@ -69,6 +91,7 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
     // the app session even after leaving and re-entering this screen.
     setState(() {
       threadById(widget.threadId).messages.add(ChatMessage(from: 'me', text: trimmed, time: 'Now'));
+      _composeError = null;
     });
     _controller.clear();
     announceStatus(context, 'Message sent');
@@ -122,8 +145,14 @@ class _MsgThreadScreenState extends State<MsgThreadScreen> {
         // ── Input row ────────────────────────────────────────────────────────
         _InputRow(
           controller: _controller,
+          focusNode: _inputFocus,
           scheme: scheme,
-          onSend: () => _send(_controller.text),
+          errorText: _composeError,
+          // Typing clears the error, so it never outlives its cause.
+          onChanged: (_) {
+            if (_composeError != null) setState(() => _composeError = null);
+          },
+          onSend: _sendTyped,
         ),
       ],
     );
@@ -306,6 +335,7 @@ class _QuickReplies extends StatelessWidget {
       ),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        scrollCacheExtent: kKeyboardReachableExtent,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: replies.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -336,10 +366,16 @@ class _QuickReplies extends StatelessWidget {
 
 class _InputRow extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
   final CScheme scheme;
+  final String? errorText;
+  final ValueChanged<String> onChanged;
   final VoidCallback onSend;
 
-  const _InputRow({required this.controller, required this.scheme, required this.onSend});
+  const _InputRow({
+    required this.controller, required this.focusNode, required this.scheme,
+    required this.errorText, required this.onChanged, required this.onSend,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -355,13 +391,19 @@ class _InputRow extends StatelessWidget {
           children: [
             Expanded(
               child: Container(
-                height: 48,
+                // 48 as before, but free to grow while it holds an error
+                // message under the text.
+                constraints: errorText == null
+                    ? const BoxConstraints.tightFor(height: 48)
+                    : const BoxConstraints(minHeight: 48),
                 decoration: BoxDecoration(
                   color: scheme.surface2,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
                   controller: controller,
+                  focusNode: focusNode,
+                  onChanged: onChanged,
                   onSubmitted: (_) => onSend(),
                   style: TextStyle(fontSize: 15, color: scheme.text),
                   decoration: InputDecoration(
@@ -371,7 +413,15 @@ class _InputRow extends StatelessWidget {
                     floatingLabelBehavior: FloatingLabelBehavior.never,
                     hintText: 'Type a message…',
                     hintStyle: TextStyle(color: scheme.muted, fontSize: 15),
+                    // Error text belongs to the field, so it is shown under
+                    // it and read out with it (SC 3.3.1).
+                    errorText: errorText,
+                    errorMaxLines: 3,
+                    errorStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                        color: readableOn(CTokens.danger, scheme.surface2)),
                     border: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),

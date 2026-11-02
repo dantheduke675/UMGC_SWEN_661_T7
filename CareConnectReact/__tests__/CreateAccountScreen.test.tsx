@@ -3,7 +3,7 @@
  * navigation.
  */
 import React from 'react';
-import { Dimensions } from 'react-native';
+import { AccessibilityInfo, Dimensions } from 'react-native';
 import { act, render, screen, fireEvent } from '@testing-library/react-native';
 import CreateAccountScreen from '../src/screens/CreateAccountScreen';
 
@@ -25,6 +25,7 @@ describe('CreateAccountScreen', () => {
     const navigation = makeNav();
     await render(<CreateAccountScreen navigation={navigation} />);
 
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'SuperSecret1');
     await fireEvent.press(screen.getByText(/Care recipient/));
     expect(navigation.navigate).toHaveBeenCalledWith('BiometricsIntro');
   });
@@ -45,6 +46,46 @@ describe('CreateAccountScreen', () => {
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
   });
 
+  describe('input errors', () => {
+    it('lists every problem in text by its field, with how to fix it, before choosing a role', async () => {
+      const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+      const navigation = makeNav();
+      await render(<CreateAccountScreen navigation={navigation} />);
+      await fireEvent.changeText(screen.getByLabelText('Full name'), '  ');
+      await fireEvent.changeText(screen.getByLabelText('Email address'), 'maddy@');
+      await fireEvent.changeText(screen.getByLabelText('Password'), 'abc');
+
+      await fireEvent.press(screen.getByText(/Care recipient/));
+
+      expect(navigation.navigate).not.toHaveBeenCalled();
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts).toHaveLength(3);
+      expect(alerts[0]).toHaveTextContent('⚠ Enter your full name.');
+      expect(alerts[1]).toHaveTextContent(/with an @ and a domain/);
+      expect(alerts[2]).toHaveTextContent('⚠ Use at least 8 characters. This one has 3.');
+      expect(announce).toHaveBeenCalledWith(expect.stringContaining('There are 3 problems with the form.'));
+      announce.mockRestore();
+    });
+
+    it('checks the form for the Caregiver tile too', async () => {
+      await render(<CreateAccountScreen navigation={makeNav()} />);
+      await fireEvent.press(screen.getByRole('button', { name: 'Caregiver' }));
+      expect(screen.getByRole('alert')).toHaveTextContent('⚠ Enter your password.');
+    });
+
+    it('goes on once the problems are fixed', async () => {
+      const navigation = makeNav();
+      await render(<CreateAccountScreen navigation={navigation} />);
+      await fireEvent.press(screen.getByText(/Care recipient/));
+      expect(screen.getByRole('alert')).toBeOnTheScreen();
+
+      await fireEvent.changeText(screen.getByLabelText('Password'), 'SuperSecret1');
+      expect(screen.queryByRole('alert')).toBeNull();
+      await fireEvent.press(screen.getByText(/Care recipient/));
+      expect(navigation.navigate).toHaveBeenCalledWith('BiometricsIntro');
+    });
+  });
+
   describe('on a tablet-sized viewport', () => {
     afterEach(async () => {
       await act(async () => {
@@ -58,6 +99,7 @@ describe('CreateAccountScreen', () => {
       await render(<CreateAccountScreen navigation={navigation} />);
 
       expect(screen.getByDisplayValue('Maddy Chen')).toBeTruthy();
+      await fireEvent.changeText(screen.getByLabelText('Password'), 'SuperSecret1');
       await fireEvent.press(screen.getByText(/Care recipient/));
       expect(navigation.navigate).toHaveBeenCalledWith('BiometricsIntro');
     });

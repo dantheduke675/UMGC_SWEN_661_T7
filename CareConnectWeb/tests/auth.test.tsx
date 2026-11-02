@@ -122,7 +122,7 @@ describe('Sign in (signin.html)', () => {
 
   it('goes back to the landing page', async () => {
     const { user, currentPath } = await renderApp('/signin.html')
-    await user.click(screen.getByRole('button', { name: '← Back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
     await waitFor(() => expect(currentPath()).toBe('/'))
   })
 
@@ -171,7 +171,7 @@ describe('Create account (create-account.html)', () => {
 
   it('goes back to the landing page', async () => {
     const { user, currentPath } = await renderApp('/create-account.html')
-    await user.click(screen.getByRole('button', { name: '← Back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
     await waitFor(() => expect(currentPath()).toBe('/'))
   })
 

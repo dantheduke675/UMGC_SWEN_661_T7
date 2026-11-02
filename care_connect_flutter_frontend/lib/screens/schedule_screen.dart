@@ -85,6 +85,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     return ListView(
       controller: scrollController,
+      scrollCacheExtent: kKeyboardReachableExtent,
       padding: const EdgeInsets.fromLTRB(0, 20, 0, 24),
       children: [
         // ── Header ─────────────────────────────────────────────────────────
@@ -187,6 +188,7 @@ class _WeekStrip extends StatelessWidget {
       height: (76 * scale).clamp(76.0, 190.0),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        scrollCacheExtent: kKeyboardReachableExtent,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         itemCount: 7,
         itemBuilder: (_, i) {

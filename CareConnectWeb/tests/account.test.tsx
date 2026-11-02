@@ -11,6 +11,9 @@ describe('Account page', () => {
     expect(group('Profile')).toHaveTextContent('maddy@example.com')
     expect(group('Profile')).toHaveTextContent('Joyce Hughes · (555) 012-3456')
     expect(within(group('Care team')).getAllByRole('button')).toHaveLength(3)
+    // Each row's two lines are read as separate phrases, not run together ("Madison Hughesmaddy@…")
+    expect(within(group('Profile')).getByRole('button', { name: /^Madison Hughes, ?maddy@example\.com$/ })).toBeInTheDocument()
+    expect(within(group('Care team')).getByRole('button', { name: /^Dr\. Sarah Chen, ?Primary Physician$/ })).toBeInTheDocument()
   })
 
   it('switches the theme from Appearance', async () => {

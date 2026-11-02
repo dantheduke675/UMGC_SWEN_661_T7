@@ -8,12 +8,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   Animated,
   Easing,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { contactById } from '../constants/data';

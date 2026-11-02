@@ -16,6 +16,7 @@ class AccountScreen extends StatelessWidget {
 
     return ListView(
       controller: scrollController,
+      scrollCacheExtent: kKeyboardReachableExtent,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       children: [
         // ── Header ─────────────────────────────────────────────────────────
@@ -254,6 +255,8 @@ class _PrefTile extends StatelessWidget {
           CGlyph(icon, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: 14),
           Expanded(
+            // 3:2 with the value below, so the label keeps the larger share.
+            flex: 3,
             child: Semantics(
               container: true,
               label: value.isEmpty ? label : '$label: $value',
@@ -265,8 +268,16 @@ class _PrefTile extends StatelessWidget {
           if (trailing != null)
             trailing!
           else if (value.isNotEmpty)
-            ExcludeSemantics(
-              child: Text(value, style: TextStyle(fontSize: 13, color: scheme.sub)),
+            // Flexible so a long value wraps rather than running off the
+            // tile: with WCAG text spacing applied, "On · 15 min before"
+            // overflowed by 1.1 px (SC 1.4.12). Unchanged at normal spacing.
+            Flexible(
+              flex: 2,
+              child: ExcludeSemantics(
+                child: Text(value,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(fontSize: 13, color: scheme.sub)),
+              ),
             ),
         ],
       ),

@@ -8,9 +8,9 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { ColorScheme, dark, accessibleAccentText, tokens } from '../constants/theme';
 import { buildSlots, patient, MedSlot } from '../constants/data';
 import {
@@ -22,10 +22,22 @@ import {
 } from '../components/AppComponents';
 import { useScrollContext } from '../context/ScrollContext';
 import { useUndoHistory } from '../hooks/useUndoHistory';
+import type { TabKey } from '../components/AppShell';
 
 interface Props {
   scheme?: ColorScheme;
+  /** Opens another tab. When given, a "Go to" list of every other screen is
+   *  shown, a second way to reach them besides the bottom tab bar. */
+  onNavigate?: (tab: TabKey) => void;
 }
+
+const SHORTCUTS: { tab: TabKey; label: string; hint: string }[] = [
+  { tab: 'medications', label: 'All medications', hint: 'Opens the Medications screen' },
+  { tab: 'schedule',    label: 'Schedule',        hint: 'Opens the Schedule screen' },
+  { tab: 'messages',    label: 'Messages',        hint: 'Opens the Messages screen' },
+  { tab: 'symptoms',    label: 'Log a symptom',   hint: 'Opens the Symptoms screen' },
+  { tab: 'account',     label: 'Account',         hint: 'Opens the Account screen' },
+];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -115,7 +127,7 @@ function MedCard({
           <Text
             style={[
               styles.medName,
-              { color: isTaken ? scheme.text + '8C' : scheme.text },
+              { color: isTaken ? scheme.sub : scheme.text }, // dimmed when taken, still 4.5:1
             ]}
           >
             {slot.med.name}
@@ -174,7 +186,7 @@ function MedCard({
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-export default function TodayScreen({ scheme = dark }: Props) {
+export default function TodayScreen({ scheme = dark, onNavigate }: Props) {
   // Register this screen's scroll with the AccessBar context
   const scrollRef   = useRef<ScrollView>(null);
   const offsetRef   = useRef(0);
@@ -270,6 +282,30 @@ export default function TodayScreen({ scheme = dark }: Props) {
             />
           </View>
         ))}
+
+        {onNavigate && (
+          <>
+            <View style={{ height: 8 }} />
+            <SectionLabel text="Go to" scheme={scheme} />
+            <View style={{ height: 10 }} />
+            <View style={styles.shortcutRow}>
+              {SHORTCUTS.map(s => (
+                <TouchableOpacity
+                  key={s.tab}
+                  onPress={() => onNavigate(s.tab)}
+                  activeOpacity={0.75}
+                  style={[styles.shortcut, { backgroundColor: scheme.surface, borderColor: scheme.border }]}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={s.label}
+                  accessibilityHint={s.hint}
+                >
+                  <Text style={[styles.shortcutText, { color: scheme.link }]}>{s.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Quick undo toast for the most recent action */}
@@ -427,7 +463,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   takeBtn: {
-    height:         52,
+    minHeight:         52,
     borderRadius:   14,
     alignItems:     'center',
     justifyContent: 'center',
@@ -438,6 +474,23 @@ const styles = StyleSheet.create({
   },
 
   // Toast overlay
+  shortcutRow: {
+    flexDirection: 'row',
+    flexWrap:      'wrap',
+    gap:           10,
+  },
+  shortcut: {
+    minHeight:         48,
+    paddingHorizontal: 16,
+    paddingVertical:   10,
+    borderRadius:      14,
+    borderWidth:       1,
+    justifyContent:    'center',
+  },
+  shortcutText: {
+    fontSize:   15,
+    fontWeight: '700',
+  },
   toastContainer: {
     position:   'absolute',
     bottom:     16,

@@ -38,7 +38,7 @@ describe('AppShellNavigator', () => {
     await render(<AppShellNavigator />);
 
     // Navigate to Messages tab.
-    await fireEvent.press(screen.getByText('Messages'));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Messages' }));
     expect(screen.getByText(`${threads.length} conversations`)).toBeTruthy();
 
     // Open the first thread.
@@ -74,7 +74,7 @@ describe('AppShellNavigator', () => {
 
   it('the Back button in a thread returns to the Messages list', async () => {
     await render(<AppShellNavigator />);
-    await fireEvent.press(screen.getByText('Messages'));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Messages' }));
     await fireEvent.press(screen.getByText(contactById(threads[0].contactId).name));
     expect(screen.queryByText(`${threads.length} conversations`)).toBeNull();
 
@@ -104,7 +104,7 @@ describe('AppShellNavigator', () => {
   it('hides the bottom nav and access bar while in a thread or on a call', async () => {
     await render(<AppShellNavigator />);
 
-    await fireEvent.press(screen.getByText('Messages'));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Messages' }));
     const thread = threads[0];
     const contact = contactById(thread.contactId);
     await fireEvent.press(screen.getByText(contact.name));
@@ -128,6 +128,22 @@ describe('AppShellNavigator', () => {
     // Scroll buttons render even with no screen registered — should not throw.
     await expect(fireEvent.press(screen.getByText('Scroll down'))).resolves.not.toThrow();
     await expect(fireEvent.press(screen.getByText('Scroll up'))).resolves.not.toThrow();
+  });
+
+  // A second way to every screen besides the tab bar (WCAG 2.4.5 Multiple Ways)
+  it.each([
+    ['All medications', 'Medications'],
+    ['Schedule',        'Schedule'],
+    ['Messages',        'Messages'],
+    ['Log a symptom',   'Symptoms'],
+    ['Account',         'Account'],
+  ])('the "%s" button in the Today Go to list opens the %s tab', async (link, tab) => {
+    await render(<AppShellNavigator />);
+    expect(screen.getByRole('header', { name: 'Go to' })).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: link }));
+    expect(screen.getByRole('tab', { name: tab })).toBeSelected();
+    expect(screen.getByRole('header', { name: tab })).toBeOnTheScreen();
   });
 
   describe('accessibility', () => {

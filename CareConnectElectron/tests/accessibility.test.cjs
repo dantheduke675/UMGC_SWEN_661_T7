@@ -9,6 +9,7 @@ const { setup } = require('./harness.cjs');
 // jsdom cannot render (sizes, motion, reflow).
 
 const CSS = fs.readFileSync(path.resolve(__dirname, '../src/styles.css'), 'utf8');
+const FOCUSABLE_SEL = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 // Every screen, dialog and panel a user can reach
 function* everyView(h) {
@@ -218,6 +219,105 @@ test('each form error says what is wrong and how to fix it, in text', t => {
   assert.equal(h.q('#sym-name').getAttribute('aria-invalid'), 'true');
 });
 
+test('every form error suggests how to fix it', t => {
+  const h = setup(t);
+  h.go('signin'); h.input('#si-email', 'nope'); h.submit('#signin-form');
+  assert.match(h.q('#si-err').textContent, /such as name@example\.com/, 'Shows the expected format');
+  h.input('#si-email', 'maddy@example.com'); h.input('#si-pass', ''); h.submit('#signin-form');
+  assert.match(h.q('#si-err').textContent, /enter your password/);
+  h.go('create'); h.submit('#create-form');
+  assert.match(h.q('#ca-err').textContent, /full name, for example/, 'Gives an example');
+  h.input('#ca-name', 'Sam Lee'); h.input('#ca-email', 'sam'); h.submit('#create-form');
+  assert.match(h.q('#ca-err').textContent, /such as name@example\.com/);
+  h.input('#ca-email', 'sam@example.com'); h.input('#ca-pass', '123'); h.submit('#create-form');
+  assert.match(h.q('#ca-err').textContent, /Add 5 more/, 'Says how many characters are still needed');
+  h.signIn(); h.go('symptoms'); h.click('[data-act="log-symptom"]'); h.submit('#sym-form');
+  assert.match(h.q('#sym-err').textContent, /for example Headache, or choose one from the list/);
+});
+
+// ---------- 2.4.1 Bypass Blocks ----------
+
+test('every signed-in page starts with a skip link to the main content', t => {
+  const h = setup(t);
+  h.signIn();
+  for (const screen of ['today', 'medications', 'messages', 'schedule', 'symptoms', 'account']) {
+    h.go(screen);
+    const first = h.w.document.querySelector('#app ' + FOCUSABLE_SEL.split(', ').join(', #app '));
+    assert.equal(first?.className, 'skip-link', `${screen}: the skip link is the first thing Tab reaches`);
+    assert.equal(first.textContent, 'Skip to main content');
+    assert.equal(h.q(first.getAttribute('href'))?.tagName, 'MAIN', `${screen}: it points at the <main> landmark`);
+  }
+  assert.match(CSS, /\.skip-link:not\(:focus\) \{[^}]*clip: rect\(0 0 0 0\)/, 'Hidden until it has focus, then shown');
+});
+
+test('the skip link moves focus past the sidebar and top bar to the page content', t => {
+  const h = setup(t);
+  h.layout([['#app', [0, 0, 1440, 768]], ['.content', [300, 72, 1140, 696]], ['.skip-link', [12, 12, 220, 50]],
+    ['.nav [data-go="today"]', [0, 112, 300, 50]], ['[data-act="sos"]', [1340, 13, 80, 46]],
+    ['[data-med-take="2"]', [335, 300, 300, 52]], ['[data-med-take="3"]', [335, 520, 300, 52]]]);
+  h.signIn(); h.go('medications');
+  h.q('.skip-link').focus();
+  const click = new h.w.MouseEvent('click', { bubbles: true, cancelable: true });
+  h.q('.skip-link').dispatchEvent(click);
+  assert.equal(click.defaultPrevented, true, 'The address is left unchanged');
+  assert.equal(h.focused(), h.q('[data-med-take="2"]'), 'Focus lands on the first control in <main>');
+  h.q('.nav [data-go="today"]').focus(); h.key('ArrowUp');
+  assert.notEqual(h.focused(), h.q('.skip-link'), 'Arrow keys never land on the skip link');
+
+  h.layout([['#app', [0, 0, 1440, 768]], ['.skip-link', [12, 12, 220, 50]]]);
+  h.q('.skip-link').click();
+  assert.equal(h.focused(), h.q('#main-content'), 'With no control in view, <main> itself takes focus');
+});
+
+// ---------- 2.4.5 Multiple Ways ----------
+
+test('pages can be reached from the sidebar, with Ctrl+1 to Ctrl+6, and from links on Today', t => {
+  const h = setup(t); h.signIn();
+  const pages = ['today', 'medications', 'messages', 'schedule', 'symptoms', 'account'];
+  pages.forEach((screen, i) => {
+    assert.equal(h.q(`.nav [data-go="${screen}"]`).getAttribute('aria-keyshortcuts'), `Control+${i + 1}`);
+  });
+  const depth = h.read('state.history.length');
+  for (const [i, screen] of [...pages.entries()].reverse()) {
+    assert.equal(h.ctrl(String(i + 1), { code: `Digit${i + 1}` }), true);
+    assert.equal(h.read('state.screen'), screen, `Ctrl+${i + 1} opens ${screen}`);
+  }
+  h.ctrl('3', { code: 'Numpad3' });
+  assert.equal(h.read('state.screen'), 'messages', 'The number pad works too');
+  assert.equal(h.read('state.history.length'), depth, 'Like the sidebar, it replaces the page rather than stacking history');
+  h.ctrl('2', { code: 'Digit2', repeat: true });
+  assert.equal(h.read('state.screen'), 'messages', 'A held key does not repeat');
+
+  h.click('[data-act="sos"]'); h.ctrl('1', { code: 'Digit1' });
+  assert.equal(h.read('state.screen'), 'messages', 'Not while a dialog is open'); h.key('Escape');
+  h.go('signin'); h.ctrl('1', { code: 'Digit1' });
+  assert.equal(h.read('state.screen'), 'signin', 'Not before signing in');
+
+  h.signIn(); h.go('account');
+  const rows = [...h.w.document.querySelectorAll('.sc-row')].map(r => r.textContent.replace(/\s+/g, ' '));
+  for (const label of ['Go to Today', 'Go to Medications', 'Go to Messages', 'Go to Schedule', 'Go to Symptoms', 'Go to Account']) {
+    assert.ok(rows.some(r => r.includes(label)), `Account lists "${label}"`);
+  }
+  h.go('today');
+  assert.ok(h.q('.content [data-go="schedule"]'), 'Today links to the schedule');
+  assert.ok(h.q('.content [data-chat]'), 'and to messages');
+});
+
+// ---------- 1.4.12 Text Spacing ----------
+
+test('no text is cut off to fit, so wider text spacing never hides any', () => {
+  assert.doesNotMatch(CSS, /text-overflow:\s*ellipsis/, 'No ellipsis truncation');
+  assert.doesNotMatch(CSS, /line-clamp/, 'No line clamping');
+  // A single line with hidden overflow only where text is meant to be hidden
+  for (const [, selector, body] of CSS.matchAll(/([^{}\n]+)\{([^}]*)\}/g)) {
+    if (/white-space:\s*nowrap/.test(body) && /overflow:\s*hidden/.test(body)) {
+      assert.match(selector, /sr-only|skip-link:not\(:focus\)|collapsed/, `${selector.trim()} clips a single line of text`);
+    }
+  }
+  assert.match(CSS, /\.sb-head \.who strong \{[^}]*overflow-wrap: anywhere/, 'The name in the sidebar wraps');
+  assert.match(CSS, /\.convo \.preview \{[^}]*overflow-wrap: anywhere/, 'Message previews wrap');
+});
+
 // ---------- 2.4.7 Focus Visible ----------
 
 test('the focus outline is never removed', () => {
@@ -252,6 +352,7 @@ test('zoomed in, the multi-column layouts fall back to one column', () => {
   for (const sel of ['.two-col', '.med-grid', '.sym-grid', '.acct-grid', '.msg-layout']) {
     assert.match(block, new RegExp(`\\${sel}[^{]*\\{[^}]*grid-template-columns: 1fr`), `${sel} stacks`);
   }
+  assert.match(CSS, /\.chat-head \{[^}]*flex-wrap: wrap/, 'The chat header wraps, so its Call button is never cut off');
   // Text is sized in rem/em; only emoji icons use px sizes
   for (const [, selector] of CSS.matchAll(/([^{}\n]+)\{[^}]*font-size:\s*\d+px/g)) {
     assert.match(selector, /emoji|logo-tile|face-circle|med-icon|role-card|h-ico|nav|sb-row|theme-fab|appt \.ico|check-circle|rings/, `${selector.trim()} sizes text in px`);

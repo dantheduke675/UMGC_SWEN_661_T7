@@ -3,6 +3,7 @@
  * symptom + severity, and submitting a new log entry.
  */
 import React from 'react';
+import { AccessibilityInfo } from 'react-native';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { ScrollProvider } from '../src/context/ScrollContext';
 import SymptomsScreen from '../src/screens/SymptomsScreen';
@@ -35,7 +36,7 @@ describe('SymptomsScreen', () => {
     expect(screen.getByText('Severity')).toBeTruthy();
   });
 
-  it('the submit button is disabled (no-op) until a symptom is selected', async () => {
+  it('pressing Log symptom with nothing chosen adds no entry', async () => {
     await renderScreen();
     await fireEvent.press(screen.getByText('Log a symptom'));
 
@@ -103,15 +104,32 @@ describe('SymptomsScreen', () => {
       expect(screen.getByRole('radio', { name: 'Severity 3 of 5' })).not.toBeChecked();
     });
 
-    it('disables the submit button until a symptom is selected', async () => {
+    it('explains in text, as an alert, what is missing when Log symptom is pressed with nothing chosen', async () => {
+      const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
       await renderScreen();
       await fireEvent.press(screen.getByText('Log a symptom'));
 
       const submit = screen.getByRole('button', { name: 'Log symptom' });
-      expect(submit).toBeDisabled();
+      expect(submit).toHaveProp('accessibilityHint', 'Choose a symptom above first');
+      await fireEvent.press(submit);
 
+      expect(screen.getByRole('alert')).toHaveTextContent(/Choose what you are feeling above/);
+      expect(announce).toHaveBeenCalledWith(expect.stringMatching(/Choose what you are feeling above/));
+
+      // Choosing a symptom clears the error.
       await fireEvent.press(screen.getByText('Breathing'));
-      expect(submit).toBeEnabled();
+      expect(screen.queryByRole('alert')).toBeNull();
+      announce.mockRestore();
+    });
+
+    it('announces the new entry once a symptom is logged', async () => {
+      const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+      await renderScreen();
+      await fireEvent.press(screen.getByText('Log a symptom'));
+      await fireEvent.press(screen.getByText('Breathing'));
+      await fireEvent.press(screen.getByText('Log symptom'));
+      expect(announce).toHaveBeenCalledWith('Breathing logged, severity 3 of 5.');
+      announce.mockRestore();
     });
   });
 

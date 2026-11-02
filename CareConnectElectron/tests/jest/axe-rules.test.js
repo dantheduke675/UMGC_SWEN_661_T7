@@ -72,6 +72,8 @@ describe('landmarks (axe: landmark-one-main, region)', () => {
       while (walker.nextNode()) {
         const node = walker.currentNode, el = node.parentElement;
         if (!node.nodeValue.trim() || el.closest('script, style, [hidden], [aria-hidden="true"]')) continue;
+        // axe's region rule allows a skip link before the landmarks
+        if (el.closest('.skip-link')) continue;
         if (!el.closest(LANDMARKS)) problems.push(`${view}: "${node.nodeValue.trim()}"`);
       }
     }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 import { useAppState } from '../appStateContext'
 import type { Conversation } from '../data'
 
@@ -25,22 +25,34 @@ export function Messages() {
   const { conversations, readConversation } = useAppState()
   const [params, setParams] = useSearchParams()
   const open = conversations.find(c => c.id === params.get('c'))
+  // The conversation just closed (passed in the navigation, since the list remounts when the shell changes
+  // layout); its row gets focus back so keyboard and screen reader users keep their place
+  const returnTo = (useLocation().state as { returnTo?: string } | null)?.returnTo
+  const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
     if (open?.unread) readConversation(open.id)
   }, [open, readConversation])
 
-  if (open) return <Thread c={open} onBack={() => setParams({})} />
+  useEffect(() => {
+    if (!open && returnTo) listRef.current?.querySelector<HTMLElement>(`[data-conversation="${returnTo}"]`)?.focus()
+  }, [open, returnTo])
+
+  if (open)
+    return (
+      <Thread c={open} onBack={() => setParams({}, { state: { returnTo: open.id } })} />
+    )
 
   return (
     <>
       <h2 className="sr-only">Conversations</h2>
-      <ul>
+      <ul ref={listRef}>
         {conversations.map(c => {
           const last = c.messages.at(-1)
           return (
             <li key={c.id} className="border-b border-line">
               <button
+                data-conversation={c.id}
                 onClick={() => setParams({ c: c.id })}
                 className="flex w-full items-start gap-4 rounded-xl py-5 text-left hover:bg-surface/60"
               >
@@ -77,6 +89,10 @@ function Thread({ c, onBack }: { c: Conversation; onBack: () => void }) {
   const { sendMessage, startCall } = useAppState()
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLUListElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  // Opening a conversation removes the button that was pressed; focus its heading so screen readers say where you are
+  useEffect(() => headingRef.current?.focus(), [c.id])
 
   // Keep the newest message in view
   useEffect(() => {
@@ -100,20 +116,21 @@ function Thread({ c, onBack }: { c: Conversation; onBack: () => void }) {
         </button>
         <PersonAvatar c={c} size={48} />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-bold text-ink">{c.name}</h2>
+          <h2 ref={headingRef} tabIndex={-1} className="truncate text-lg font-bold text-ink">{c.name}</h2>
           <p className="text-sm text-sub">{c.role}</p>
         </div>
         <button
           onClick={() => startCall(c.id)}
           aria-label={`Call ${c.name}`}
           title={`Call ${c.name}`}
-          className="grid size-14 shrink-0 place-items-center rounded-full bg-brand text-2xl transition-all active:scale-95"
+          className="grid size-14 shrink-0 place-items-center rounded-full bg-brand text-2xl text-white transition-all active:scale-95"
         >
           <span aria-hidden="true">📞</span>
         </button>
       </div>
 
-      <ul ref={listRef} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 md:px-6" aria-label={`Messages with ${c.name}`}>
+      {/* aria-live reads each new message (sent or received) without moving focus from the reply box */}
+      <ul ref={listRef} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 md:px-6" aria-label={`Messages with ${c.name}`} aria-live="polite">
         {c.messages.map((m, i) => {
           const mine = m.from === 'me'
           return (
@@ -148,7 +165,7 @@ function Thread({ c, onBack }: { c: Conversation; onBack: () => void }) {
           onChange={e => setDraft(e.target.value)}
           placeholder="Type a message…"
           autoComplete="off"
-          className="auth-input h-14 min-w-0 flex-1 rounded-xl border-2 border-transparent bg-surface-2 px-4 text-base text-ink placeholder:text-muted"
+          className="auth-input h-14 min-w-0 flex-1 rounded-xl border-2 border-line-input bg-surface-2 px-4 text-base text-ink placeholder:text-muted"
         />
         <button type="submit" aria-label="Send" className="grid size-14 shrink-0 place-items-center rounded-full bg-brand text-2xl font-bold text-white transition-all active:scale-95">
           <span aria-hidden="true">↑</span>
