@@ -165,7 +165,7 @@ function Thread({ c, onBack }: { c: Conversation; onBack: () => void }) {
           onChange={e => setDraft(e.target.value)}
           placeholder="Type a message…"
           autoComplete="off"
-          className="auth-input h-14 min-w-0 flex-1 rounded-xl border-2 border-transparent bg-surface-2 px-4 text-base text-ink placeholder:text-muted"
+          className="auth-input h-14 min-w-0 flex-1 rounded-xl border-2 border-line-input bg-surface-2 px-4 text-base text-ink placeholder:text-muted"
         />
         <button type="submit" aria-label="Send" className="grid size-14 shrink-0 place-items-center rounded-full bg-brand text-2xl font-bold text-white transition-all active:scale-95">
           <span aria-hidden="true">↑</span>

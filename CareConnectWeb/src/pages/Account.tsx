@@ -28,7 +28,8 @@ function Row({ icon, title, value, onClick, checked }: { icon: string; title: st
         className="flex min-h-[80px] w-full items-center gap-4 px-5 py-3 text-left hover:bg-surface-2"
       >
         <span className="w-7 shrink-0 text-center text-2xl leading-none" aria-hidden="true">{icon}</span>
-        <span className="min-w-0 flex-1">
+        {/* overflow-wrap: anywhere lets a long value (the email) wrap, so rows fit a 320 px screen (WCAG 1.4.10) */}
+        <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
           {/* The sr-only comma keeps screen readers from running the two lines together */}
           <span className="block text-[17px] font-bold text-ink">{title}</span>
           <span className="sr-only">, </span>
@@ -110,7 +111,7 @@ export function Account() {
       </div>
 
       {/* Profile and Preferences side by side on desktop; Care team and Accessibility under them */}
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <Group title="Profile">
           <Row icon="👤" title={patient.full} value={patient.email} onClick={() => addToast('Editing your profile is coming soon')} />
           <Row
