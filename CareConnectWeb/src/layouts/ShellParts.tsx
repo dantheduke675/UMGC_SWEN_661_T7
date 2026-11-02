@@ -57,7 +57,7 @@ export function Sidebar({ collapsed, onToggle, onNavigate }: { collapsed: boolea
         }`}
       >
         <div className={`flex min-h-[76px] items-center gap-3 px-[18px] py-3.5 ${collapsed ? 'max-lg:justify-center max-lg:px-0' : ''}`}>
-          <div className="grid size-[42px] flex-none place-items-center rounded-[13px] bg-brand text-[21px]" aria-hidden="true">💊</div>
+          <div className="grid size-[42px] flex-none place-items-center rounded-[13px] bg-brand text-[21px] text-white" aria-hidden="true">💊</div>
           <div className={`min-w-0 ${hideLabel}`}>
             <p className="truncate font-extrabold text-ink">CareConnect</p>
             <p className="text-[10px] leading-snug font-extrabold tracking-[0.12em] text-sub">Patient workspace</p>

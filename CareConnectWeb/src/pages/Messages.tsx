@@ -107,7 +107,7 @@ function Thread({ c, onBack }: { c: Conversation; onBack: () => void }) {
           onClick={() => startCall(c.id)}
           aria-label={`Call ${c.name}`}
           title={`Call ${c.name}`}
-          className="grid size-14 shrink-0 place-items-center rounded-full bg-brand text-2xl transition-all active:scale-95"
+          className="grid size-14 shrink-0 place-items-center rounded-full bg-brand text-2xl text-white transition-all active:scale-95"
         >
           <span aria-hidden="true">📞</span>
         </button>

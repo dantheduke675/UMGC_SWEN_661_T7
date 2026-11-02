@@ -40,7 +40,7 @@ export function Schedule() {
               onClick={() => setSel(i)}
               aria-pressed={isSel}
               className={`flex h-[60px] min-w-[52px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border-[1.5px] transition-all ${
-                isSel ? 'border-brand bg-brand' : 'border-line bg-surface'
+                isSel ? 'border-brand bg-brand text-white' : 'border-line bg-surface'
               }`}
             >
               {/* Named by its content, "Sunday, October 25", which includes the visible day number
