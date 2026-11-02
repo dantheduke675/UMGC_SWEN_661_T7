@@ -69,6 +69,8 @@ test('all visible text sits inside a landmark, dialog or live region', t => {
     while (walker.nextNode()) {
       const node = walker.currentNode, el = node.parentElement;
       if (!node.nodeValue.trim() || el.closest('script, style, [hidden], [aria-hidden="true"]')) continue;
+      // axe's region rule allows a skip link before the landmarks
+      if (el.closest('.skip-link')) continue;
       assert.ok(el.closest(LANDMARKS), `${view}: "${node.nodeValue.trim()}" is outside every landmark — ${el.outerHTML.slice(0, 90)}`);
     }
   }
