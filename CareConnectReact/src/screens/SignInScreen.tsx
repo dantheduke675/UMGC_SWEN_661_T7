@@ -1,10 +1,12 @@
 /**
  * SignInScreen (password)
  * Email + password sign-in form. Offers Face ID as an alternative path.
- * Sign in → Today screen; Use Face ID instead → FaceIDScreen
+ * Sign in → Today screen (once both fields pass validation); Use Face ID instead → FaceIDScreen
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
+  TextInput,
   View,
   Text,
   StyleSheet,
@@ -15,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { AuthBtn, AuthField, ThemeToggleBtn } from '../components/AuthComponents';
+import { emailError, errorSummary, passwordError } from '../constants/validation';
 
 interface Props {
   navigation: {
@@ -28,6 +31,25 @@ export default function SignInScreen({ navigation }: Props) {
 
   const [email,    setEmail]    = useState('maddy@example.com');
   const [password, setPassword] = useState('');
+  // Errors only appear after Sign in is pressed, and each clears as soon as
+  // its field is edited.
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const emailRef    = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+
+  function signIn() {
+    const next = { email: emailError(email), password: passwordError(password) };
+    setErrors(next);
+    const messages = [next.email, next.password].filter(Boolean);
+    if (messages.length === 0) {
+      navigation.navigate('Today');
+      return;
+    }
+    // Say what went wrong (iOS has no live regions), then put focus on the
+    // first field to fix.
+    AccessibilityInfo.announceForAccessibility(`${errorSummary(messages.length)} ${messages.join(' ')}`);
+    (next.email ? emailRef : passwordRef).current?.focus();
+  }
 
   const { width } = useWindowDimensions();
   const isTablet = width >= 700;
@@ -78,10 +100,12 @@ export default function SignInScreen({ navigation }: Props) {
         <AuthField
           label="Email address"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={t => { setEmail(t); setErrors(e => ({ ...e, email: undefined })); }}
           filled={email.length > 0}
           keyboardType="email-address"
           helper="We will never share this."
+          error={errors.email}
+          inputRef={emailRef}
           large={isTablet}
           scheme={scheme}
         />
@@ -91,8 +115,10 @@ export default function SignInScreen({ navigation }: Props) {
         <AuthField
           label="Password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={t => { setPassword(t); setErrors(e => ({ ...e, password: undefined })); }}
           helper="Your password manager can fill this for you."
+          error={errors.password}
+          inputRef={passwordRef}
           secureTextEntry
           large={isTablet}
           scheme={scheme}
@@ -105,7 +131,7 @@ export default function SignInScreen({ navigation }: Props) {
           label="Sign in"
           scheme={scheme}
           large={isTablet}
-          onPress={() => navigation.navigate('Today')}
+          onPress={signIn}
         />
         <View style={{ height: 16 }} />
 

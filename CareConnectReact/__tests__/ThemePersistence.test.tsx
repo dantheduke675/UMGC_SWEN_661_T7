@@ -31,6 +31,7 @@ describe('theme persistence across navigation', () => {
     expect(screen.getByText('🌙')).toBeTruthy();
     expect(screen.queryByText('☀️')).toBeNull();
 
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'SuperSecret1');
     await fireEvent.press(screen.getByText(/Care recipient/));
     // Still light mode on BiometricsIntroScreen.
     expect(screen.getByText('🌙')).toBeTruthy();
@@ -53,6 +54,7 @@ describe('theme persistence across navigation', () => {
     // On SignInScreen — still light mode.
     expect(screen.getByText('🌙')).toBeTruthy();
 
+    await fireEvent.changeText(screen.getByLabelText('Password'), 'SuperSecret1');
     const matches = screen.getAllByText('Sign in');
     await fireEvent.press(matches[matches.length - 1]);
 
@@ -61,7 +63,7 @@ describe('theme persistence across navigation', () => {
     expect(screen.getByText('🌙')).toBeTruthy();
 
     // The Account screen's own appearance switch should agree too.
-    await fireEvent.press(screen.getByText('Account'));
+    await fireEvent.press(screen.getByRole('tab', { name: 'Account' }));
     expect(screen.getByRole('switch', { name: 'Dark mode' })).not.toBeChecked();
   });
 });

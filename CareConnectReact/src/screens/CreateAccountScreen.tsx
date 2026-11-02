@@ -3,8 +3,10 @@
  * New user registration. Fields for name, email, password, then role selection.
  * Care recipient → BiometricsIntroScreen; Caregiver → app home (not yet implemented).
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
+  TextInput,
   View,
   Text,
   StyleSheet,
@@ -20,6 +22,15 @@ import {
   AuthRoleTile,
   ThemeToggleBtn,
 } from '../components/AuthComponents';
+import {
+  PASSWORD_MIN_LENGTH,
+  emailError,
+  errorSummary,
+  nameError,
+  passwordError,
+} from '../constants/validation';
+
+type FieldErrors = { name?: string; email?: string; password?: string };
 
 interface Props {
   navigation: {
@@ -34,6 +45,25 @@ export default function CreateAccountScreen({ navigation }: Props) {
   const [name,     setName]     = useState('Maddy Chen');
   const [email,    setEmail]    = useState('maddy@example.com');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const nameRef     = useRef<TextInput>(null);
+  const emailRef    = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+
+  /** Checks the form before a role is chosen; true when it can go ahead. */
+  function validate(): boolean {
+    const next: FieldErrors = {
+      name:     nameError(name),
+      email:    emailError(email),
+      password: passwordError(password, PASSWORD_MIN_LENGTH),
+    };
+    setErrors(next);
+    const messages = [next.name, next.email, next.password].filter(Boolean);
+    if (messages.length === 0) return true;
+    AccessibilityInfo.announceForAccessibility(`${errorSummary(messages.length)} ${messages.join(' ')}`);
+    (next.name ? nameRef : next.email ? emailRef : passwordRef).current?.focus();
+    return false;
+  }
 
   const { width } = useWindowDimensions();
   const isTablet = width >= 700;
@@ -84,8 +114,10 @@ export default function CreateAccountScreen({ navigation }: Props) {
         <AuthField
           label="Full name"
           value={name}
-          onChangeText={setName}
+          onChangeText={t => { setName(t); setErrors(e => ({ ...e, name: undefined })); }}
           filled={name.length > 0}
+          error={errors.name}
+          inputRef={nameRef}
           large={isTablet}
           scheme={scheme}
         />
@@ -94,9 +126,11 @@ export default function CreateAccountScreen({ navigation }: Props) {
         <AuthField
           label="Email address"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={t => { setEmail(t); setErrors(e => ({ ...e, email: undefined })); }}
           filled={email.length > 0}
           keyboardType="email-address"
+          error={errors.email}
+          inputRef={emailRef}
           large={isTablet}
           scheme={scheme}
         />
@@ -105,8 +139,10 @@ export default function CreateAccountScreen({ navigation }: Props) {
         <AuthField
           label="Password"
           value={password}
-          onChangeText={setPassword}
-          helper="At least 8 characters."
+          onChangeText={t => { setPassword(t); setErrors(e => ({ ...e, password: undefined })); }}
+          helper={`At least ${PASSWORD_MIN_LENGTH} characters.`}
+          error={errors.password}
+          inputRef={passwordRef}
           secureTextEntry
           large={isTablet}
           scheme={scheme}
@@ -134,7 +170,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
           role="recipient"
           scheme={scheme}
           large={isTablet}
-          onPress={() => navigation.navigate('BiometricsIntro')}
+          onPress={() => { if (validate()) navigation.navigate('BiometricsIntro'); }}
         />
         <View style={{ height: 16 }} />
         <AuthRoleTile
@@ -142,7 +178,9 @@ export default function CreateAccountScreen({ navigation }: Props) {
           scheme={scheme}
           large={isTablet}
           onPress={() => {
-            // Caregiver onboarding not yet implemented
+            // Caregiver onboarding not yet implemented; still check the form
+            // so the user is told about any mistakes.
+            validate();
           }}
         />
       </ScrollView>

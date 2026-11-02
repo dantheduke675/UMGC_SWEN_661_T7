@@ -7,9 +7,9 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { ColorScheme, dark } from '../constants/theme';
 import { CChip } from '../components/AppComponents';
 import { selectedButtonState } from '../constants/a11y';

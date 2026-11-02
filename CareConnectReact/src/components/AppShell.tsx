@@ -18,10 +18,10 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Platform,
 } from 'react-native';
+import { TouchableOpacity } from './Touchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ColorScheme } from '../constants/theme';
 import { ScrollProvider, useScrollContext } from '../context/ScrollContext';
@@ -66,7 +66,8 @@ function AccessBar({ scheme }: { scheme: ColorScheme }) {
         styles.accessBar,
         { backgroundColor: scheme.surface, borderTopColor: scheme.border },
       ]}
-      accessible
+      // No `accessible` here: it would merge the buttons into one element for
+      // VoiceOver and add an extra, do-nothing keyboard stop on Android.
       accessibilityRole="toolbar"
     >
       {/* Scroll up */}
@@ -155,7 +156,6 @@ function BottomNav({
         styles.bottomNav,
         { backgroundColor: scheme.surface, borderTopColor: scheme.border },
       ]}
-      accessible
       accessibilityRole="tablist"
     >
       {NAV_ITEMS.map(item => {
@@ -226,8 +226,9 @@ export function AppShell({
   return (
     <ScrollProvider>
       <View style={[styles.root, { backgroundColor: scheme.bg }]}>
-        {/* Screen content */}
-        <View style={styles.body}>{children}</View>
+        {/* Screen content. It comes first in the reading and keyboard order,
+            before the repeated bars, and is the "main" landmark on the web. */}
+        <View style={styles.body} role="main">{children}</View>
 
         {showThemeToggle && (
           <SafeAreaView
@@ -310,7 +311,7 @@ export default function AppShellNavigator({ navigation }: AppShellNavigatorProps
 
     switch (view.tab) {
       case 'today':
-        return <TodayScreen scheme={scheme} />;
+        return <TodayScreen scheme={scheme} onNavigate={tab => setView({ type: 'tab', tab })} />;
       case 'medications':
         return <MedicationsScreen scheme={scheme} />;
       case 'messages':
@@ -371,7 +372,7 @@ const styles = StyleSheet.create({
 
   // Accessibility bar
   accessBar: {
-    height:            64,
+    minHeight:            64,
     flexDirection:     'row',
     alignItems:        'flex-end',
     paddingHorizontal: 12,
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   },
   accessBtn: {
     flex:           1,
-    height:         52,
+    minHeight:         52,
     borderRadius:   16,
     borderWidth:    2,
     alignItems:     'center',
@@ -396,8 +397,8 @@ const styles = StyleSheet.create({
     marginTop:  1,
   },
   voiceBtn: {
-    width:          72,
-    height:         52,
+    minWidth:          72,
+    minHeight:         52,
     borderRadius:   16,
     alignItems:     'center',
     justifyContent: 'center',
@@ -414,12 +415,17 @@ const styles = StyleSheet.create({
 
   // Bottom nav
   bottomNav: {
-    height:        76,
+    minHeight:        76,
     flexDirection: 'row',
     borderTopWidth: 1,
   },
   navItem: {
     flex:           1,
+    // Lets each tab stay a sixth of the bar on a narrow screen or with large
+    // text: a long label then wraps inside its tab instead of pushing past
+    // its neighbours.
+    minWidth:       0,
+    paddingHorizontal: 2,
     alignItems:     'center',
     justifyContent: 'center',
     paddingBottom:  Platform.OS === 'ios' ? 0 : 4,
@@ -442,6 +448,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   navLabel: {
+    textAlign:  'center',
+    alignSelf:  'stretch', // the label's width is the tab's, so it wraps rather than overflows
     fontSize:   11,
     fontWeight: '700',
     marginTop:  2,

@@ -4,6 +4,10 @@ appId: com.dgmartin.CareConnectReact
 ---
 - runFlow: helpers/launch_app.yaml
 - tapOn: "Sign in"
+# Sign-in now checks the form, so a password is needed
+- tapOn: "Password"
+- inputText: "SuperSecret1"
+- hideKeyboard
 - tapOn:
     text: "Sign in"
     index: 1

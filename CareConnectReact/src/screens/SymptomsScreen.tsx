@@ -5,12 +5,13 @@
  */
 import React, { useRef, useEffect, useState } from 'react';
 import {
+  AccessibilityInfo,
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { ColorScheme, dark, accessibleAccentText, accessibleFillForWhiteText } from '../constants/theme';
 import { useScrollContext } from '../context/ScrollContext';
 import { selectedButtonState } from '../constants/a11y';
@@ -132,11 +133,13 @@ function LogCard({
   onSelect,
   onSeverityChange,
   onSubmit,
+  error,
 }: {
   scheme:          ColorScheme;
   expanded:        boolean;
   selected:        string | null;
   severity:        number;
+  error:           string | null;
   onToggle:        () => void;
   onSelect:        (s: string) => void;
   onSeverityChange:(v: number) => void;
@@ -229,10 +232,23 @@ function LogCard({
           <SeverityPicker value={severity} scheme={scheme} onChange={onSeverityChange} />
           <View style={{ height: 14 }} />
 
-          {/* Submit */}
+          {/* Submit. Stays pressable with nothing chosen, so pressing it
+              explains what is missing instead of silently doing nothing. */}
+          {error ? (
+            <>
+              <Text
+                style={[styles.logError, { color: scheme.danger }]}
+                accessibilityRole="alert"
+                accessibilityLiveRegion="assertive"
+              >
+                {`⚠ ${error}`}
+              </Text>
+              <View style={{ height: 10 }} />
+            </>
+          ) : null}
           <TouchableOpacity
-            onPress={selected ? onSubmit : undefined}
-            activeOpacity={selected ? 0.85 : 1}
+            onPress={onSubmit}
+            activeOpacity={0.85}
             style={[
               styles.submitBtn,
               { backgroundColor: selected ? scheme.primary : scheme.surface2 },
@@ -241,7 +257,6 @@ function LogCard({
             accessibilityRole="button"
             accessibilityLabel="Log symptom"
             accessibilityHint={selected ? undefined : 'Choose a symptom above first'}
-            aria-disabled={!selected}
           >
             <Text
               style={[
@@ -329,9 +344,20 @@ export default function SymptomsScreen({ scheme = dark }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [severity, setSeverity] = useState(3);
   const [showLogger, setShowLogger] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
+
+  function selectSymptom(label: string) {
+    setSelected(label);
+    setLogError(null);
+  }
 
   function logSymptom() {
-    if (!selected) return;
+    if (!selected) {
+      const message = 'Choose what you are feeling above, then press Log symptom again.';
+      setLogError(message);
+      AccessibilityInfo.announceForAccessibility(message);
+      return;
+    }
     const opt  = SYMPTOM_OPTS.find(o => o.label === selected)!;
     const now  = new Date();
     const h    = now.getHours();
@@ -352,6 +378,7 @@ export default function SymptomsScreen({ scheme = dark }: Props) {
     setSelected(null);
     setSeverity(3);
     setShowLogger(false);
+    AccessibilityInfo.announceForAccessibility(`${selected} logged, severity ${severity} of 5.`);
   }
 
   return (
@@ -375,9 +402,10 @@ export default function SymptomsScreen({ scheme = dark }: Props) {
         selected={selected}
         severity={severity}
         onToggle={() => setShowLogger(v => !v)}
-        onSelect={setSelected}
+        onSelect={selectSymptom}
         onSeverityChange={setSeverity}
         onSubmit={logSymptom}
+        error={logError}
       />
       <View style={{ height: 20 }} />
 
@@ -468,11 +496,12 @@ const styles = StyleSheet.create({
   },
 
   submitBtn: {
-    height:         52,
+    minHeight:         52,
     borderRadius:   14,
     alignItems:     'center',
     justifyContent: 'center',
   },
+  logError: { fontSize: 14, fontWeight: '700' },
   submitBtnText: { fontSize: 15, fontWeight: '700' },
 
   // Severity bar

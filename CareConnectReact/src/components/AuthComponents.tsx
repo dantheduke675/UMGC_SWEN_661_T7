@@ -3,16 +3,16 @@
  * All components accept the active ColorScheme so they render correctly in both
  * light and dark mode without needing a context provider.
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   TextInput,
   StyleSheet,
   Animated,
   Easing,
 } from 'react-native';
+import { TouchableOpacity, focusRingStyle } from './Touchable';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { ColorScheme, tokens } from '../constants/theme';
 
@@ -69,8 +69,10 @@ export function AuthBtn({
   accessibilityHint,
   accessibilityLabel,
 }: AuthBtnProps) {
-  const h  = large ? 80 : 64;
   const fs = large ? 22 : 18;
+  // Padding rather than a fixed height (64, or 80 on a tablet), so the button
+  // grows instead of clipping its label when the system text size is raised.
+  const py = large ? 26 : 20;
 
   const a11yProps = {
     accessible: true,
@@ -84,7 +86,7 @@ export function AuthBtn({
   if (variant === 'text') {
     return (
       <TouchableOpacity
-        style={[styles.btnBase, { height: h, minHeight: 44 }]}
+        style={[styles.btnBase, { paddingVertical: py, minHeight: 44 }]}
         onPress={onPress}
         disabled={disabled}
         activeOpacity={0.7}
@@ -102,7 +104,7 @@ export function AuthBtn({
           styles.btnBase,
           styles.btnSecondary,
           {
-            height: h,
+            paddingVertical: py,
             minHeight: 44,
             backgroundColor: scheme.surface,
             borderColor: scheme.border,
@@ -123,7 +125,7 @@ export function AuthBtn({
       style={[
         styles.btnBase,
         styles.btnPrimary,
-        { height: h, minHeight: 44, backgroundColor: scheme.primary, opacity: disabled ? 0.5 : 1 },
+        { paddingVertical: py, minHeight: 44, backgroundColor: scheme.primary, opacity: disabled ? 0.5 : 1 },
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -142,12 +144,17 @@ interface AuthFieldProps {
   value: string;
   onChangeText?: (text: string) => void;
   helper?: string;
+  /** Shown in text under the field (and announced) when the value is wrong.
+   *  Say what is wrong and how to fix it, e.g. "Enter your password." */
+  error?: string;
   filled?: boolean;
   large?: boolean;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address';
   scheme: ColorScheme;
   placeholder?: string;
+  /** Lets a form move focus to the first field with an error. */
+  inputRef?: React.Ref<TextInput>;
 }
 
 export function AuthField({
@@ -155,13 +162,16 @@ export function AuthField({
   value,
   onChangeText,
   helper,
+  error,
   filled = false,
   large = false,
   secureTextEntry = false,
   keyboardType = 'default',
   scheme,
   placeholder,
+  inputRef,
 }: AuthFieldProps) {
+  const [focused, setFocused] = useState(false);
   const labelFs  = large ? 20 : 16;
   const inputH   = large ? 80 : 64;
   const inputFs  = large ? 22 : 18;
@@ -177,20 +187,25 @@ export function AuthField({
         style={[
           styles.fieldInput,
           {
-            height: inputH,
+            // minHeight, not height, so a larger system text size never clips the value
+            minHeight: inputH,
             backgroundColor: scheme.surface,
-            borderColor: scheme.inputBorder,
+            borderColor: error ? scheme.danger : scheme.inputBorder,
             paddingHorizontal: px,
           },
+          focused && focusRingStyle(scheme.text),
         ]}
       >
         <TextInput
+          ref={inputRef}
           style={[
             styles.fieldInputText,
             { fontSize: inputFs, color: filled ? scheme.text : scheme.muted },
           ]}
           value={value}
           onChangeText={onChangeText}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           placeholder={placeholder}
@@ -199,9 +214,20 @@ export function AuthField({
           autoCorrect={false}
           accessible
           accessibilityLabel={label}
-          accessibilityHint={helper}
+          // The error is read first, so a screen reader user returning to the
+          // field hears what to fix before the general helper text.
+          accessibilityHint={[error && `Error: ${error}`, helper].filter(Boolean).join(' ') || undefined}
         />
       </View>
+      {error ? (
+        <Text
+          style={[styles.fieldHelper, styles.fieldError, { fontSize: helperFs, color: scheme.danger }]}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="assertive"
+        >
+          {`⚠ ${error}`}
+        </Text>
+      ) : null}
       {helper ? (
         <Text style={[styles.fieldHelper, { fontSize: helperFs, color: scheme.muted }]}>
           {helper}
@@ -225,12 +251,12 @@ export function AuthRoleTile({ role, scheme, large = false, onPress }: AuthRoleT
   const bg          = isCaregiver ? tokens.caregiverPurple : scheme.primary;
   const label       = isCaregiver ? '👤  Caregiver' : '🙂  Care recipient';
   const spokenLabel = isCaregiver ? 'Caregiver' : 'Care recipient';
-  const h           = large ? 80 : 88;
+  const py          = large ? 26 : 32; // ~80 / 88 tall, but grows with the text
   const fs          = large ? 22 : 18;
 
   return (
     <TouchableOpacity
-      style={[styles.roleTile, { height: h, minHeight: 44, backgroundColor: bg }]}
+      style={[styles.roleTile, { paddingVertical: py, minHeight: 44, backgroundColor: bg }]}
       onPress={onPress}
       activeOpacity={0.82}
       accessible
@@ -400,6 +426,9 @@ const styles = StyleSheet.create({
   },
   fieldHelper: {
     marginTop: 6,
+  },
+  fieldError: {
+    fontWeight: '700',
   },
   roleTile: {
     width: '100%',

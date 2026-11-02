@@ -8,11 +8,11 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   Animated,
   Easing,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { useAnimatedValue } from '../hooks/useAnimatedValue';
 import { ColorScheme, dark } from '../constants/theme';
 import { contacts, patient } from '../constants/data';
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   careTeamRole: { fontSize: 12, marginTop: 2 },
   msgBtn: {
     width:          40,
-    height:         40,
+    minHeight:         40,
     borderRadius:   12,
     alignItems:     'center',
     justifyContent: 'center',
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
 
   // Sign out
   signOutBtn: {
-    height:         56,
+    minHeight:         56,
     borderRadius:   16,
     alignItems:     'center',
     justifyContent: 'center',

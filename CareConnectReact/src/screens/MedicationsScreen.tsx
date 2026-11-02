@@ -8,10 +8,10 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   Modal,
   StyleSheet,
 } from 'react-native';
+import { TouchableOpacity } from '../components/Touchable';
 import { ColorScheme, dark, tokens } from '../constants/theme';
 import { buildSlots, MedSlot } from '../constants/data';
 import {
@@ -100,10 +100,14 @@ function MedCard({
           </View>
           <View style={styles.medInfo}>
             <View style={styles.medNameRow}>
+              {/* A heading per dose, so screen reader users can jump card to
+                  card (heading navigation) instead of through every button.
+                  No numberOfLines: long names wrap rather than being cut off
+                  at large text sizes. */}
               <Text
                 style={[styles.medName, { color: scheme.text }]}
-                numberOfLines={1}
-                accessibilityLabel={`${slot.med.name}, ${statusLabel}`}
+                accessibilityRole="header"
+                accessibilityLabel={`${slot.med.name}, ${slot.time}, ${statusLabel}`}
               >
                 {slot.med.name}
               </Text>
@@ -138,7 +142,13 @@ function MedCard({
             activeOpacity={isTaken ? 1 : 0.8}
             accessible
             accessibilityRole="button"
-            accessibilityLabel={`${slot.med.name}, ${isTaken ? 'Taken' : 'I took this'}`}
+            // Starts with the visible text so voice control ("tap I took this")
+            // matches, then says which dose (as on the Today screen)
+            accessibilityLabel={
+              isTaken
+                ? `Taken: ${slot.med.name} ${slot.med.dose}, ${slot.time}`
+                : `I took this: ${slot.med.name} ${slot.med.dose}, ${slot.time}`
+            }
             accessibilityHint={isTaken ? undefined : 'Marks this dose as taken'}
             aria-disabled={isTaken}
           >
@@ -169,7 +179,7 @@ function MedCard({
               activeOpacity={0.8}
               accessible
               accessibilityRole="button"
-              accessibilityLabel={`${slot.med.name}, ${isMissed ? 'Missed' : 'I missed this'}`}
+              accessibilityLabel={`${isMissed ? 'Missed' : 'I missed this'}: ${slot.med.name} ${slot.med.dose}, ${slot.time}`}
               accessibilityHint={isMissed ? undefined : 'Opens a confirmation to mark this dose as missed'}
               aria-disabled={isMissed}
             >
@@ -241,7 +251,7 @@ function ConfirmMissedModal({
             activeOpacity={0.75}
             accessible
             accessibilityRole="button"
-            accessibilityLabel="Cancel"
+            accessibilityLabel="Cancel, go back"
             accessibilityHint="Closes this dialog without marking the dose as missed"
           >
             <Text style={[styles.modalBtnText, { color: scheme.text }]}>
@@ -478,7 +488,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex:           1,
-    height:         52,
+    minHeight:         52,
     borderRadius:   14,
     alignItems:     'center',
     justifyContent: 'center',
@@ -509,7 +519,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   modalBtn: {
-    height:         56,
+    minHeight:         56,
     borderRadius:   16,
     alignItems:     'center',
     justifyContent: 'center',
