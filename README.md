@@ -202,7 +202,7 @@ are described in their own sections below.
 
 ## Accessibility Testing
 
-The Flutter app targets **WCAG 2.1 Level AA**. 254 of the 627 host tests are
+The Flutter app targets **WCAG 2.1 Level AA**. 340 of the 713 host tests are
 accessibility tests:
 
 ```
@@ -461,7 +461,7 @@ files are at 100%. The 10 lines left are deliberate:
 
 | Gap                                            | Where                                                                                                            | Production fix                                                           |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Sign-in accepts any input; no route guard      | `sign_in_pass_screen.dart` calls `context.go('/today')` without checking anything; `appRouter` has no `redirect` | A real auth service plus a GoRouter `redirect` on the shell              |
+| Sign-in checks only the email format; any password signs in; no route guard | `sign_in_pass_screen.dart` validates the email (`validateEmail`) then calls `context.go('/today')`; `appRouter` has no `redirect` | A real auth service plus a GoRouter `redirect` on the shell              |
 | Face ID is a spinner only; no `local_auth`     | `sign_in_bio_screen.dart`                                                                                        | `local_auth`, plus `NSFaceIDUsageDescription` in `ios/Runner/Info.plist` |
 | Text fields have no `validator` or `maxLength` | `AuthField` in `widgets.dart`; the message composer                                                              | `Form` with validators; `maxLength` on every free-text field             |
 
@@ -614,7 +614,7 @@ npm run test:coverage
 ```
 
 This runs the Node test runner suite under [c8](https://github.com/bcoe/c8)
-and measures `main.js`, `preload.js` and `src/app.js` (as of 2026-10-29: 162 tests, 100% of
+and measures `main.js`, `preload.js` and `src/app.js` (as of 2026-11-02: 167 tests, 100% of
 lines and statements, 99.3% of functions, 97.9% of branches). It prints a summary table and fails
 if any file drops below **70%** of lines, statements, functions or branches.
 The full report is written to `coverage/`:
@@ -1011,7 +1011,7 @@ npm run test:coverage
 
 Coverage is collected from `App.tsx` and everything in `src/` (`collectCoverageFrom` in `package.json`), so a file no test imports still counts, at 0%. The run fails if lines, statements, functions or branches drop below **60%** (`coverageThreshold`).
 
-Then open `coverage/lcov-report/index.html` in a browser. Unlike the Flutter report this needs no extra tooling — Jest writes the HTML itself. As of 2026-10-29 the suite is 23 files / 215 tests, all passing, with 100% line coverage (563 of 563 lines), 99.7% of statements, 98.8% of functions and 97.0% of branches. What is left is deliberate: iOS-only styling (`Platform.OS === 'ios'`), default prop values, guards the interface makes unreachable (a disabled button's handler, a list with no doses), the Voice button's empty placeholder handler (voice input isn't built yet), and the default `toggleTheme` of `ThemeContext`, used only outside its provider.
+Then open `coverage/lcov-report/index.html` in a browser. Unlike the Flutter report this needs no extra tooling — Jest writes the HTML itself. As of 2026-11-02 the suite is 25 files / 256 tests, all passing, with 99.68% line coverage (631 of 633 lines), 99.58% of statements, 98.2% of functions and 96.87% of branches. What is left is deliberate: iOS-only styling (`Platform.OS === 'ios'`), default prop values, guards the interface makes unreachable (a disabled button's handler, a list with no doses), the Voice button's empty placeholder handler (voice input isn't built yet), and the default `toggleTheme` of `ThemeContext`, used only outside its provider.
 
 ### Note 1. The first test in each file renders the React Native tree for the first time, which is slow under coverage on a busy machine, so `testTimeout` is 20 seconds (Jest's default of 5 seconds made those tests time out at random).
 
@@ -1066,7 +1066,7 @@ Two kinds of axe "label in name" warnings remain and were reviewed: schedule day
 
 | Gap                                                                          | Where                                                                         | Production fix                                                                                             |
 | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Sign-in and create-account do no validation; any input (even empty) signs in | `SignInScreen.tsx` and `CreateAccountScreen.tsx` navigate directly to `Today` | A real auth service plus an auth-gated navigator                                                           |
+| Sign-in and create-account check the input (email format, a password; 8+ characters for a new account) but nothing is verified against a server | `SignInScreen.tsx` and `CreateAccountScreen.tsx` validate with `src/constants/validation.ts`, then navigate to `Today` | A real auth service plus an auth-gated navigator                                                           |
 | Face ID is a 2-second timer                                                  | `FaceIDScreen.tsx`                                                            | `expo-local-authentication`, plus `NSFaceIDUsageDescription` via the `ios.infoPlist` setting in `app.json` |
 | No `maxLength` on text inputs                                                | Message composer in `MsgThreadScreen.tsx`; `AuthField`                        | Length limits and email-format validation                                                                  |
 | No session timeout                                                           | —                                                                             | An `AppState` listener that locks after inactivity                                                         |
