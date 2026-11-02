@@ -29,7 +29,9 @@ function Row({ icon, title, value, onClick, checked }: { icon: string; title: st
       >
         <span className="w-7 shrink-0 text-center text-2xl leading-none" aria-hidden="true">{icon}</span>
         <span className="min-w-0 flex-1">
+          {/* The sr-only comma keeps screen readers from running the two lines together */}
           <span className="block text-[17px] font-bold text-ink">{title}</span>
+          <span className="sr-only">, </span>
           <span className="block text-sm text-sub">{value}</span>
         </span>
         <span className="text-lg text-sub" aria-hidden="true">›</span>

@@ -41,7 +41,7 @@ export function SignIn() {
     >
       <div className="flex flex-col gap-[18px] md:gap-6">
         <AuthButton type="button" variant="text" onClick={() => navigate('/')}>
-          ← Back
+          <span aria-hidden="true" className="mr-1">←</span>Back
         </AuthButton>
         <h1 id="si-title" className="text-[28px] font-bold text-ink md:text-4xl">
           Sign in

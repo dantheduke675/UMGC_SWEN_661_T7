@@ -46,7 +46,7 @@ export function CreateAccount() {
     >
       <div className="flex flex-col gap-4 md:gap-6">
         <AuthButton type="button" variant="text" onClick={() => navigate('/')}>
-          ← Back
+          <span aria-hidden="true" className="mr-1">←</span>Back
         </AuthButton>
         <h1 id="ca-title" className="text-2xl font-bold text-ink md:text-[30px]">
           Create your account

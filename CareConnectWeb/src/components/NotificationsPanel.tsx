@@ -79,6 +79,7 @@ export function NotificationsButton() {
                 <li key={n.to}>
                   <Link to={n.to} onClick={close} className="block min-h-12 rounded-xl bg-surface-2 p-3 hover:bg-brand/15">
                     <span className="block text-sm font-bold">{n.title}</span>
+                    <span className="sr-only">: </span>
                     <span className="block truncate text-sm text-sub">{n.text}</span>
                   </Link>
                 </li>
